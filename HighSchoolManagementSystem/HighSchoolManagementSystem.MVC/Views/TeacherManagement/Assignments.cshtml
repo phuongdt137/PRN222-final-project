@@ -1,0 +1,174 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Teacher.TeacherDetailViewModel
+@{
+    ViewData["Title"] = "Phân Công Giảng Dạy: " + Model.FullName;
+}
+
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-calendar3 me-1"></i> KẾ HOẠCH ĐÀO TẠO • PHÂN CÔNG GIẢNG DẠY
+        </span>
+        <h1 class="greeting-title">Lịch Phân Công: @Model.FullName</h1>
+        <p class="greeting-subtitle">
+            Mã giáo viên: <strong class="font-monospace text-primary">@Model.TeacherCode</strong> • Tổ bộ môn: <strong>@(Model.Specialization ?? "Chưa phân tổ")</strong> • Định mức: <strong>@(Model.MaxPeriodsPerWeek ?? 20) tiết/tuần</strong>
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary px-3 py-2 shadow-sm">
+            <i class="bi bi-person-lines-fill"></i>
+            <span>Hồ Sơ Giáo Viên</span>
+        </a>
+        <a asp-action="Index" class="btn btn-secondary px-3 py-2 shadow-sm">
+            <i class="bi bi-arrow-left"></i>
+            <span>Quay Lại Danh Sách</span>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="edu-card p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <span class="text-muted d-block small fw-semibold">TỔNG PHÂN CÔNG</span>
+                <span class="fs-4 fw-bold text-dark">@Model.TeachingAssignments.Count lớp/môn</span>
+            </div>
+            <div class="p-2 rounded-3 bg-light text-primary fs-3">
+                <i class="bi bi-journal-check"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="edu-card p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <span class="text-muted d-block small fw-semibold">ĐỊNH MỨC TIẾT DẠY</span>
+                <span class="fs-4 fw-bold text-primary">@(Model.MaxPeriodsPerWeek ?? 20)</span>
+                <span class="text-muted small">tiết/tuần</span>
+            </div>
+            <div class="p-2 rounded-3 bg-light text-info fs-3">
+                <i class="bi bi-clock-history"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="edu-card p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <span class="text-muted d-block small fw-semibold">CHỦ NHIỆM LỚP</span>
+                @if (Model.HomeroomClasses.Any())
+                {
+                    <span class="fs-4 fw-bold text-success">@string.Join(", ", Model.HomeroomClasses.Select(c => c.ClassName))</span>
+                }
+                else
+                {
+                    <span class="fs-4 fw-bold text-muted">Không</span>
+                }
+            </div>
+            <div class="p-2 rounded-3 bg-light text-success fs-3">
+                <i class="bi bi-award"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="edu-card p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <span class="text-muted d-block small fw-semibold">TRẠNG THÁI</span>
+                @if (Model.Status == "Active")
+                {
+                    <span class="badge-status badge-status-success fs-6 mt-1">Đang công tác</span>
+                }
+                else
+                {
+                    <span class="badge-status badge-status-danger fs-6 mt-1">Tạm dừng</span>
+                }
+            </div>
+            <div class="p-2 rounded-3 bg-light text-secondary fs-3">
+                <i class="bi bi-shield-check"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="edu-card p-0 overflow-hidden">
+    <div class="edu-card-header px-4 pt-3 pb-2 border-bottom mb-0 d-flex justify-content-between align-items-center">
+        <h2 class="edu-card-title">
+            <i class="bi bi-table me-2 text-primary"></i>Danh Sách Lớp & Môn Học Phụ Trách
+        </h2>
+    </div>
+
+    @if (Model.TeachingAssignments.Count == 0)
+    {
+        <div class="p-5 text-center">
+            <div class="text-muted mb-3" style="font-size: 3rem;">
+                <i class="bi bi-calendar-x"></i>
+            </div>
+            <h5 class="fw-bold text-secondary">Chưa có phân công giảng dạy</h5>
+            <p class="text-muted small">Hiện tại giáo viên này chưa được phân công môn học hoặc lớp học nào trong học kỳ này.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table-edu m-0">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;" class="text-center">#</th>
+                        <th style="width: 140px;">Lớp học</th>
+                        <th>Môn học phụ trách</th>
+                        <th style="width: 180px;">Học kỳ & Năm học</th>
+                        <th>Lịch giảng dạy (Thời khóa biểu)</th>
+                        <th style="width: 140px;" class="text-center">Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int stt = 1; }
+                    @foreach (var assign in Model.TeachingAssignments)
+                    {
+                        <tr>
+                            <td class="text-center text-muted small">@stt</td>
+                            <td>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 fs-6 fw-bold">
+                                    @assign.ClassName
+                                </span>
+                            </td>
+                            <td>
+                                @if (assign.SubjectId > 0)
+                                {
+                                    <a asp-controller="Subject" asp-action="Details" asp-route-id="@assign.SubjectId" 
+                                       class="fw-bold text-primary text-decoration-none">
+                                        @assign.SubjectName
+                                    </a>
+                                }
+                                else
+                                {
+                                    <div class="fw-bold text-dark">@assign.SubjectName</div>
+                                }
+                                <div class="text-muted small font-monospace">@assign.SubjectCode</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">@assign.SemesterName</div>
+                                <div class="text-muted small">Năm học @assign.AcademicYearName</div>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(assign.TimetableSchedule))
+                                {
+                                    <div class="small text-dark">
+                                        <i class="bi bi-clock me-1 text-primary"></i>@assign.TimetableSchedule
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small fst-italic">Chưa xếp lịch thời khóa biểu</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border">
+                                    @assign.Status
+                                </span>
+                            </td>
+                        </tr>
+                        stt++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

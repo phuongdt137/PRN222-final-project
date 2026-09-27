@@ -1,0 +1,272 @@
+@{
+    ViewData["Title"] = "Bảng Điều Hành - Giáo Viên";
+    var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Thầy/Cô";
+}
+
+<!-- Greeting Banner kiểu EIMS -->
+<div class="greeting-banner">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> TRANG CHỦ GIÁO VIÊN
+        </span>
+        <h1 class="greeting-title">Xin chào, Thầy/Cô @displayName</h1>
+        <p class="greeting-subtitle">
+            Theo dõi thời khóa biểu hôm nay, quản lý điểm danh lớp chủ nhiệm và cập nhật sổ điểm bộ môn.
+        </p>
+    </div>
+    <div class="live-clock-card">
+        <div class="clock-info text-end">
+            <div class="clock-date" id="liveClockDate">Đang đồng bộ...</div>
+            <div class="clock-time" id="liveClockTime">--:--:--</div>
+        </div>
+        <div class="clock-icon-box">
+            <i class="bi bi-clock"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Section 1: KPI & Chỉ số giảng dạy -->
+<div class="dashboard-section-header">
+    <div class="section-title-wrap">
+        <h2>Chỉ số công tác giảng dạy & Quản lý lớp học</h2>
+        <p>Tổng hợp các tiết dạy hôm nay, dữ liệu điểm danh và tình hình học sinh cần hỗ trợ.</p>
+    </div>
+    <div class="section-right-meta">
+        <i class="bi bi-arrow-repeat me-1"></i>Cập nhật tự động theo thời gian thực
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Card 1: Tiết dạy hôm nay -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-blue">
+                <i class="bi bi-calendar-event-fill"></i>
+            </span>
+            <div class="stat-kicker">GIẢNG DẠY HÔM NAY</div>
+            <div class="stat-title">Tiết dạy trong ngày</div>
+            <div class="stat-main">
+                <div class="stat-number">4 tiết</div>
+                <div class="stat-label">Thời khóa biểu chính khóa</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-blue">Buổi sáng: 3 tiết</div>
+                <div class="breakdown-pill pill-blue">Buổi chiều: 1 tiết</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Lớp chủ nhiệm -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-green">
+                <i class="bi bi-people-fill"></i>
+            </span>
+            <div class="stat-kicker">LỚP CHỦ NHIỆM (10A1)</div>
+            <div class="stat-title">Chuyên cần hôm nay</div>
+            <div class="stat-main">
+                <div class="stat-number">44 / 45</div>
+                <div class="stat-label">Học sinh có mặt đúng giờ</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-green">Có mặt: 44</div>
+                <div class="breakdown-pill pill-yellow">Có phép: 1</div>
+                <div class="breakdown-pill pill-red">K.phép: 0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Sổ điểm bộ môn -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-orange">
+                <i class="bi bi-journal-check"></i>
+            </span>
+            <div class="stat-kicker">BỘ MÔN TOÁN</div>
+            <div class="stat-title">Cột điểm cần cập nhật</div>
+            <div class="stat-main">
+                <div class="stat-number">2</div>
+                <div class="stat-label">Bài kiểm tra định kỳ cần nhập điểm</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-yellow">KT 15 phút (10A1)</div>
+                <div class="breakdown-pill pill-yellow">KT 1 tiết (10A3)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Học sinh cần chú ý -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-purple">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </span>
+            <div class="stat-kicker">NỀ NẾP & HỌC TẬP</div>
+            <div class="stat-title">Học sinh cần chú ý</div>
+            <div class="stat-main">
+                <div class="stat-number">3</div>
+                <div class="stat-label">Trường hợp cần phối hợp với phụ huynh</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-yellow">Học lực: 2</div>
+                <div class="breakdown-pill pill-yellow">Chuyên cần: 1</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 2: Bảng dữ liệu tác vụ -->
+<!-- Table 1: Lịch dạy hôm nay -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Thời khóa biểu giảng dạy hôm nay</h2>
+            <p class="table-card-subtitle">Chi tiết các tiết lên lớp, phòng học và tiến độ thực hiện điểm danh học sinh.</p>
+        </div>
+        <span class="table-counter-badge">Tổng số: 4 tiết</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 80px;" class="text-center">Tiết</th>
+                    <th>Thời Gian</th>
+                    <th>Lớp Giảng Dạy</th>
+                    <th>Môn Học</th>
+                    <th>Phòng Học</th>
+                    <th class="text-center">Trạng Thái Điểm Danh</th>
+                    <th class="text-center" style="width: 140px;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 1</td>
+                    <td>07:00 - 07:45</td>
+                    <td><strong>Lớp 10A1</strong> (Chủ nhiệm)</td>
+                    <td>Toán Đại Số</td>
+                    <td>Phòng 201</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success">Đã điểm danh (44/45)</span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-eye me-1"></i>Xem lại
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 2</td>
+                    <td>07:50 - 08:35</td>
+                    <td><strong>Lớp 10A1</strong></td>
+                    <td>Toán Hình Học</td>
+                    <td>Phòng 201</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success">Đang trong tiết</span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-journal-plus me-1"></i>Ghi sổ đầu bài
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 4</td>
+                    <td>09:35 - 10:20</td>
+                    <td><strong>Lớp 10A3</strong></td>
+                    <td>Toán Đại Số</td>
+                    <td>Phòng 203</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-warning">Chưa điểm danh</span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-check-square me-1"></i>Điểm danh
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 7</td>
+                    <td>14:00 - 14:45</td>
+                    <td><strong>Lớp 11A2</strong></td>
+                    <td>Toán Hình Học</td>
+                    <td>Phòng 302</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-info">Tiết chiều</span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;" disabled>
+                            <i class="bi bi-clock me-1"></i>Chưa tới giờ
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Table 2: Học sinh cần chú ý -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Danh sách học sinh lớp 10A1 cần lưu ý & Phối hợp phụ huynh</h2>
+            <p class="table-card-subtitle">Theo dõi diễn biến điểm số và mức độ chuyên cần để kịp thời hỗ trợ các em.</p>
+        </div>
+        <span class="table-counter-badge">Ghi nhận: 3 học sinh</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 80px;" class="text-center">STT</th>
+                    <th>Mã Học Sinh</th>
+                    <th>Họ và Tên</th>
+                    <th>Vấn Đề Ghi Nhận</th>
+                    <th class="text-center">Điểm TB Hiện Tại</th>
+                    <th>Biện Pháp Đã Thực Hiện</th>
+                    <th class="text-center" style="width: 140px;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center">1</td>
+                    <td><strong>HS-10024</strong></td>
+                    <td><strong>Nguyễn Anh Tuấn</strong></td>
+                    <td>Bị ốm nghỉ học hôm nay (Có phép từ phụ huynh)</td>
+                    <td class="text-center fw-bold">7.2</td>
+                    <td>Đã ghi nhận đơn nghỉ phép, giao bài tập về nhà qua Zalo</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-chat-dots me-1"></i>Nhắn PH
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center">2</td>
+                    <td><strong>HS-10031</strong></td>
+                    <td><strong>Hoàng Minh Quân</strong></td>
+                    <td>Điểm kiểm tra 15 phút Toán dưới trung bình (4.5)</td>
+                    <td class="text-center fw-bold text-danger">5.8</td>
+                    <td>Đã hướng dẫn chữa bài, xếp nhóm đôi bạn cùng tiến</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-person-lines-fill me-1"></i>Hồ sơ
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center">3</td>
+                    <td><strong>HS-10015</strong></td>
+                    <td><strong>Vũ Thùy Linh</strong></td>
+                    <td>Thường xuyên đi học muộn vào tiết 1 các ngày Thứ Hai</td>
+                    <td class="text-center fw-bold">8.1</td>
+                    <td>Đã gọi điện trao đổi trực tiếp với phụ huynh ngày 15/09</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-check2-circle me-1"></i>Đã xử lý
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,150 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Subject.EditSubjectViewModel
+@{
+    ViewData["Title"] = "Chỉnh Sửa Môn Học: " + Model.SubjectName;
+}
+
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-pencil-square me-1"></i> CẬP NHẬT MÔN HỌC • @Model.SubjectCode
+        </span>
+        <h1 class="greeting-title">Chỉnh Sửa Môn Học</h1>
+        <p class="greeting-subtitle">
+            Cập nhật tên gọi, mã môn, hình thức đánh giá và trạng thái kích hoạt của môn học trong hệ thống.
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary px-3 py-2 shadow-sm">
+            <i class="bi bi-eye"></i>
+            <span>Xem Chi Tiết</span>
+        </a>
+        <a asp-action="Index" class="btn btn-secondary px-3 py-2 shadow-sm">
+            <i class="bi bi-arrow-left"></i>
+            <span>Quay Lại</span>
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <div class="edu-card shadow-sm">
+            <div class="edu-card-header">
+                <h2 class="edu-card-title">
+                    <i class="bi bi-pencil-fill text-primary me-2"></i>Thông Tin Chỉnh Sửa
+                </h2>
+            </div>
+
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4" role="alert"></div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label asp-for="SubjectCode" class="form-label required">Mã môn học <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted">
+                                <i class="bi bi-tag-fill"></i>
+                            </span>
+                            <input asp-for="SubjectCode" class="form-control text-uppercase font-monospace fw-bold" 
+                                   placeholder="VD: MATH10, LIT11, ENG12..." />
+                        </div>
+                        <span asp-validation-for="SubjectCode" class="text-danger small"></span>
+                        <div class="form-text small text-muted">
+                            Lưu ý: Thay đổi mã môn học có thể ảnh hưởng đến mã quy chuẩn của các báo cáo.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label asp-for="SubjectName" class="form-label required">Tên môn học <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted">
+                                <i class="bi bi-book-half"></i>
+                            </span>
+                            <input asp-for="SubjectName" class="form-control" 
+                                   placeholder="VD: Toán Học 10, Ngữ Văn 11..." />
+                        </div>
+                        <span asp-validation-for="SubjectName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Hình thức đánh giá môn học <span class="text-danger">*</span></label>
+                        @if (Model.HasScores)
+                        {
+                            <div class="alert alert-warning py-2 px-3 small d-flex align-items-center gap-2 mb-3">
+                                <i class="bi bi-shield-lock-fill fs-5 text-warning"></i>
+                                <div>
+                                    <strong>Đã khóa hình thức đánh giá:</strong> Môn học này đã phát sinh điểm số hoặc kết quả học tập của học sinh. Không thể thay đổi hình thức đánh giá để bảo toàn dữ liệu học bạ.
+                                </div>
+                            </div>
+                            <input type="hidden" asp-for="EvaluationType" />
+                        }
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <div class="border rounded-3 p-3 h-100 bg-white shadow-sm position-relative @(Model.HasScores ? "opacity-75" : "")">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" asp-for="EvaluationType" value="Score" id="evalScoreEdit" disabled="@(Model.HasScores ? "disabled" : null)" />
+                                        <label class="form-check-label fw-bold text-primary" for="evalScoreEdit">
+                                            <i class="bi bi-calculator me-1"></i> Đánh giá bằng điểm số (0 - 10)
+                                        </label>
+                                    </div>
+                                    <p class="text-muted small mb-0 ps-4 pt-1">
+                                        Chấm điểm từ 0 đến 10, tính điểm trung bình môn học kỳ và cả năm học, dùng để tính điểm GPA và xếp loại học sinh (Toán, Văn, Ngoại ngữ, Lý, Hóa, Sinh, Tin...).
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <div class="border rounded-3 p-3 h-100 bg-white shadow-sm position-relative @(Model.HasScores ? "opacity-75" : "")">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" asp-for="EvaluationType" value="PassFail" id="evalPassFailEdit" disabled="@(Model.HasScores ? "disabled" : null)" />
+                                        <label class="form-check-label fw-bold text-success" for="evalPassFailEdit">
+                                            <i class="bi bi-check2-circle me-1"></i> Đánh giá bằng nhận xét (Đạt / Chưa đạt)
+                                        </label>
+                                    </div>
+                                    <p class="text-muted small mb-0 ps-4 pt-1">
+                                        Đánh giá nhận xét theo 2 mức Đạt (Đ) hoặc Chưa đạt (CĐ), không tính GPA chung (Giáo dục thể chất, Giáo dục Quốc phòng - An ninh, Hoạt động trải nghiệm).
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <span asp-validation-for="EvaluationType" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label asp-for="Description" class="form-label">Mô tả chương trình & định hướng (Tùy chọn)</label>
+                        <textarea asp-for="Description" class="form-control" rows="3" 
+                                  placeholder="Nhập ghi chú hoặc tóm tắt nội dung chương trình giảng dạy..."></textarea>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check form-switch pt-2">
+                            <input class="form-check-input" type="checkbox" asp-for="IsActive" id="switchIsActiveEdit" />
+                            <label class="form-check-label fw-semibold" for="switchIsActiveEdit">
+                                Kích hoạt và áp dụng môn học này trong hệ thống
+                            </label>
+                        </div>
+                        <div class="text-muted small ms-4">
+                            Tắt tùy chọn này nếu muốn vô hiệu hóa môn học khỏi danh sách lập thời khóa biểu và phân công giảng dạy mới.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+                    <a asp-action="Index" class="btn btn-secondary px-4">
+                        <i class="bi bi-x-circle me-1"></i> Hủy Bỏ
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                        <i class="bi bi-check-circle-fill me-1"></i> Lưu Thay Đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

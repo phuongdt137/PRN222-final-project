@@ -1,0 +1,265 @@
+@{
+    ViewData["Title"] = "Bảng Điều Hành - Giáo Vụ";
+    var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Cán bộ Giáo Vụ";
+}
+
+<!-- Greeting Banner kiểu EIMS -->
+<div class="greeting-banner">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> TRANG CHỦ GIÁO VỤ
+        </span>
+        <h1 class="greeting-title">Xin chào, @displayName</h1>
+        <p class="greeting-subtitle">
+            Không gian tiếp nhận hồ sơ học sinh, điều phối lịch học, duyệt đơn từ và hỗ trợ công tác đào tạo nhà trường.
+        </p>
+    </div>
+    <div class="live-clock-card">
+        <div class="clock-info text-end">
+            <div class="clock-date" id="liveClockDate">Đang đồng bộ...</div>
+            <div class="clock-time" id="liveClockTime">--:--:--</div>
+        </div>
+        <div class="clock-icon-box">
+            <i class="bi bi-clock"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Section 1: KPI & Chỉ số công việc -->
+<div class="dashboard-section-header">
+    <div class="section-title-wrap">
+        <h2>Chỉ số tiếp nhận & Tiến độ công việc giáo vụ</h2>
+        <p>Thống kê số lượng đơn từ, tình trạng phòng học và công tác quản lý hồ sơ đào tạo.</p>
+    </div>
+    <div class="section-right-meta">
+        <i class="bi bi-arrow-repeat me-1"></i>Cập nhật tự động theo thời gian thực
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Card 1: Đơn xin nghỉ phép cần duyệt -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-orange">
+                <i class="bi bi-file-earmark-check-fill"></i>
+            </span>
+            <div class="stat-kicker">HÀNH CHÍNH & ĐƠN TỪ</div>
+            <div class="stat-title">Đơn xin nghỉ phép cần duyệt</div>
+            <div class="stat-main">
+                <div class="stat-number">5</div>
+                <div class="stat-label">Yêu cầu từ phụ huynh & học sinh gửi hôm nay</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-yellow">Chờ duyệt: 5</div>
+                <div class="breakdown-pill pill-green">Đã duyệt: 22</div>
+                <div class="breakdown-pill pill-red">Từ chối: 1</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Hồ sơ học sinh -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-blue">
+                <i class="bi bi-folder2-open"></i>
+            </span>
+            <div class="stat-kicker">QUẢN LÝ ĐÀO TẠO</div>
+            <div class="stat-title">Hồ sơ học sinh quản lý</div>
+            <div class="stat-main">
+                <div class="stat-number">1,450</div>
+                <div class="stat-label">Hồ sơ điện tử đang được lưu trữ</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-blue">Đầy đủ: 1,438</div>
+                <div class="breakdown-pill pill-yellow">Bổ sung: 12</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Cơ sở vật chất -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-green">
+                <i class="bi bi-door-open-fill"></i>
+            </span>
+            <div class="stat-kicker">CƠ SỞ VẬT CHẤT</div>
+            <div class="stat-title">Tình trạng phòng học</div>
+            <div class="stat-main">
+                <div class="stat-number">36 / 40</div>
+                <div class="stat-label">Phòng học tiêu chuẩn đang vận hành</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-green">Đang dùng: 36</div>
+                <div class="breakdown-pill pill-blue">Phòng trống: 4</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Tiếp nhận giấy tờ -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-purple">
+                <i class="bi bi-inbox-fill"></i>
+            </span>
+            <div class="stat-kicker">TIẾP NHẬN YÊU CẦU</div>
+            <div class="stat-title">Yêu cầu cấp giấy tờ & bảng điểm</div>
+            <div class="stat-main">
+                <div class="stat-number">8</div>
+                <div class="stat-label">Đơn xin xác nhận và trích lục học bạ</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-yellow">Đang xử lý: 5</div>
+                <div class="breakdown-pill pill-green">Hoàn thành: 3</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 2: Bảng dữ liệu tác vụ -->
+<!-- Table 1: Đơn xin nghỉ phép cần duyệt -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Đơn xin nghỉ phép gửi đến hôm nay cần xét duyệt</h2>
+            <p class="table-card-subtitle">Vui lòng kiểm tra lý do và xác nhận để cập nhật trạng thái điểm danh cho giáo viên bộ môn.</p>
+        </div>
+        <span class="table-counter-badge">Chờ duyệt: 5 đơn</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 100px;">Mã Đơn</th>
+                    <th>Học Sinh</th>
+                    <th>Lớp</th>
+                    <th>Phụ Huynh Người Gửi</th>
+                    <th>Thời Gian Nghỉ</th>
+                    <th>Lý Do Xin Nghỉ</th>
+                    <th class="text-center" style="width: 170px;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>#NP-1048</strong></td>
+                    <td><strong>Nguyễn Anh Tuấn</strong></td>
+                    <td>10A1</td>
+                    <td>Nguyễn Văn Bình (Bố)</td>
+                    <td>19/09/2026 (1 ngày)</td>
+                    <td>Bị sốt phát ban, bác sĩ chỉ định nghỉ ngơi</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-check-lg me-1"></i>Duyệt
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-x-lg me-1"></i>Từ chối
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>#NP-1049</strong></td>
+                    <td><strong>Trần Thu Trang</strong></td>
+                    <td>11A4</td>
+                    <td>Phạm Thị Hương (Mẹ)</td>
+                    <td>19/09/2026 - 20/09/2026 (2 ngày)</td>
+                    <td>Về quê có việc hiếu cùng gia đình</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-check-lg me-1"></i>Duyệt
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-x-lg me-1"></i>Từ chối
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>#NP-1050</strong></td>
+                    <td><strong>Lê Hoàng Long</strong></td>
+                    <td>12A2</td>
+                    <td>Lê Đức Anh (Bố)</td>
+                    <td>19/09/2026 (Buổi sáng)</td>
+                    <td>Đi khám sức khỏe răng hàm mặt</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-check-lg me-1"></i>Duyệt
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-x-lg me-1"></i>Từ chối
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Table 2: Tình trạng phòng học & Sĩ số -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Tình trạng điều phối phòng học & Sĩ số các lớp</h2>
+            <p class="table-card-subtitle">Theo dõi phân bổ tiết học, sức chứa phòng và tình trạng hoạt động thực tế.</p>
+        </div>
+        <span class="table-counter-badge">Theo dõi: 4 phòng mẫu</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 100px;">Phòng</th>
+                    <th>Lớp Đang Học</th>
+                    <th>Khối Lớp</th>
+                    <th>Giáo Viên Giảng Dạy</th>
+                    <th>Môn Học</th>
+                    <th class="text-center">Sĩ Số / Sức Chứa</th>
+                    <th class="text-center">Tình Trạng</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>P.201</strong></td>
+                    <td><strong>10A1</strong></td>
+                    <td>Khối 10</td>
+                    <td>Thầy Nguyễn Văn Nam</td>
+                    <td>Toán học</td>
+                    <td class="text-center">45 / 50</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success">Đang học (Tiết 2)</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>P.202</strong></td>
+                    <td><strong>10A2</strong></td>
+                    <td>Khối 10</td>
+                    <td>Cô Lê Thị Hồng</td>
+                    <td>Ngữ văn</td>
+                    <td class="text-center">44 / 50</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success">Đang học (Tiết 2)</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>P.301</strong></td>
+                    <td><strong>11A3</strong></td>
+                    <td>Khối 11</td>
+                    <td>Thầy Phạm Quốc Hưng</td>
+                    <td>Vật lý</td>
+                    <td class="text-center">42 / 50</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success">Đang học (Tiết 2)</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>P.Lab-1</strong></td>
+                    <td><em>(Phòng Tin học 1)</em></td>
+                    <td>Phòng Chức năng</td>
+                    <td>-- Trống --</td>
+                    <td>--</td>
+                    <td class="text-center">0 / 45</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-info">Sẵn sàng sử dụng</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

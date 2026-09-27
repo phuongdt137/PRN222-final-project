@@ -1,0 +1,287 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Teacher.TeacherDetailViewModel
+@{
+    ViewData["Title"] = "Hồ Sơ Giáo Viên: " + Model.FullName;
+}
+
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-person-lines-fill me-1"></i> THÔNG TIN CHI TIẾT • @Model.TeacherCode
+        </span>
+        <h1 class="greeting-title">@Model.FullName</h1>
+        <p class="greeting-subtitle">
+            Hồ sơ nhân sự sư phạm, tổ bộ môn, định mức tiết dạy và dữ liệu phân công giảng dạy.
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a asp-action="Assignments" asp-route-id="@Model.Id" class="btn btn-outline-primary px-3 py-2 shadow-sm">
+            <i class="bi bi-calendar-week"></i>
+            <span>Xem Phân Công</span>
+        </a>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary px-3 py-2 shadow-sm">
+            <i class="bi bi-pencil-square"></i>
+            <span>Chỉnh Sửa</span>
+        </a>
+        <a asp-action="Index" class="btn btn-secondary px-3 py-2 shadow-sm">
+            <i class="bi bi-arrow-left"></i>
+            <span>Quay Lại</span>
+        </a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill fs-5"></i>
+        <div>@TempData["SuccessMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>@TempData["ErrorMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-12 col-lg-4">
+        <div class="edu-card text-center mb-4">
+            <div class="edu-card-header justify-content-center">
+                <h2 class="edu-card-title">
+                    <i class="bi bi-person-circle text-primary me-2"></i>Thẻ Cán Bộ Giáo Viên
+                </h2>
+            </div>
+
+            <div class="d-flex justify-content-center my-3">
+                @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                {
+                    <img src="@Model.AvatarUrl" alt="@Model.FullName" 
+                         class="rounded-circle shadow-sm"
+                         style="width: 120px; height: 120px; object-fit: cover; border: 3px solid var(--tufts-blue-300);" />
+                }
+                else
+                {
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                         style="width: 120px; height: 120px; font-size: 40px; background-color: var(--tufts-blue-700); border: 3px solid var(--tufts-blue-300);">
+                        @(Model.FullName.Length > 0 ? Model.FullName.Substring(0, 1).ToUpper() : "G")
+                    </div>
+                }
+            </div>
+
+            <h3 class="fs-5 fw-bold text-dark mb-1">@Model.FullName</h3>
+            <div class="font-monospace text-primary fw-bold mb-2">@Model.TeacherCode</div>
+
+            <div>
+                @if (Model.Status == "Active")
+                {
+                    <span class="badge-status badge-status-success">
+                        <i class="bi bi-check-circle-fill"></i> Đang công tác
+                    </span>
+                }
+                else
+                {
+                    <span class="badge-status badge-status-danger">
+                        <i class="bi bi-dash-circle-fill"></i> Tạm dừng công tác
+                    </span>
+                }
+            </div>
+
+            <div class="mt-4 pt-3 border-top text-start">
+                <div class="row py-2 border-bottom">
+                    <div class="col-5 text-muted small fw-semibold">Tên tài khoản:</div>
+                    <div class="col-7 font-monospace text-dark">@Model.Username</div>
+                </div>
+                <div class="row py-2 border-bottom">
+                    <div class="col-5 text-muted small fw-semibold">Email:</div>
+                    <div class="col-7 text-truncate" title="@Model.Email">@Model.Email</div>
+                </div>
+                <div class="row py-2 border-bottom">
+                    <div class="col-5 text-muted small fw-semibold">Điện thoại:</div>
+                    <div class="col-7 font-monospace">@(Model.PhoneNumber ?? "Chưa có")</div>
+                </div>
+                <div class="row py-2 border-bottom">
+                    <div class="col-5 text-muted small fw-semibold">Giới tính:</div>
+                    <div class="col-7">@(Model.Gender ?? "Không rõ")</div>
+                </div>
+                <div class="row py-2">
+                    <div class="col-5 text-muted small fw-semibold">Ngày sinh:</div>
+                    <div class="col-7">@(Model.DateOfBirth?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")</div>
+                </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-top">
+                <form asp-action="ToggleStatus" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+                    @if (Model.Status == "Active")
+                    {
+                        <button type="submit" class="btn btn-outline-danger w-100" 
+                                onclick="return confirm('Bạn có chắc chắn muốn tạm dừng trạng thái của giáo viên này?');">
+                            <i class="bi bi-person-slash me-1"></i> Tạm Dừng Hoạt Động
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-outline-success w-100"
+                                onclick="return confirm('Bạn có chắc chắn muốn kích hoạt lại giáo viên này?');">
+                            <i class="bi bi-person-check me-1"></i> Kích Hoạt Lại Hoạt Động
+                        </button>
+                    }
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-8">
+        <div class="edu-card mb-4">
+            <div class="edu-card-header">
+                <h2 class="edu-card-title">
+                    <i class="bi bi-briefcase-fill text-primary me-2"></i>Thông Tin Chuyên Môn & Công Tác
+                </h2>
+            </div>
+
+            <div class="row g-3 py-2">
+                <div class="col-12 col-md-6">
+                    <div class="p-3 bg-light rounded-3 border h-100">
+                        <div class="text-muted small fw-semibold">TỔ CHUYÊN MÔN</div>
+                        <div class="fs-5 fw-bold text-primary mt-1">
+                            @(Model.Specialization ?? "Chưa gán tổ chuyên môn")
+                        </div>
+                        @if (Model.SpecializedSubjects.Any())
+                        {
+                            <div class="mt-2 pt-2 border-top">
+                                <div class="text-muted small fw-semibold mb-1">Môn học phụ trách theo chuyên môn:</div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var sub in Model.SpecializedSubjects)
+                                    {
+                                        <a asp-controller="Subject" asp-action="Details" asp-route-id="@sub.SubjectId"
+                                           class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 text-decoration-none py-1 px-2">
+                                            <i class="bi bi-book me-1"></i>@sub.SubjectName
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted small fw-semibold">TRÌNH ĐỘ / BẰNG CẤP</div>
+                        <div class="fs-5 fw-bold text-dark mt-1">
+                            @(Model.Qualification ?? "Cử nhân Sư phạm")
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted small fw-semibold">NGÀY VÀO TRƯỜNG</div>
+                        <div class="fs-6 fw-semibold text-dark mt-1">
+                            @(Model.HireDate?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted small fw-semibold">ĐỊNH MỨC TIẾT DẠY / TUẦN</div>
+                        <div class="fs-6 fw-semibold text-dark mt-1">
+                            @(Model.MaxPeriodsPerWeek.HasValue ? $"{Model.MaxPeriodsPerWeek} tiết/tuần" : "20 tiết/tuần")
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-top">
+                <div class="text-muted small fw-semibold mb-2">LỚP PHỤ TRÁCH CHỦ NHIỆM</div>
+                @if (Model.HomeroomClasses.Any())
+                {
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var c in Model.HomeroomClasses)
+                        {
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 fs-6">
+                                <i class="bi bi-award-fill me-1"></i>Lớp @c.ClassName (Năm học @c.AcademicYearName)
+                            </span>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <span class="text-muted small">Hiện tại giáo viên không chủ nhiệm lớp nào.</span>
+                }
+            </div>
+        </div>
+
+        <div class="edu-card p-0 overflow-hidden">
+            <div class="edu-card-header px-4 pt-3 pb-2 border-bottom mb-0 d-flex justify-content-between align-items-center">
+                <h2 class="edu-card-title">
+                    <i class="bi bi-journal-text text-primary me-2"></i>Phân Công Giảng Dạy (@Model.TeachingAssignments.Count)
+                </h2>
+                <a asp-action="Assignments" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm">
+                    Chi tiết phân công <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            @if (Model.TeachingAssignments.Count == 0)
+            {
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary"></i>
+                    <p class="mb-0">Chưa có dữ liệu phân công giảng dạy cho giáo viên này.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table-edu m-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;" class="text-center">#</th>
+                                <th>Lớp</th>
+                                <th>Môn học</th>
+                                <th>Học kỳ</th>
+                                <th class="text-center">Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ int sttAss = 1; }
+                            @foreach (var a in Model.TeachingAssignments)
+                            {
+                                <tr>
+                                    <td class="text-center text-muted small">@sttAss</td>
+                                    <td class="fw-bold text-primary">@a.ClassName</td>
+                                    <td>
+                                        @if (a.SubjectId > 0)
+                                        {
+                                            <a asp-controller="Subject" asp-action="Details" asp-route-id="@a.SubjectId" 
+                                               class="fw-semibold text-primary text-decoration-none">
+                                                @a.SubjectName
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <div class="fw-semibold">@a.SubjectName</div>
+                                        }
+                                        <div class="text-muted small font-monospace">@a.SubjectCode</div>
+                                    </td>
+                                    <td>@a.SemesterName (@a.AcademicYearName)</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border">
+                                            @a.Status
+                                        </span>
+                                    </td>
+                                </tr>
+                                sttAss++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

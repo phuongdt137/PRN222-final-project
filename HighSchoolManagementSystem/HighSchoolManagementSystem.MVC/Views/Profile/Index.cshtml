@@ -1,0 +1,362 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Profile.UserProfileViewModel
+@{
+    ViewData["Title"] = "Hồ Sơ Cá Nhân";
+    string roleBadgeClass = Model.RoleName switch
+    {
+        "Principal" => "badge-status-danger",
+        "Teacher" => "badge-status-info",
+        "Staff" => "badge-status-warning",
+        "Student" => "badge-status-success",
+        "Parent" => "badge-status-info",
+        _ => "badge-status-info"
+    };
+
+    string roleDisplayVi = Model.RoleName switch
+    {
+        "Principal" => "HIỆU TRƯỞNG",
+        "Staff" => "GIÁO VỤ / NHÂN VIÊN",
+        "Teacher" => "GIÁO VIÊN",
+        "Student" => "HỌC SINH",
+        "Parent" => "PHỤ HUYNH",
+        _ => Model.RoleName.ToUpper()
+    };
+}
+
+<!-- Greeting Banner EIMS Standard -->
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-person-badge-fill me-1"></i> THÔNG TIN TÀI KHOẢN
+        </span>
+        <h1 class="greeting-title">Hồ Sơ Người Dùng</h1>
+        <p class="greeting-subtitle">
+            Tra cứu thông tin cá nhân, định danh tài khoản và hồ sơ nghiệp vụ trong hệ thống trường THPT.
+        </p>
+    </div>
+    <div class="live-clock-card">
+        <div class="clock-info text-end">
+            <div class="clock-date" id="liveClockDate">Đang đồng bộ...</div>
+            <div class="clock-time" id="liveClockTime">--:--:--</div>
+        </div>
+        <div class="clock-icon-box">
+            <i class="bi bi-person-circle"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Alert thông báo kết quả -->
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-check-circle-fill fs-5 me-2"></i>
+        <div>@TempData["SuccessMessage"]</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5 me-2"></i>
+        <div>@TempData["ErrorMessage"]</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- CỘT TRÁI: AVATAR & THÔNG TIN TỔNG QUAN -->
+    <div class="col-12 col-lg-4">
+        <div class="edu-card text-center mb-4">
+            <div class="d-flex justify-content-center mb-3">
+                @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                {
+                    <img src="@Model.AvatarUrl" alt="@Model.FullName" class="rounded-circle shadow-sm" 
+                         style="width: 128px; height: 128px; object-fit: cover; border: 3px solid var(--tufts-blue-300);" />
+                }
+                else
+                {
+                    <div class="user-avatar-large shadow-sm d-flex align-items-center justify-content-center"
+                         style="width: 128px; height: 128px; border-radius: 50%; background-color: var(--tufts-blue-800); color: #fff; font-size: 52px; font-weight: 700; border: 3px solid var(--tufts-blue-300);">
+                        @Model.InitialLetter
+                    </div>
+                }
+            </div>
+
+            <h3 class="fw-bold mb-1" style="color: var(--tufts-blue-900); font-size: 20px;">@Model.FullName</h3>
+            <p class="text-muted small mb-2">@@@Model.Username</p>
+
+            <div class="d-flex justify-content-center gap-2 mb-3">
+                <span class="badge-status @roleBadgeClass">
+                    <i class="bi bi-shield-check"></i> @roleDisplayVi
+                </span>
+                @if (Model.IsActive)
+                {
+                    <span class="badge-status badge-status-success">
+                        <i class="bi bi-check-circle"></i> Đang hoạt động
+                    </span>
+                }
+                else
+                {
+                    <span class="badge-status badge-status-danger">
+                        <i class="bi bi-lock"></i> Đã khóa
+                    </span>
+                }
+            </div>
+
+            <div class="p-3 bg-light rounded-2 text-start mb-3" style="border: 1px solid var(--color-border);">
+                <div class="small text-muted mb-1"><i class="bi bi-envelope me-1"></i> Email hệ thống:</div>
+                <div class="fw-semibold text-break mb-2" style="font-size: 13.5px;">@Model.Email</div>
+
+                <div class="small text-muted mb-1"><i class="bi bi-telephone me-1"></i> Điện thoại:</div>
+                <div class="fw-semibold mb-2" style="font-size: 13.5px;">@(Model.PhoneNumber ?? "Chưa cập nhật")</div>
+
+                <div class="small text-muted mb-1"><i class="bi bi-calendar-event me-1"></i> Ngày tham gia:</div>
+                <div class="fw-semibold" style="font-size: 13.5px;">@Model.CreateAt.ToString("dd/MM/yyyy")</div>
+            </div>
+
+            <a asp-action="Edit" class="btn btn-action-update w-100">
+                <i class="bi bi-pencil-square"></i> Cập nhật thông tin
+            </a>
+            <a asp-action="ChangePassword" class="btn btn-outline-primary w-100 mt-2">
+                <i class="bi bi-key"></i> Đổi mật khẩu
+            </a>
+        </div>
+    </div>
+
+    <!-- CỘT PHẢI: CHI TIẾT HỒ SƠ & THÔNG TIN NGHIỆP VỤ -->
+    <div class="col-12 col-lg-8">
+        <!-- Khối 1: Thông tin cá nhân cơ bản -->
+        <div class="edu-card mb-4">
+            <div class="edu-card-header">
+                <h2 class="edu-card-title">
+                    <i class="bi bi-person-lines-fill text-primary me-2"></i>Thông Tin Cá Nhân
+                </h2>
+                <span class="text-muted small">Dữ liệu hồ sơ người dùng</span>
+            </div>
+            
+            <div class="row g-3">
+                <div class="col-12 col-sm-6">
+                    <div class="text-muted small mb-1">Họ và tên</div>
+                    <div class="p-2 rounded bg-light fw-semibold" style="border: 1px solid var(--color-border);">
+                        @Model.FullName
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <div class="text-muted small mb-1">Tên đăng nhập (Username)</div>
+                    <div class="p-2 rounded bg-light fw-semibold" style="border: 1px solid var(--color-border);">
+                        @Model.Username
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <div class="text-muted small mb-1">Địa chỉ Email</div>
+                    <div class="p-2 rounded bg-light fw-semibold text-break" style="border: 1px solid var(--color-border);">
+                        @Model.Email
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <div class="text-muted small mb-1">Số điện thoại liên lạc</div>
+                    <div class="p-2 rounded bg-light fw-semibold" style="border: 1px solid var(--color-border);">
+                        @(Model.PhoneNumber ?? "Chưa thiết lập")
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <div class="text-muted small mb-1">Giới tính</div>
+                    <div class="p-2 rounded bg-light fw-semibold" style="border: 1px solid var(--color-border);">
+                        @(Model.Gender ?? "Chưa thiết lập")
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6">
+                    <div class="text-muted small mb-1">Ngày sinh</div>
+                    <div class="p-2 rounded bg-light fw-semibold" style="border: 1px solid var(--color-border);">
+                        @(Model.DateOfBirth?.ToString("dd/MM/yyyy") ?? "Chưa thiết lập")
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Khối 2: Thông tin mở rộng theo Vai trò -->
+        @if (Model.TeacherSection != null)
+        {
+            <div class="edu-card mb-4">
+                <div class="edu-card-header">
+                    <h2 class="edu-card-title">
+                        <i class="bi bi-briefcase-fill text-primary me-2"></i>Hồ Sơ Cán Bộ Giáo Viên
+                    </h2>
+                    <span class="badge-status badge-status-info">Mã GV: @Model.TeacherSection.TeacherCode</span>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Mã cán bộ / Giáo viên</div>
+                        <div class="fw-semibold">@Model.TeacherSection.TeacherCode</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Chuyên môn / Tổ bộ môn</div>
+                        <div class="fw-semibold">@(Model.TeacherSection.Specialization ?? "Đang cập nhật")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Trình độ chuyên môn / Học vấn</div>
+                        <div class="fw-semibold">@(Model.TeacherSection.Qualification ?? "Đang cập nhật")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Ngày tiếp nhận công tác</div>
+                        <div class="fw-semibold">@(Model.TeacherSection.HireDate?.ToString("dd/MM/yyyy") ?? "—")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Định mức giảng dạy tối đa</div>
+                        <div class="fw-semibold">@(Model.TeacherSection.MaxPeriodsPerWeek.HasValue ? $"{Model.TeacherSection.MaxPeriodsPerWeek} tiết/tuần" : "Theo quy định chung")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Lớp phụ trách chủ nhiệm</div>
+                        <div class="fw-semibold">
+                            @if (Model.TeacherSection.HomeroomClassNames.Any())
+                            {
+                                @foreach (var className in Model.TeacherSection.HomeroomClassNames)
+                                {
+                                    <span class="badge bg-primary me-1">@className</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">Không phụ trách chủ nhiệm</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (Model.StudentSection != null)
+        {
+            <div class="edu-card mb-4">
+                <div class="edu-card-header">
+                    <h2 class="edu-card-title">
+                        <i class="bi bi-mortarboard-fill text-primary me-2"></i>Hồ Sơ Học Sinh
+                    </h2>
+                    <span class="badge-status badge-status-success">Mã HS: @Model.StudentSection.StudentCode</span>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Mã số học sinh</div>
+                        <div class="fw-semibold">@Model.StudentSection.StudentCode</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Lớp học hiện tại</div>
+                        <div class="fw-semibold">
+                            @if (!string.IsNullOrEmpty(Model.StudentSection.CurrentClassName))
+                            {
+                                <span class="badge bg-primary fs-6">Lớp @Model.StudentSection.CurrentClassName</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Chưa xếp lớp</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Ngày nhập học</div>
+                        <div class="fw-semibold">@(Model.StudentSection.AdmissionDate?.ToString("dd/MM/yyyy") ?? "—")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Tình trạng học tịch</div>
+                        <div class="fw-semibold">@Model.StudentSection.Status</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted small mb-1">Địa chỉ thường trú / Cư trú</div>
+                        <div class="fw-semibold">@(Model.StudentSection.Address ?? "Chưa cập nhật")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Phụ huynh đại diện</div>
+                        <div class="fw-semibold">@(Model.StudentSection.ParentFullName ?? "Chưa liên kết")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Điện thoại liên hệ phụ huynh</div>
+                        <div class="fw-semibold">@(Model.StudentSection.ParentPhone ?? "Chưa liên kết")</div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (Model.ParentSection != null)
+        {
+            <div class="edu-card mb-4">
+                <div class="edu-card-header">
+                    <h2 class="edu-card-title">
+                        <i class="bi bi-people-fill text-primary me-2"></i>Hồ Sơ Phụ Huynh Học Sinh
+                    </h2>
+                    <span class="badge-status badge-status-info">Sổ liên lạc điện tử</span>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Nghề nghiệp</div>
+                        <div class="fw-semibold">@(Model.ParentSection.Occupation ?? "Chưa cập nhật")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted small mb-1">Số điện thoại liên hệ khẩn cấp</div>
+                        <div class="fw-semibold">@(Model.ParentSection.EmergencyContact ?? "Chưa cập nhật")</div>
+                    </div>
+                </div>
+
+                <h3 class="h6 fw-bold mb-2" style="color: var(--tufts-blue-900);">
+                    <i class="bi bi-person-check-fill me-1"></i> Danh sách con em đang theo học:
+                </h3>
+
+                @if (Model.ParentSection.Children.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table-edu">
+                            <thead>
+                                <tr>
+                                    <th>Mã Học Sinh</th>
+                                    <th>Họ Và Tên</th>
+                                    <th>Lớp Học</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var child in Model.ParentSection.Children)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@child.StudentCode</td>
+                                        <td>@child.FullName</td>
+                                        <td>
+                                            <span class="badge bg-primary">@(child.CurrentClassName ?? "Chưa xếp lớp")</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted small mb-0">Chưa có thông tin con em được liên kết trong hệ thống.</p>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="edu-card mb-4">
+                <div class="edu-card-header">
+                    <h2 class="edu-card-title">
+                        <i class="bi bi-shield-lock-fill text-primary me-2"></i>Quyền Hạn & Phân Hệ
+                    </h2>
+                    <span class="badge-status @roleBadgeClass">@roleDisplayVi</span>
+                </div>
+
+                <p class="text-muted mb-2">
+                    Tài khoản được phân quyền đảm nhiệm chức vụ quản lý / vận hành trong hệ thống trường THPT.
+                </p>
+                <div class="p-3 bg-light rounded" style="border: 1px solid var(--color-border);">
+                    <div class="fw-semibold mb-1" style="color: var(--tufts-blue-900);">Chức năng & Trách nhiệm:</div>
+                    <div class="text-muted small">
+                        @(Model.RoleDescription ?? "Quản lý và giám sát vận hành các quy trình đào tạo, nề nếp toàn trường.")
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

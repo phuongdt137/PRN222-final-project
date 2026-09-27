@@ -1,0 +1,307 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Subject.SubjectDetailViewModel
+@{
+    ViewData["Title"] = "Chi Tiết Môn Học: " + Model.SubjectName;
+}
+
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-info-circle-fill me-1"></i> CHI TIẾT MÔN HỌC • @Model.SubjectCode
+        </span>
+        <h1 class="greeting-title">@Model.SubjectName</h1>
+        <p class="greeting-subtitle">
+            Xem thông số cấu hình môn học, hình thức tính điểm và danh sách phân công giảng dạy thực tế.
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary px-3 py-2 shadow-sm">
+            <i class="bi bi-pencil-square"></i>
+            <span>Chỉnh Sửa</span>
+        </a>
+        <a asp-action="Index" class="btn btn-secondary px-3 py-2 shadow-sm">
+            <i class="bi bi-arrow-left"></i>
+            <span>Quay Lại Danh Sách</span>
+        </a>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill fs-5"></i>
+        <div>@TempData["SuccessMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>@TempData["ErrorMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-12 col-lg-5">
+        <div class="edu-card mb-4">
+            <div class="edu-card-header d-flex justify-content-between align-items-center">
+                <h2 class="edu-card-title">
+                    <i class="bi bi-card-heading text-primary me-2"></i>Thông Tin Môn Học
+                </h2>
+                @if (Model.IsActive)
+                {
+                    <span class="badge-status badge-status-success">
+                        <i class="bi bi-check-circle-fill"></i> Đang áp dụng
+                    </span>
+                }
+                else
+                {
+                    <span class="badge-status badge-status-danger">
+                        <i class="bi bi-dash-circle-fill"></i> Vô hiệu hóa
+                    </span>
+                }
+            </div>
+
+            <div class="py-2">
+                <div class="row py-2 border-bottom">
+                    <div class="col-sm-5 text-muted small fw-semibold">Mã môn học:</div>
+                    <div class="col-sm-7 fw-bold font-monospace text-primary">@Model.SubjectCode</div>
+                </div>
+
+                <div class="row py-2 border-bottom">
+                    <div class="col-sm-5 text-muted small fw-semibold">Tên môn học:</div>
+                    <div class="col-sm-7 fw-semibold text-dark">@Model.SubjectName</div>
+                </div>
+
+                <div class="row py-2 border-bottom">
+                    <div class="col-sm-5 text-muted small fw-semibold">Hình thức đánh giá:</div>
+                    <div class="col-sm-7">
+                        @if (Model.EvaluationType == "Score")
+                        {
+                            <span class="badge-status badge-status-info">
+                                <i class="bi bi-calculator"></i> Đánh giá bằng điểm số (0 - 10, tính GPA)
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge-status badge-status-success">
+                                <i class="bi bi-check2-circle"></i> Đánh giá bằng nhận xét (Đạt / Chưa đạt)
+                            </span>
+                        }
+                    </div>
+                </div>
+
+                <div class="row py-2 border-bottom">
+                    <div class="col-sm-5 text-muted small fw-semibold">Mô tả nghiệp vụ:</div>
+                    <div class="col-sm-7 text-secondary">
+                        @(!string.IsNullOrWhiteSpace(Model.Description) ? Model.Description : "Chưa có mô tả chi tiết.")
+                    </div>
+                </div>
+
+                <div class="row py-2">
+                    <div class="col-sm-5 text-muted small fw-semibold">Số lớp đang gán:</div>
+                    <div class="col-sm-7 fw-bold text-dark">
+                        @Model.TeachingAssignments.Count lớp học
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top d-flex flex-column gap-2">
+                <a asp-controller="TeacherManagement" asp-action="Index" asp-route-search="@Model.SubjectName.Split(' ')[0]"
+                   class="btn btn-outline-primary w-100">
+                    <i class="bi bi-people-fill me-1"></i> Xem giáo viên bộ môn @Model.SubjectName.Split(' ')[0]
+                </a>
+                <form asp-action="ToggleStatus" method="post" class="w-100">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+                    @if (Model.IsActive)
+                    {
+                        <button type="submit" class="btn btn-outline-danger w-100" 
+                                onclick="return confirm('Bạn có chắc chắn muốn vô hiệu hóa môn học này?');">
+                            <i class="bi bi-toggle-on me-1"></i> Vô Hiệu Hóa Môn Học
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="btn btn-outline-success w-100"
+                                onclick="return confirm('Bạn có chắc chắn muốn kích hoạt lại môn học này?');">
+                            <i class="bi bi-toggle-off me-1"></i> Kích Hoạt Môn Học
+                        </button>
+                    }
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-7">
+        <div class="edu-card p-0 overflow-hidden">
+            <div class="edu-card-header px-4 pt-3 pb-2 border-bottom mb-0 d-flex justify-content-between align-items-center">
+                <h2 class="edu-card-title">
+                    <i class="bi bi-person-workspace text-primary me-2"></i>Phân Công Giảng Dạy (@Model.TeachingAssignments.Count)
+                </h2>
+                @if (Model.IsActive)
+                {
+                    <button type="button" class="btn btn-primary btn-sm px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#assignTeacherModal">
+                        <i class="bi bi-person-plus-fill me-1"></i> Phân Công Giáo Viên
+                    </button>
+                }
+            </div>
+
+            @if (Model.TeachingAssignments.Count == 0)
+            {
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary"></i>
+                    <p class="mb-0">Môn học này hiện chưa được phân công cho lớp học hay giáo viên nào.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table-edu m-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;" class="text-center">#</th>
+                                <th>Lớp học</th>
+                                <th>Giáo viên phụ trách</th>
+                                <th>Học kỳ</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th class="text-center" style="width: 70px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ int assignStt = 1; }
+                            @foreach (var assign in Model.TeachingAssignments)
+                            {
+                                <tr>
+                                    <td class="text-center text-muted small">@assignStt</td>
+                                    <td class="fw-semibold text-primary">@assign.ClassName</td>
+                                    <td>
+                                        @if (assign.TeacherId > 0)
+                                        {
+                                            <a asp-controller="TeacherManagement" asp-action="Details" asp-route-id="@assign.TeacherId" 
+                                               class="fw-semibold text-primary text-decoration-none">
+                                                @assign.TeacherName
+                                            </a>
+                                            <div class="text-muted small font-monospace">@assign.TeacherCode</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="fw-semibold">@assign.TeacherName</div>
+                                            <div class="text-muted small font-monospace">@assign.TeacherCode</div>
+                                        }
+                                    </td>
+                                    <td>@assign.SemesterName</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border">
+                                            @assign.Status
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <form asp-action="UnassignTeacher" method="post" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn hủy phân công giáo viên này khỏi lớp?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="assignmentId" value="@assign.AssignmentId" />
+                                            <input type="hidden" name="subjectId" value="@Model.Id" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm p-1 px-2" title="Hủy phân công">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                assignStt++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="assignTeacherModal" tabindex="-1" aria-labelledby="assignTeacherModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="assignTeacherModalLabel">
+                    <i class="bi bi-person-plus-fill text-primary me-2"></i>Phân Công Giáo Viên Giảng Dạy
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="AssignTeacher" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="SubjectId" value="@Model.Id" />
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">MÔN HỌC</label>
+                        <div class="p-2 px-3 bg-light rounded-2 border fw-bold text-primary font-monospace">
+                            @Model.SubjectCode - @Model.SubjectName
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">Học Kỳ & Năm Học <span class="text-danger">*</span></label>
+                        <select name="SemesterId" class="form-select" required>
+                            <option value="">-- Chọn học kỳ --</option>
+                            @foreach (var sem in Model.AvailableSemesters)
+                            {
+                                <option value="@sem.Id">@sem.SemesterName (Năm học @sem.AcademicYear)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">Lớp Học <span class="text-danger">*</span></label>
+                        <select name="ClassId" class="form-select" required>
+                            <option value="">-- Chọn lớp học --</option>
+                            @foreach (var cls in Model.AvailableClasses)
+                            {
+                                <option value="@cls.Id">Lớp @cls.ClassName (Năm học @cls.AcademicYear)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">Giáo Viên Phụ Trách <span class="text-danger">*</span></label>
+                        <select name="TeacherId" class="form-select" required>
+                            <option value="">-- Chọn giáo viên --</option>
+                            @if (Model.AvailableTeachers.Any(t => t.IsMatchingSpecialization))
+                            {
+                                <optgroup label="★ Giáo viên đúng tổ chuyên môn">
+                                    @foreach (var t in Model.AvailableTeachers.Where(t => t.IsMatchingSpecialization))
+                                    {
+                                        <option value="@t.Id">@t.FullName (@t.TeacherCode) - @t.Specialization</option>
+                                    }
+                                </optgroup>
+                            }
+                            @if (Model.AvailableTeachers.Any(t => !t.IsMatchingSpecialization))
+                            {
+                                <optgroup label="Giáo viên các tổ khác">
+                                    @foreach (var t in Model.AvailableTeachers.Where(t => !t.IsMatchingSpecialization))
+                                    {
+                                        <option value="@t.Id">@t.FullName (@t.TeacherCode) - @(t.Specialization ?? "Chưa phân tổ")</option>
+                                    }
+                                </optgroup>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-bold small text-dark">Trạng Thái Phân Công</label>
+                        <select name="Status" class="form-select">
+                            <option value="Active" selected>Đang giảng dạy (Active)</option>
+                            <option value="Assigned">Đã phân công (Assigned)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                        <i class="bi bi-check-lg me-1"></i> Lưu Phân Công
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,246 @@
+@{
+    ViewData["Title"] = "Bảng Điều Hành - Hiệu Trưởng";
+    var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Thầy/Cô Hiệu Trưởng";
+}
+
+<!-- Greeting Banner kiểu EIMS -->
+<div class="greeting-banner">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> TRANG CHỦ HIỆU TRƯỞNG
+        </span>
+        <h1 class="greeting-title">Xin chào, @displayName</h1>
+        <p class="greeting-subtitle">
+            Hệ thống giám sát tổng quan tình hình đào tạo, chuyên cần, nề nếp kỷ luật và đội ngũ nhân sự toàn trường.
+        </p>
+    </div>
+    <div class="live-clock-card">
+        <div class="clock-info text-end">
+            <div class="clock-date" id="liveClockDate">Đang đồng bộ...</div>
+            <div class="clock-time" id="liveClockTime">--:--:--</div>
+        </div>
+        <div class="clock-icon-box">
+            <i class="bi bi-clock"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Section 1: KPI & Chỉ số hoạt động -->
+<div class="dashboard-section-header">
+    <div class="section-title-wrap">
+        <h2>Chỉ số hoạt động & Thống kê toàn trường</h2>
+        <p>Tổng hợp nhanh dữ liệu mới nhất về quy mô học sinh, chuyên cần và đội ngũ nhân sự.</p>
+    </div>
+    <div class="section-right-meta">
+        <i class="bi bi-arrow-repeat me-1"></i>Cập nhật tự động theo thời gian thực
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Card 1: Tổng học sinh -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-blue">
+                <i class="bi bi-people-fill"></i>
+            </span>
+            <div class="stat-kicker">QUY MÔ NHÀ TRƯỜNG</div>
+            <div class="stat-title">Tổng số học sinh</div>
+            <div class="stat-main">
+                <div class="stat-number">1,450</div>
+                <div class="stat-label">Học sinh đang theo học chính quy</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-blue">K10: 520</div>
+                <div class="breakdown-pill pill-blue">K11: 480</div>
+                <div class="breakdown-pill pill-blue">K12: 450</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Chuyên cần hôm nay -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-green">
+                <i class="bi bi-calendar2-check-fill"></i>
+            </span>
+            <div class="stat-kicker">CHUYÊN CẦN HÔM NAY</div>
+            <div class="stat-title">Tỷ lệ hiện diện toàn trường</div>
+            <div class="stat-main">
+                <div class="stat-number">98.4%</div>
+                <div class="stat-label">1,427 / 1,450 học sinh có mặt</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-green">Có mặt: 1,427</div>
+                <div class="breakdown-pill pill-yellow">Có phép: 19</div>
+                <div class="breakdown-pill pill-red">K.phép: 4</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Đội ngũ cán bộ -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-orange">
+                <i class="bi bi-person-workspace"></i>
+            </span>
+            <div class="stat-kicker">ĐỘI NGŨ SƯ PHẠM</div>
+            <div class="stat-title">Cán bộ & Giáo viên</div>
+            <div class="stat-main">
+                <div class="stat-number">86</div>
+                <div class="stat-label">Cán bộ, giáo viên và nhân viên</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-green">Đang dạy: 68</div>
+                <div class="breakdown-pill pill-blue">Hành chính: 14</div>
+                <div class="breakdown-pill pill-yellow">Nghỉ: 4</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Lớp học vận hành -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-purple">
+                <i class="bi bi-building-check"></i>
+            </span>
+            <div class="stat-kicker">LỚP HỌC & PHÒNG HỌC</div>
+            <div class="stat-title">Lớp học đang vận hành</div>
+            <div class="stat-main">
+                <div class="stat-number">36 / 36</div>
+                <div class="stat-label">100% phòng học đang sử dụng chuẩn</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-blue">Khối 10: 12 lớp</div>
+                <div class="breakdown-pill pill-blue">Khối 11: 12 lớp</div>
+                <div class="breakdown-pill pill-blue">Khối 12: 12 lớp</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 2: Bảng dữ liệu tác vụ -->
+<!-- Table 1: Tình hình chuyên cần theo khối -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Tình hình chuyên cần theo khối học hôm nay</h2>
+            <p class="table-card-subtitle">Dữ liệu ghi nhận từ hệ thống điểm danh tự động của giáo viên bộ môn và chủ nhiệm.</p>
+        </div>
+        <span class="table-counter-badge">Tổng số: 3 Khối (36 Lớp)</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 80px;" class="text-center">STT</th>
+                    <th>Khối Lớp</th>
+                    <th class="text-center">Tổng Sĩ Số</th>
+                    <th class="text-center">Hiện Diện</th>
+                    <th class="text-center">Vắng Có Phép</th>
+                    <th class="text-center">Vắng Không Phép</th>
+                    <th class="text-center">Tỷ Lệ Chuyên Cần</th>
+                    <th class="text-center">Đánh Giá</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center">1</td>
+                    <td><strong>Khối 10</strong> (12 Lớp: 10A1 - 10A12)</td>
+                    <td class="text-center">520</td>
+                    <td class="text-center fw-bold text-success">514</td>
+                    <td class="text-center text-warning fw-semibold">5</td>
+                    <td class="text-center text-danger fw-semibold">1</td>
+                    <td class="text-center"><span class="fw-bold">98.8%</span></td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success">Đạt chuẩn xuất sắc</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center">2</td>
+                    <td><strong>Khối 11</strong> (12 Lớp: 11A1 - 11A12)</td>
+                    <td class="text-center">480</td>
+                    <td class="text-center fw-bold text-success">472</td>
+                    <td class="text-center text-warning fw-semibold">6</td>
+                    <td class="text-center text-danger fw-semibold">2</td>
+                    <td class="text-center"><span class="fw-bold">98.3%</span></td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success">Đạt chuẩn tốt</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center">3</td>
+                    <td><strong>Khối 12</strong> (12 Lớp: 12A1 - 12A12)</td>
+                    <td class="text-center">450</td>
+                    <td class="text-center fw-bold text-success">441</td>
+                    <td class="text-center text-warning fw-semibold">8</td>
+                    <td class="text-center text-danger fw-semibold">1</td>
+                    <td class="text-center"><span class="fw-bold">98.0%</span></td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success">Đạt chuẩn tốt</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Table 2: Báo cáo nề nếp & Kỷ luật mới nhất -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Báo cáo nề nếp & Sự vụ kỷ luật cần lưu ý trong tuần</h2>
+            <p class="table-card-subtitle">Các trường hợp cần sự can thiệp, giám sát hoặc phê duyệt từ Ban Giám Hiệu.</p>
+        </div>
+        <span class="table-counter-badge">Ghi nhận: 3 vụ việc</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 80px;" class="text-center">STT</th>
+                    <th>Thời Gian</th>
+                    <th>Học Sinh / Lớp</th>
+                    <th>Nội Dung Sự Việc</th>
+                    <th>Hình Thức Xử Lý Đề Xuất</th>
+                    <th>Cán Bộ Báo Cáo</th>
+                    <th class="text-center">Trạng Thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center">1</td>
+                    <td>18/09/2026 - 08:30</td>
+                    <td><strong>Trần Văn Nam</strong> (Lớp 11A3)</td>
+                    <td>Đi học muộn 3 lần trong tuần, không mặc đúng đồng phục quy định</td>
+                    <td>Nhắc nhở trước lớp & thông báo phụ huynh</td>
+                    <td>Thầy Nguyễn Văn Bình (GVCN)</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-warning">Chờ trao đổi PH</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center">2</td>
+                    <td>17/09/2026 - 14:15</td>
+                    <td><strong>Lê Hoàng Long</strong> (Lớp 12A5)</td>
+                    <td>Sử dụng điện thoại chơi game trong giờ học môn Vật Lý</td>
+                    <td>Tạm giữ thiết bị đến hết ngày & viết bản tự kiểm điểm</td>
+                    <td>Cô Trần Thị Mai (GVBM)</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success">Đã giải quyết</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center">3</td>
+                    <td>16/09/2026 - 09:45</td>
+                    <td><strong>Tập thể Lớp 10A2</strong></td>
+                    <td>Khen thưởng: Đạt giải Nhất phong trào thi đua nề nếp và vệ sinh trường học</td>
+                    <td>Tuyên dương trước toàn trường trong tiết Chào cờ</td>
+                    <td>Đoàn Thanh Niên THPT</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-info">Đã phê duyệt</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

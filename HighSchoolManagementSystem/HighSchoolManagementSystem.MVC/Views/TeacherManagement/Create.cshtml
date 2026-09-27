@@ -1,0 +1,172 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Teacher.CreateTeacherViewModel
+@{
+    ViewData["Title"] = "Thêm Mới Giáo Viên";
+    var specializations = ViewBag.Specializations as List<string> ?? new List<string>();
+}
+
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-person-plus-fill me-1"></i> NHÂN SỰ • KHỞI TẠO HỒ SƠ
+        </span>
+        <h1 class="greeting-title">Thêm Mới Giáo Viên</h1>
+        <p class="greeting-subtitle">
+            Tạo tài khoản giáo viên mới, thiết lập tổ bộ môn chuyên môn và định mức giờ dạy trong tuần.
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a asp-action="Index" class="btn btn-secondary px-3 py-2 shadow-sm">
+            <i class="bi bi-arrow-left"></i>
+            <span>Quay Lại Danh Sách</span>
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-10">
+        <div class="edu-card shadow-sm">
+            <div class="edu-card-header">
+                <h2 class="edu-card-title">
+                    <i class="bi bi-file-earmark-person-fill text-primary me-2"></i>Biểu Mẫu Thông Tin Giáo Viên
+                </h2>
+            </div>
+
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4" role="alert"></div>
+
+                <div class="p-3 bg-light rounded-3 border mb-4">
+                    <h5 class="fw-bold text-primary mb-3">
+                        <i class="bi bi-shield-lock-fill me-2"></i>1. Thông Tin Tài Khoản & Định Danh
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <label asp-for="TeacherCode" class="form-label">Mã giáo viên <span class="text-danger">*</span></label>
+                            <input asp-for="TeacherCode" class="form-control text-uppercase font-monospace fw-bold" 
+                                   placeholder="VD: GV003, GV004..." autofocus />
+                            <span asp-validation-for="TeacherCode" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="Username" class="form-label">Tên đăng nhập <span class="text-danger">*</span></label>
+                            <input asp-for="Username" class="form-control font-monospace" 
+                                   placeholder="VD: gv_nguyenvanan..." />
+                            <span asp-validation-for="Username" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="Password" class="form-label">Mật khẩu khởi tạo</label>
+                            <input asp-for="Password" class="form-control" 
+                                   placeholder="Để trống: Teacher@123" />
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-light rounded-3 border mb-4">
+                    <h5 class="fw-bold text-primary mb-3">
+                        <i class="bi bi-person-badge-fill me-2"></i>2. Thông Tin Cá Nhân & Liên Lạc
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label asp-for="FullName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                            <input asp-for="FullName" class="form-control" placeholder="VD: Thầy Nguyễn Văn A..." />
+                            <span asp-validation-for="FullName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Email" class="form-label">Email cơ quan / liên lạc <span class="text-danger">*</span></label>
+                            <input asp-for="Email" class="form-control" placeholder="VD: nguyenvanan@thpt.edu.vn..." />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="PhoneNumber" class="form-label">Số điện thoại</label>
+                            <input asp-for="PhoneNumber" class="form-control font-monospace" placeholder="0912345678" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="Gender" class="form-label">Giới tính</label>
+                            <select asp-for="Gender" class="form-select">
+                                <option value="Nam">Nam</option>
+                                <option value="Nữ">Nữ</option>
+                                <option value="Khác">Khác</option>
+                            </select>
+                            <span asp-validation-for="Gender" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="DateOfBirth" class="form-label">Ngày sinh</label>
+                            <input asp-for="DateOfBirth" type="date" class="form-control" />
+                            <span asp-validation-for="DateOfBirth" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-light rounded-3 border mb-4">
+                    <h5 class="fw-bold text-primary mb-3">
+                        <i class="bi bi-mortarboard-fill me-2"></i>3. Chuyên Môn & Công Tác
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Specialization" class="form-label">Tổ bộ môn chuyên môn <span class="text-danger">*</span></label>
+                            <select asp-for="Specialization" class="form-select">
+                                <option value="">-- Chọn tổ chuyên môn --</option>
+                                @foreach (var spec in specializations)
+                                {
+                                    <option value="@spec">@spec</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Specialization" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Qualification" class="form-label">Trình độ / Bằng cấp</label>
+                            <input asp-for="Qualification" class="form-control" placeholder="VD: Thạc sĩ Sư phạm, Cử nhân Sư phạm..." />
+                            <span asp-validation-for="Qualification" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="HireDate" class="form-label">Ngày vào trường</label>
+                            <input asp-for="HireDate" type="date" class="form-control" />
+                            <span asp-validation-for="HireDate" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="MaxPeriodsPerWeek" class="form-label">Định mức tiết dạy / tuần</label>
+                            <div class="input-group">
+                                <input asp-for="MaxPeriodsPerWeek" class="form-control" min="1" max="40" />
+                                <span class="input-group-text bg-light">tiết/tuần</span>
+                            </div>
+                            <span asp-validation-for="MaxPeriodsPerWeek" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="Status" class="form-label">Trạng thái công tác</label>
+                            <select asp-for="Status" class="form-select">
+                                <option value="Active">Đang công tác (Active)</option>
+                                <option value="Inactive">Tạm dừng công tác (Inactive)</option>
+                            </select>
+                            <span asp-validation-for="Status" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+                    <a asp-action="Index" class="btn btn-secondary px-4">
+                        <i class="bi bi-x-circle me-1"></i> Hủy Bỏ
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                        <i class="bi bi-check-circle-fill me-1"></i> Lưu Hồ Sơ Giáo Viên
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

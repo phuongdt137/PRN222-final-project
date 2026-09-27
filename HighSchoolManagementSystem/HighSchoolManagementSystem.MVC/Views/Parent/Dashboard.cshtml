@@ -1,0 +1,247 @@
+@{
+    ViewData["Title"] = "Bảng Thông Tin - Phụ Huynh";
+    var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Quý Phụ Huynh";
+}
+
+<!-- Greeting Banner kiểu EIMS -->
+<div class="greeting-banner">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> TRANG CHỦ PHỤ HUYNH
+        </span>
+        <h1 class="greeting-title">Xin chào, @displayName</h1>
+        <p class="greeting-subtitle">
+            Kênh liên lạc trực tiếp giữa gia đình và nhà trường • Theo dõi học sinh: <strong>Nguyễn Văn A</strong> (Lớp 10A1) • GVCN: Thầy Nguyễn Văn Nam (SĐT: 0988.123.456).
+        </p>
+    </div>
+    <div class="live-clock-card">
+        <div class="clock-info text-end">
+            <div class="clock-date" id="liveClockDate">Đang đồng bộ...</div>
+            <div class="clock-time" id="liveClockTime">--:--:--</div>
+        </div>
+        <div class="clock-icon-box">
+            <i class="bi bi-clock"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Section 1: KPI & Chỉ số theo dõi của con -->
+<div class="dashboard-section-header">
+    <div class="section-title-wrap">
+        <h2>Tổng quan học tập & Chuyên cần của con em</h2>
+        <p>Cập nhật số liệu điểm số, tình trạng điểm danh và rèn luyện của học sinh trong học kỳ hiện tại.</p>
+    </div>
+    <div class="section-right-meta">
+        <i class="bi bi-arrow-repeat me-1"></i>Cập nhật tự động theo thời gian thực
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Card 1: Học sinh theo dõi -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-blue">
+                <i class="bi bi-person-badge-fill"></i>
+            </span>
+            <div class="stat-kicker">HỒ SƠ HỌC SINH</div>
+            <div class="stat-title">Nguyễn Văn A</div>
+            <div class="stat-main">
+                <div class="stat-number" style="font-size: 22px;">Lớp 10A1</div>
+                <div class="stat-label">Mã học sinh: <strong>HS-10024</strong></div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-blue">Sĩ số: 45 em</div>
+                <div class="breakdown-pill pill-blue">GVCN: Thầy Nam</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Điểm TB tích lũy -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-green">
+                <i class="bi bi-mortarboard-fill"></i>
+            </span>
+            <div class="stat-kicker">KẾT QUẢ HỌC TẬP</div>
+            <div class="stat-title">Điểm TB tích lũy (GPA)</div>
+            <div class="stat-main">
+                <div class="stat-number">8.4</div>
+                <div class="stat-label">Xếp thứ <strong>5 / 45</strong> trong lớp (Học lực Giỏi)</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-green">Toán: 8.8</div>
+                <div class="breakdown-pill pill-blue">Văn: 8.0</div>
+                <div class="breakdown-pill pill-blue">Anh: 8.5</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Chuyên cần của con -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-orange">
+                <i class="bi bi-calendar2-check-fill"></i>
+            </span>
+            <div class="stat-kicker">CHUYÊN CẦN CỦA CON</div>
+            <div class="stat-title">Tỷ lệ hiện diện tháng</div>
+            <div class="stat-main">
+                <div class="stat-number">98.0%</div>
+                <div class="stat-label">21 / 22 buổi học đã tham gia</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-green">Có mặt: 21</div>
+                <div class="breakdown-pill pill-yellow">Có phép: 1</div>
+                <div class="breakdown-pill pill-red">K.phép: 0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Hạnh kiểm & Rèn luyện -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-purple">
+                <i class="bi bi-patch-check-fill"></i>
+            </span>
+            <div class="stat-kicker">RÈN LUYỆN & NỀ NẾP</div>
+            <div class="stat-title">Đánh giá hạnh kiểm</div>
+            <div class="stat-main">
+                <div class="stat-number">Tốt</div>
+                <div class="stat-label">Điểm rèn luyện: 92/100 (Tích cực)</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-green">Đi học: Đúng giờ</div>
+                <div class="breakdown-pill pill-blue">Đồng phục: Chuẩn</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 2: Bảng dữ liệu tác vụ -->
+<!-- Table 1: Lịch học hôm nay & Điểm danh -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Lịch học hôm nay & Tình trạng điểm danh của con</h2>
+            <p class="table-card-subtitle">Hệ thống đồng bộ trực tiếp khi giáo viên hoàn tất điểm danh trên lớp.</p>
+        </div>
+        <span class="table-counter-badge">Buổi sáng • 5 tiết</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 80px;" class="text-center">Tiết</th>
+                    <th>Thời Gian</th>
+                    <th>Môn Học</th>
+                    <th>Giáo Viên Giảng Dạy</th>
+                    <th>Phòng Học</th>
+                    <th class="text-center">Tình Trạng Có Mặt</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 1</td>
+                    <td>07:00 - 07:45</td>
+                    <td><strong>Toán Đại Số</strong></td>
+                    <td>Thầy Nguyễn Văn Nam (GVCN)</td>
+                    <td>Phòng 201</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success"><i class="bi bi-check-circle-fill me-1"></i>Có mặt đúng giờ</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 2</td>
+                    <td>07:50 - 08:35</td>
+                    <td><strong>Toán Hình Học</strong></td>
+                    <td>Thầy Nguyễn Văn Nam</td>
+                    <td>Phòng 201</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success"><i class="bi bi-check-circle-fill me-1"></i>Có mặt</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 3</td>
+                    <td>08:45 - 09:30</td>
+                    <td><strong>Ngữ Văn</strong></td>
+                    <td>Cô Lê Thị Hồng</td>
+                    <td>Phòng 201</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-info"><i class="bi bi-hourglass-split me-1"></i>Sắp diễn ra</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 4</td>
+                    <td>09:35 - 10:20</td>
+                    <td><strong>Tiếng Anh</strong></td>
+                    <td>Cô Nguyễn Thị Mai</td>
+                    <td>Phòng Lab-2</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-info"><i class="bi bi-clock me-1"></i>Chưa bắt đầu</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 5</td>
+                    <td>10:30 - 11:15</td>
+                    <td><strong>Vật Lý</strong></td>
+                    <td>Thầy Trần Quốc Huy</td>
+                    <td>Phòng 201</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-info"><i class="bi bi-clock me-1"></i>Chưa bắt đầu</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Table 2: Sổ liên lạc điện tử -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Sổ liên lạc điện tử & Nhận xét từ Giáo viên chủ nhiệm</h2>
+            <p class="table-card-subtitle">Kênh tiếp nhận trao đổi giữa giáo viên và phụ huynh học sinh.</p>
+        </div>
+        <span class="table-counter-badge">Mới nhất: 2 lời nhắn</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 140px;">Thời Gian</th>
+                    <th style="width: 180px;">Người Gửi</th>
+                    <th>Nội Dung Trao Đổi / Đánh Giá</th>
+                    <th class="text-center" style="width: 130px;">Trạng Thái</th>
+                    <th class="text-center" style="width: 150px;">Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>16/09/2026 - 17:30</td>
+                    <td><strong>Thầy Nguyễn Văn Nam</strong><br /><small class="text-muted">GVCN Lớp 10A1</small></td>
+                    <td>Em Văn A tuần này rất tích cực phát biểu xây dựng bài trong các tiết Toán. Điểm kiểm tra 15 phút đạt 9.0 điểm, kính báo phụ huynh cùng động viên em phát huy.</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success">Đã đọc</span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-chat-left-dots me-1"></i>Phản hồi
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>10/09/2026 - 08:00</td>
+                    <td><strong>Ban Giám Hiệu</strong><br /><small class="text-muted">Thông báo chung</small></td>
+                    <td>Thông báo kế hoạch họp phụ huynh đầu năm học 2026 - 2027 vào lúc 08:00 Chủ Nhật ngày 27/09/2026 tại phòng học 201. Kính mời quý phụ huynh thu xếp thời gian tham dự.</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-info">Thông báo</span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                            <i class="bi bi-check2-circle me-1"></i>Xác nhận
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

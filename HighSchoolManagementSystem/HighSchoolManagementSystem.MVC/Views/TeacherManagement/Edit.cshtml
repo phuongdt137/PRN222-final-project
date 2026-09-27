@@ -1,0 +1,176 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Teacher.EditTeacherViewModel
+@{
+    ViewData["Title"] = "Chỉnh Sửa Giáo Viên: " + Model.FullName;
+    var specializations = ViewBag.Specializations as List<string> ?? new List<string>();
+}
+
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-pencil-square me-1"></i> NHÂN SỰ • CẬP NHẬT HỒ SƠ
+        </span>
+        <h1 class="greeting-title">Chỉnh Sửa: @Model.FullName</h1>
+        <p class="greeting-subtitle">
+            Mã định danh: <strong class="font-monospace text-primary">@Model.TeacherCode</strong> • Cập nhật thông tin cá nhân và định mức giảng dạy.
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary px-3 py-2 shadow-sm">
+            <i class="bi bi-eye"></i>
+            <span>Xem Chi Tiết</span>
+        </a>
+        <a asp-action="Index" class="btn btn-secondary px-3 py-2 shadow-sm">
+            <i class="bi bi-arrow-left"></i>
+            <span>Quay Lại</span>
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-xl-10">
+        <div class="edu-card shadow-sm">
+            <div class="edu-card-header">
+                <h2 class="edu-card-title">
+                    <i class="bi bi-pencil-fill text-primary me-2"></i>Thông Tin Chỉnh Sửa
+                </h2>
+            </div>
+
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="UserId" />
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4" role="alert"></div>
+
+                <div class="p-3 bg-light rounded-3 border mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-secondary mb-0">
+                            <i class="bi bi-person-badge-fill me-2"></i>1. Thông Tin Định Danh & Cá Nhân
+                        </h5>
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+                            <i class="bi bi-lock-fill me-1"></i>Chỉ xem (Không được phép sửa)
+                        </span>
+                    </div>
+
+                    <input type="hidden" asp-for="TeacherCode" />
+                    <input type="hidden" asp-for="FullName" />
+                    <input type="hidden" asp-for="Email" />
+                    <input type="hidden" asp-for="PhoneNumber" />
+                    <input type="hidden" asp-for="Gender" />
+                    <input type="hidden" asp-for="DateOfBirth" />
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-muted small fw-semibold">
+                                <i class="bi bi-lock me-1"></i>Mã giáo viên
+                            </label>
+                            <input value="@Model.TeacherCode" class="form-control text-uppercase font-monospace fw-bold bg-white text-muted" readonly tabindex="-1" style="cursor: not-allowed;" />
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-muted small fw-semibold">
+                                <i class="bi bi-lock me-1"></i>Họ và tên
+                            </label>
+                            <input value="@Model.FullName" class="form-control bg-white text-muted fw-semibold" readonly tabindex="-1" style="cursor: not-allowed;" />
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-muted small fw-semibold">
+                                <i class="bi bi-lock me-1"></i>Email cơ quan / liên lạc
+                            </label>
+                            <input value="@Model.Email" class="form-control bg-white text-muted" readonly tabindex="-1" style="cursor: not-allowed;" />
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-muted small fw-semibold">
+                                <i class="bi bi-lock me-1"></i>Số điện thoại
+                            </label>
+                            <input value="@(string.IsNullOrEmpty(Model.PhoneNumber) ? "Chưa cập nhật" : Model.PhoneNumber)" class="form-control font-monospace bg-white text-muted" readonly tabindex="-1" style="cursor: not-allowed;" />
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-muted small fw-semibold">
+                                <i class="bi bi-lock me-1"></i>Giới tính
+                            </label>
+                            <input value="@(Model.Gender ?? "Chưa rõ")" class="form-control bg-white text-muted" readonly tabindex="-1" style="cursor: not-allowed;" />
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-muted small fw-semibold">
+                                <i class="bi bi-lock me-1"></i>Ngày sinh
+                            </label>
+                            <input value="@(Model.DateOfBirth?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")" class="form-control bg-white text-muted" readonly tabindex="-1" style="cursor: not-allowed;" />
+                        </div>
+                    </div>
+
+                    <div class="small text-muted mt-3 pt-2 border-top">
+                        <i class="bi bi-info-circle me-1 text-primary"></i>
+                        Thông tin danh tính và tài khoản thuộc quyền quản trị tài khoản cá nhân. Nhân viên phụ trách chỉ được phép điều chỉnh phân công, tổ chuyên môn và định mức tiết dạy ở Mục 2.
+                    </div>
+                </div>
+
+                <div class="p-3 bg-light rounded-3 border mb-4">
+                    <h5 class="fw-bold text-primary mb-3">
+                        <i class="bi bi-mortarboard-fill me-2"></i>2. Chuyên Môn & Công Tác
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Specialization" class="form-label">Tổ bộ môn chuyên môn <span class="text-danger">*</span></label>
+                            <select asp-for="Specialization" class="form-select">
+                                <option value="">-- Chọn tổ chuyên môn --</option>
+                                @foreach (var spec in specializations)
+                                {
+                                    <option value="@spec" selected="@(Model.Specialization == spec)">@spec</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Specialization" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Qualification" class="form-label">Trình độ / Bằng cấp</label>
+                            <input asp-for="Qualification" class="form-control" />
+                            <span asp-validation-for="Qualification" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="HireDate" class="form-label">Ngày vào trường</label>
+                            <input asp-for="HireDate" type="date" class="form-control" />
+                            <span asp-validation-for="HireDate" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="MaxPeriodsPerWeek" class="form-label">Định mức tiết dạy / tuần</label>
+                            <div class="input-group">
+                                <input asp-for="MaxPeriodsPerWeek" class="form-control" min="1" max="40" />
+                                <span class="input-group-text bg-light">tiết/tuần</span>
+                            </div>
+                            <span asp-validation-for="MaxPeriodsPerWeek" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label asp-for="Status" class="form-label">Trạng thái công tác</label>
+                            <select asp-for="Status" class="form-select">
+                                <option value="Active">Đang công tác (Active)</option>
+                                <option value="Inactive">Tạm dừng công tác (Inactive)</option>
+                            </select>
+                            <span asp-validation-for="Status" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+                    <a asp-action="Index" class="btn btn-secondary px-4">
+                        <i class="bi bi-x-circle me-1"></i> Hủy Bỏ
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                        <i class="bi bi-check-circle-fill me-1"></i> Lưu Thay Đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,260 @@
+@{
+    ViewData["Title"] = "Bảng Học Tập - Học Sinh";
+    var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Em Học Sinh";
+}
+
+<!-- Greeting Banner kiểu EIMS -->
+<div class="greeting-banner">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> TRANG CHỦ HỌC SINH
+        </span>
+        <h1 class="greeting-title">Xin chào, @displayName</h1>
+        <p class="greeting-subtitle">
+            Học sinh Lớp 10A1 • Mã học sinh: HS-10024 • Năm học 2026 - 2027. Chúc em có một ngày học tập hiệu quả!
+        </p>
+    </div>
+    <div class="live-clock-card">
+        <div class="clock-info text-end">
+            <div class="clock-date" id="liveClockDate">Đang đồng bộ...</div>
+            <div class="clock-time" id="liveClockTime">--:--:--</div>
+        </div>
+        <div class="clock-icon-box">
+            <i class="bi bi-clock"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Section 1: KPI & Chỉ số học tập -->
+<div class="dashboard-section-header">
+    <div class="section-title-wrap">
+        <h2>Chỉ số học tập & Tình hình rèn luyện cá nhân</h2>
+        <p>Theo dõi nhanh tiến độ môn học, chuyên cần và kết quả kiểm tra định kỳ của em.</p>
+    </div>
+    <div class="section-right-meta">
+        <i class="bi bi-arrow-repeat me-1"></i>Cập nhật tự động theo thời gian thực
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Card 1: Điểm TB -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-blue">
+                <i class="bi bi-mortarboard-fill"></i>
+            </span>
+            <div class="stat-kicker">KẾT QUẢ HỌC TẬP</div>
+            <div class="stat-title">Điểm trung bình (GPA)</div>
+            <div class="stat-main">
+                <div class="stat-number">8.4</div>
+                <div class="stat-label">Xếp loại học lực: <strong>Giỏi</strong></div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-blue">Toán: 8.8</div>
+                <div class="breakdown-pill pill-blue">Văn: 8.0</div>
+                <div class="breakdown-pill pill-blue">Anh: 8.5</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Lịch học hôm nay -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-green">
+                <i class="bi bi-book-half"></i>
+            </span>
+            <div class="stat-kicker">LỊCH HỌC HÔM NAY</div>
+            <div class="stat-title">Tiết học trong ngày</div>
+            <div class="stat-main">
+                <div class="stat-number">5 tiết</div>
+                <div class="stat-label">Lớp 10A1 (Buổi sáng)</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-green">Xong: 1 tiết</div>
+                <div class="breakdown-pill pill-blue">Đang học: 1</div>
+                <div class="breakdown-pill pill-yellow">Còn lại: 3</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Chuyên cần cá nhân -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-orange">
+                <i class="bi bi-calendar2-check-fill"></i>
+            </span>
+            <div class="stat-kicker">CHUYÊN CẦN CÁ NHÂN</div>
+            <div class="stat-title">Tỷ lệ hiện diện tháng</div>
+            <div class="stat-main">
+                <div class="stat-number">98.0%</div>
+                <div class="stat-label">21 / 22 buổi học đã tham gia</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-green">Có mặt: 21</div>
+                <div class="breakdown-pill pill-yellow">Có phép: 1</div>
+                <div class="breakdown-pill pill-red">K.phép: 0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Rèn luyện & Hạnh kiểm -->
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="stat-card-eims">
+            <span class="stat-icon-badge badge-purple">
+                <i class="bi bi-award-fill"></i>
+            </span>
+            <div class="stat-kicker">RÈN LUYỆN & NỀ NẾP</div>
+            <div class="stat-title">Xếp loại hạnh kiểm</div>
+            <div class="stat-main">
+                <div class="stat-number">Tốt</div>
+                <div class="stat-label">Điểm rèn luyện dự kiến: 92/100</div>
+            </div>
+            <div class="stat-breakdown-bar">
+                <div class="breakdown-pill pill-green">Nề nếp: Xuất sắc</div>
+                <div class="breakdown-pill pill-blue">Ngoại khóa: Tích cực</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 2: Bảng dữ liệu tác vụ -->
+<!-- Table 1: Thời khóa biểu hôm nay -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Thời khóa biểu các tiết học hôm nay</h2>
+            <p class="table-card-subtitle">Phòng học 201 • Buổi sáng bắt đầu từ 07:00 đến 11:15.</p>
+        </div>
+        <span class="table-counter-badge">5 tiết học</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 80px;" class="text-center">Tiết</th>
+                    <th>Thời Gian</th>
+                    <th>Môn Học</th>
+                    <th>Giáo Viên Giảng Dạy</th>
+                    <th>Phòng Học</th>
+                    <th class="text-center">Trạng Thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 1</td>
+                    <td>07:00 - 07:45</td>
+                    <td><strong>Toán Đại Số</strong></td>
+                    <td>Thầy Nguyễn Văn Nam (GVCN)</td>
+                    <td>Phòng 201</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success"><i class="bi bi-check-circle me-1"></i>Đã hoàn thành</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 2</td>
+                    <td>07:50 - 08:35</td>
+                    <td><strong>Toán Hình Học</strong></td>
+                    <td>Thầy Nguyễn Văn Nam</td>
+                    <td>Phòng 201</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-success"><i class="bi bi-play-circle me-1"></i>Đang học</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 3</td>
+                    <td>08:45 - 09:30</td>
+                    <td><strong>Ngữ Văn</strong></td>
+                    <td>Cô Lê Thị Hồng</td>
+                    <td>Phòng 201</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-warning"><i class="bi bi-hourglass me-1"></i>Sắp diễn ra</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 4</td>
+                    <td>09:35 - 10:20</td>
+                    <td><strong>Tiếng Anh</strong></td>
+                    <td>Cô Nguyễn Thị Mai</td>
+                    <td>Phòng Lab-2</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-info"><i class="bi bi-clock me-1"></i>Chưa bắt đầu</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="text-center fw-bold">Tiết 5</td>
+                    <td>10:30 - 11:15</td>
+                    <td><strong>Vật Lý</strong></td>
+                    <td>Thầy Trần Quốc Huy</td>
+                    <td>Phòng 201</td>
+                    <td class="text-center">
+                        <span class="badge-status badge-status-info"><i class="bi bi-clock me-1"></i>Chưa bắt đầu</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Table 2: Điểm số gần đây -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Kết quả điểm số các bài kiểm tra vừa cập nhật</h2>
+            <p class="table-card-subtitle">Điểm số chính thức đã được giáo viên bộ môn ghi nhận vào sổ điểm điện tử.</p>
+        </div>
+        <span class="table-counter-badge">Gần nhất: 4 bài kiểm tra</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 80px;" class="text-center">STT</th>
+                    <th>Môn Học</th>
+                    <th>Loại Bài Kiểm Tra</th>
+                    <th class="text-center">Hệ Số</th>
+                    <th class="text-center">Điểm Số</th>
+                    <th>Ngày Công Bố</th>
+                    <th>Nhận Xét Của Giáo Viên</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="text-center">1</td>
+                    <td><strong>Toán Đại Số</strong></td>
+                    <td>Kiểm tra 15 phút (Đợt 1)</td>
+                    <td class="text-center">1</td>
+                    <td class="text-center fw-bold text-success" style="font-size: 15px;">9.0</td>
+                    <td>16/09/2026</td>
+                    <td>Làm bài cẩn thận, trình bày mạch lạc và tư duy tốt.</td>
+                </tr>
+                <tr>
+                    <td class="text-center">2</td>
+                    <td><strong>Ngữ Văn</strong></td>
+                    <td>Kiểm tra miệng</td>
+                    <td class="text-center">1</td>
+                    <td class="text-center fw-bold text-success" style="font-size: 15px;">8.5</td>
+                    <td>14/09/2026</td>
+                    <td>Nắm chắc tác phẩm, trả lời lưu loát tự tin.</td>
+                </tr>
+                <tr>
+                    <td class="text-center">3</td>
+                    <td><strong>Tiếng Anh</strong></td>
+                    <td>Từ vựng & Ngữ pháp (15 phút)</td>
+                    <td class="text-center">1</td>
+                    <td class="text-center fw-bold text-success" style="font-size: 15px;">8.0</td>
+                    <td>12/09/2026</td>
+                    <td>Cần chú ý thêm phần phát âm đuôi ed và s/es.</td>
+                </tr>
+                <tr>
+                    <td class="text-center">4</td>
+                    <td><strong>Vật Lý</strong></td>
+                    <td>Kiểm tra 15 phút</td>
+                    <td class="text-center">1</td>
+                    <td class="text-center fw-bold" style="font-size: 15px;">7.5</td>
+                    <td>10/09/2026</td>
+                    <td>Áp dụng đúng công thức, chú ý đổi đơn vị cẩn thận hơn.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
