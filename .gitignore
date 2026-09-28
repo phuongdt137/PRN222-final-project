@@ -52,12 +52,6 @@ CodeCoverage/
 [Bb]uild[Ll]og.*
 
 # NUnit
-# Visual Studio
-.vs/
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
-
-# Scratch
-scratch/
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml

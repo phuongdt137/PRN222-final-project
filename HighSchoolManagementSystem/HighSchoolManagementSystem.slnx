@@ -1,6 +1,0 @@
-<Solution>
-  <Project Path="HighSchoolManagementSystem.Models/HighSchoolManagementSystem.Models.csproj" />
-  <Project Path="HighSchoolManagementSystem.MVC/HighSchoolManagementSystem.MVC.csproj" />
-  <Project Path="HighSchoolManagementSystem.Repositories/HighSchoolManagementSystem.Repositories.csproj" />
-  <Project Path="HighSchoolManagementSystem.Services/HighSchoolManagementSystem.Services.csproj" />
-</Solution>
