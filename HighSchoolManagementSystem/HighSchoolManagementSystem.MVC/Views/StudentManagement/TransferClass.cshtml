@@ -1,0 +1,33 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Student.TransferStudentClassViewModel
+@{ ViewData["Title"] = "Chuyển lớp học sinh"; }
+<div class="greeting-banner mb-4">
+    <div><h1 class="greeting-title">Chuyển lớp học sinh</h1><p class="greeting-subtitle">@Model.Student.StudentCode — @Model.Student.FullName</p></div>
+    <a asp-action="Details" asp-route-id="@Model.Student.Id" class="btn btn-secondary">Quay lại hồ sơ</a>
+</div>
+<div class="edu-card">
+    <div asp-validation-summary="All" class="text-danger mb-3" role="alert"></div>
+    <p>Lớp hiện tại: <strong>@(Model.Student.CurrentClassName ?? "Chưa có phân lớp hợp lệ")</strong> • @Model.Student.CurrentYear</p>
+    <p>Chỉ chuyển sang lớp khác cùng khối trong năm học hiện hành. Lịch sử lớp cũ và kết quả học tập được giữ lại.</p>
+    @if (Model.Student.Status != "Active")
+    {
+        <div class="alert alert-warning">Chỉ chuyển lớp cho học sinh đang học.</div>
+    }
+    else if (!Model.Student.CurrentMembershipId.HasValue)
+    {
+        <div class="alert alert-warning">Học sinh cần có đúng một phân lớp đang học trong năm hiện hành để chuyển lớp.</div>
+    }
+    else if (Model.Classes.Count == 0)
+    {
+        <div class="alert alert-warning">Không có lớp đích cùng khối trong năm học hiện hành.</div>
+    }
+    @if (Model.CanTransfer)
+    {
+        <form asp-action="TransferClass" asp-route-id="@Model.Student.Id" method="post">
+            <input asp-for="MembershipId" type="hidden" />
+            <div class="mb-4"><label asp-for="ClassId" class="form-label">Lớp đích</label><select asp-for="ClassId" asp-items="Model.Classes" class="form-select"><option value="0">— Chọn lớp —</option></select><span asp-validation-for="ClassId" class="text-danger small"></span></div>
+            <button type="submit" class="btn btn-primary">Xác nhận chuyển lớp</button>
+            <a asp-action="TransferClass" asp-route-id="@Model.Student.Id" class="btn btn-outline-secondary">Tải lại phân lớp hiện tại</a>
+        </form>
+    }
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

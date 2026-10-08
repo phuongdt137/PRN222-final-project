@@ -12,7 +12,7 @@
 }
 <div class="edu-card mb-4">
     <form asp-action="Index" method="get" class="row g-3 align-items-end">
-        <div class="col-lg-5"><label asp-for="Search" class="form-label">Tìm học sinh</label><input asp-for="Search" class="form-control" placeholder="Mã học sinh, họ tên, tài khoản, email, số điện thoại" /></div>
+        <div class="col-lg-5"><label asp-for="Search" class="form-label">Tìm học sinh</label><input asp-for="Search" class="form-control" maxlength="100" placeholder="Mã học sinh, họ tên, tài khoản, email, số điện thoại" /></div>
         <div class="col-lg-3"><label asp-for="Status" class="form-label">Trạng thái học sinh</label><select asp-for="Status" class="form-select"><option value="">Tất cả</option><option value="Active">Đang học</option><option value="Inactive">Ngừng học</option><option value="Graduated">Đã tốt nghiệp</option></select></div>
         <div class="col-lg-4"><label asp-for="ClassId" class="form-label">Lớp năm học @(Model.CurrentYear ?? "hiện hành")</label><select asp-for="ClassId" asp-items="Model.Classes" class="form-select"><option value="">Tất cả lớp</option></select></div>
         <div class="col-md-6"><div class="form-check"><input asp-for="UnassignedOnly" class="form-check-input" /><label asp-for="UnassignedOnly" class="form-check-label">Chỉ học sinh chưa được phân lớp trong năm hiện hành</label></div></div>
@@ -20,7 +20,7 @@
     </form>
 </div>
 <div class="card-table-wrap">
-    <div class="card-table-header"><h2 class="table-card-title">Danh sách học sinh</h2><span class="table-counter-badge">@Model.Students.Count kết quả</span></div>
+    <div class="card-table-header"><h2 class="table-card-title">Danh sách học sinh</h2><span class="table-counter-badge">@Model.TotalCount kết quả</span></div>
     <div class="table-responsive"><table class="table-edu mb-0">
         <thead><tr><th>Mã học sinh</th><th>Họ và tên</th><th>Liên hệ</th><th>Lớp hiện hành</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
         <tbody>
@@ -45,9 +45,27 @@
                     {
                         <a asp-action="AssignClass" asp-route-id="@student.Id" class="btn btn-sm btn-outline-primary">Phân lớp</a>
                     }
+                    @if (student.Status == "Active" && student.CurrentMembershipId.HasValue)
+                    {
+                        <a asp-action="TransferClass" asp-route-id="@student.Id" class="btn btn-sm btn-outline-primary">Chuyển lớp</a>
+                    }
                 </div></td>
             </tr>
         }
         </tbody>
     </table></div>
 </div>
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Phân trang học sinh" class="d-flex gap-3 align-items-center mt-3">
+        @if (Model.Page > 1)
+        {
+            <a asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-search="@Model.Search" asp-route-status="@Model.Status" asp-route-classId="@Model.ClassId" asp-route-unassignedOnly="@Model.UnassignedOnly" class="btn btn-outline-primary">Trang trước</a>
+        }
+        <span>Trang @Model.Page / @Model.TotalPages</span>
+        @if (Model.Page < Model.TotalPages)
+        {
+            <a asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-search="@Model.Search" asp-route-status="@Model.Status" asp-route-classId="@Model.ClassId" asp-route-unassignedOnly="@Model.UnassignedOnly" class="btn btn-outline-primary">Trang sau</a>
+        }
+    </nav>
+}

@@ -1,0 +1,62 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Student.StudentAcademicHistoryViewModel
+@{ ViewData["Title"] = "Lịch sử học tập"; }
+<div class="greeting-banner mb-4">
+    <div><h1 class="greeting-title">Lịch sử học tập</h1><p class="greeting-subtitle">@Model.Student.StudentCode — @Model.Student.FullName</p></div>
+    <a asp-action="Details" asp-route-id="@Model.Student.Id" class="btn btn-secondary">Quay lại hồ sơ</a>
+</div>
+<div class="edu-card mb-4">
+    <h2 class="edu-card-title mb-3">Lịch sử phân lớp</h2>
+    <div class="table-responsive"><table class="table-edu">
+        <thead><tr><th>Năm học</th><th>Khối / lớp</th><th>Ngày vào lớp</th><th>Ngày rời lớp</th><th>Trạng thái</th></tr></thead>
+        <tbody>
+        @if (Model.Memberships.Count == 0) { <tr><td colspan="5">Chưa có lịch sử phân lớp.</td></tr> }
+        @foreach (var membership in Model.Memberships)
+        {
+            <tr><td>@membership.Class.AcademicYear.YearCode</td><td>@membership.Class.GradeLevel.LevelName / @membership.Class.ClassName</td>
+                <td>@membership.JoinedAt.AddHours(7).ToString("dd/MM/yyyy HH:mm")</td><td>@(membership.LeftAt?.AddHours(7).ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
+                <td>@(membership.Status switch { "Transferred" => "Đã chuyển lớp", "Enrolled" when membership.LeftAt == null => "Đang theo học", "Enrolled" => "Đã kết thúc", _ => membership.Status })</td></tr>
+        }
+        </tbody>
+    </table></div>
+</div>
+@if (Model.Semesters.Count == 0)
+{
+    <div class="alert alert-info">Chưa có điểm hoặc kết quả học tập được ghi nhận.</div>
+}
+@foreach (var term in Model.Semesters)
+{
+    <section class="edu-card mb-4">
+        <h2 class="edu-card-title mb-3">@term.Semester.AcademicYear.YearCode • @term.Semester.SemesterName</h2>
+        <dl class="row">
+            <dt class="col-sm-3">Điểm trung bình</dt><dd class="col-sm-3">@(term.Report?.Gpa?.ToString("0.00") ?? "Chưa tổng kết")</dd>
+            <dt class="col-sm-3">Xếp loại học lực</dt><dd class="col-sm-3">@(term.Report?.AcademicRank ?? "Chưa tổng kết")</dd>
+            <dt class="col-sm-3">Hạnh kiểm</dt><dd class="col-sm-3">@(term.Report?.ConductGrade ?? term.Conduct?.ConductGrade ?? "Chưa đánh giá")</dd>
+            <dt class="col-sm-3">Xếp hạng trong lớp</dt><dd class="col-sm-3">@(term.Report?.ClassRank?.ToString() ?? "Chưa tổng kết")</dd>
+            <dt class="col-sm-3">Nhận xét</dt><dd class="col-sm-9">@(term.Report?.TeacherComments ?? term.Conduct?.TeacherComment ?? "Chưa có nhận xét")</dd>
+        </dl>
+        <h3 class="h6">Kết quả môn học</h3>
+        <div class="table-responsive"><table class="table-edu mb-4">
+            <thead><tr><th>Môn học</th><th>Điểm trung bình</th><th>Kết quả</th><th>Nhận xét</th></tr></thead>
+            <tbody>
+            @if (term.Subjects.Count == 0) { <tr><td colspan="4">Chưa tổng kết môn học.</td></tr> }
+            @foreach (var subject in term.Subjects)
+            {
+                <tr><td>@subject.Subject.SubjectName</td><td>@(subject.Subject.EvaluationType == "PassFail" ? "Đánh giá đạt / chưa đạt" : subject.AverageScore?.ToString("0.00") ?? "Chưa có điểm")</td><td>@(!subject.AverageScore.HasValue && subject.Subject.EvaluationType != "PassFail" ? "Chưa tổng kết" : subject.IsPassed ? "Đạt" : "Chưa đạt")</td><td>@(subject.Remarks ?? "—")</td></tr>
+            }
+            </tbody>
+        </table></div>
+        <details>
+            <summary class="mb-3">Điểm thành phần (@term.Scores.Count)</summary>
+            <div class="table-responsive"><table class="table-edu">
+                <thead><tr><th>Môn / lớp</th><th>Bài kiểm tra</th><th>Ngày kiểm tra</th><th>Điểm</th><th>Nhận xét</th></tr></thead>
+                <tbody>
+                @if (term.Scores.Count == 0) { <tr><td colspan="5">Chưa có điểm thành phần.</td></tr> }
+                @foreach (var score in term.Scores)
+                {
+                    <tr><td>@score.Assessment.TeachingAssignment.Subject.SubjectName / @score.Assessment.TeachingAssignment.Class.ClassName</td><td>@score.Assessment.AssessmentName</td><td>@(score.Assessment.ConductedAt?.ToString("dd/MM/yyyy") ?? "—")</td><td>@(score.Score?.ToString("0.00") ?? "Chưa có điểm")</td><td>@(score.Comment ?? "—")</td></tr>
+                }
+                </tbody>
+            </table></div>
+        </details>
+    </section>
+}

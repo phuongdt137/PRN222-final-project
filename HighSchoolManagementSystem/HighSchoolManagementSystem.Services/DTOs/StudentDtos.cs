@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using HighSchoolManagementSystem.Services.Common;
 
 namespace HighSchoolManagementSystem.Services.DTOs;
 
@@ -15,7 +16,7 @@ public class UpdateStudentDto : IValidatableObject
     [Required(ErrorMessage = "Vui lòng nhập email."), EmailAddress(ErrorMessage = "Địa chỉ email không hợp lệ."), StringLength(100, ErrorMessage = "Email không được vượt quá 100 ký tự."), Display(Name = "Email")]
     public string Email { get; set; } = string.Empty;
 
-    [StringLength(20, ErrorMessage = "Số điện thoại không được vượt quá 20 ký tự."), RegularExpression(@"^0[1-9]\d{8}$", ErrorMessage = "Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0.")]
+    [StringLength(20, ErrorMessage = "Số điện thoại không được vượt quá 20 ký tự."), RegularExpression(@"^0[1-9][0-9]{8}$", ErrorMessage = "Số điện thoại phải gồm 10 chữ số, bắt đầu bằng 0.")]
     [Display(Name = "Số điện thoại")]
     public string? PhoneNumber { get; set; }
 
@@ -23,6 +24,7 @@ public class UpdateStudentDto : IValidatableObject
     public string? Gender { get; set; }
 
     [DataType(DataType.Date), Display(Name = "Ngày sinh")]
+    [MinimumAge(ProfileAgeRules.StudentMinimumAge, nameof(AdmissionDate), ErrorMessage = ProfileAgeRules.StudentMessage)]
     public DateTime? DateOfBirth { get; set; }
 
     [DataType(DataType.Date), Display(Name = "Ngày nhập học")]
@@ -37,12 +39,16 @@ public class UpdateStudentDto : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (DateOfBirth.HasValue && (DateOfBirth.Value.Year < 1920 || DateOfBirth.Value.Date >= DateTime.UtcNow.Date))
+        if (DateOfBirth.HasValue && (DateOfBirth.Value.Year < 1920 || DateOfBirth.Value.Date >= SchoolDate.Today))
             yield return new ValidationResult("Ngày sinh phải từ năm 1920 và trước ngày hiện tại.", new[] { nameof(DateOfBirth) });
-        if (AdmissionDate.HasValue && (AdmissionDate.Value.Year < 1920 || AdmissionDate.Value.Date > DateTime.UtcNow.Date))
+        if (AdmissionDate.HasValue && (AdmissionDate.Value.Year < 1920 || AdmissionDate.Value.Date > SchoolDate.Today))
             yield return new ValidationResult("Ngày nhập học phải từ năm 1920 và không sau ngày hiện tại.", new[] { nameof(AdmissionDate) });
         if (DateOfBirth.HasValue && AdmissionDate.HasValue && AdmissionDate.Value.Date <= DateOfBirth.Value.Date)
             yield return new ValidationResult("Ngày nhập học phải sau ngày sinh.", new[] { nameof(AdmissionDate) });
+        if (FullName?.Any(char.IsControl) == true)
+            yield return new ValidationResult("Họ và tên không được chứa ký tự điều khiển.", new[] { nameof(FullName) });
+        if (this is CreateStudentDto create && System.Text.Encoding.UTF8.GetByteCount(create.Password ?? "") > 72)
+            yield return new ValidationResult("Mật khẩu không được vượt quá 72 byte UTF-8.", new[] { nameof(CreateStudentDto.Password) });
     }
 }
 
@@ -61,4 +67,10 @@ public class AssignStudentClassDto
 {
     [Range(1, int.MaxValue, ErrorMessage = "Vui lòng chọn lớp học."), Display(Name = "Lớp học")]
     public int ClassId { get; set; }
+}
+
+public class TransferStudentClassDto : AssignStudentClassDto
+{
+    [Range(1, int.MaxValue, ErrorMessage = "Phân lớp hiện tại không hợp lệ. Vui lòng tải lại trang.")]
+    public int MembershipId { get; set; }
 }

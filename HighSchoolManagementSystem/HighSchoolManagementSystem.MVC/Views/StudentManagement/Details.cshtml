@@ -12,6 +12,7 @@
     </div>
 </div>
 <partial name="_Messages" />
+<div class="mb-4"><a asp-action="AcademicHistory" asp-route-id="@Model.Id" class="btn btn-outline-primary">Lịch sử học tập</a></div>
 <div class="row g-4">
     <div class="col-lg-7"><div class="edu-card h-100">
         <h2 class="edu-card-title mb-3">Thông tin học sinh</h2>
@@ -41,11 +42,18 @@
             {
                 <p class="fw-bold">@Model.CurrentClassName • @Model.CurrentGrade • @Model.CurrentYear</p>
                 <a asp-controller="Staff" asp-action="ClassStudents" asp-route-id="@Model.CurrentClassId" class="btn btn-outline-primary">Xem danh sách lớp</a>
+                @if (Model.Status == "Active")
+                {
+                    <a asp-action="TransferClass" asp-route-id="@Model.Id" class="btn btn-primary">Chuyển lớp</a>
+                }
             }
             else
             {
                 <p>@(Model.HasAssignment ? "Phân lớp trong năm học này đã kết thúc." : "Chưa có lớp trong năm học hiện hành.")</p>
-                <a asp-action="AssignClass" asp-route-id="@Model.Id" class="btn btn-primary">Phân lớp</a>
+                @if (Model.Status == "Active" && !Model.HasAssignment)
+                {
+                    <a asp-action="AssignClass" asp-route-id="@Model.Id" class="btn btn-primary">Phân lớp</a>
+                }
             }
         </div>
         <div class="edu-card">

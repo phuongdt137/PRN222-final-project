@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using HighSchoolManagementSystem.Models;
 using HighSchoolManagementSystem.Models.Entities;
 using HighSchoolManagementSystem.Repositories.Interfaces;
 using HighSchoolManagementSystem.Services.Common;
@@ -15,12 +16,26 @@ public class StudentService(IStudentRepository students, IUserRepository users, 
     public const string NotFound = "STUDENT_NOT_FOUND";
     public const string DuplicateCode = "STUDENT_CODE_DUPLICATE";
 
-    public Task<ServiceResult<List<Student>>> GetStudentsAsync(string? search = null, string? status = null, int? classId = null, bool unassignedOnly = false) =>
-        ExecuteAsync(async () => ServiceResult<List<Student>>.Ok(await students.GetAllAsync(search, status, classId, unassignedOnly)));
+    public Task<ServiceResult<PagedResult<Student>>> GetStudentsAsync(string? search = null, string? status = null, int? classId = null, bool unassignedOnly = false, int page = 1, int pageSize = 25) =>
+        ExecuteAsync(async () =>
+        {
+            if (search?.Length > 100 || (!string.IsNullOrEmpty(status) && status is not ("Active" or "Inactive" or "Graduated"))
+                || classId <= 0 || (classId.HasValue && unassignedOnly) || page <= 0 || pageSize is < 1 or > 100)
+                return ServiceResult<PagedResult<Student>>.Fail(ErrorCodes.ValidationFailed, "Bộ lọc không hợp lệ: tìm kiếm tối đa 100 ký tự, trang phải là số dương và không chọn đồng thời lớp học với chưa phân lớp.");
+            if (classId.HasValue && !(await students.GetCurrentClassesAsync()).Any(c => c.Id == classId))
+                return ServiceResult<PagedResult<Student>>.Fail(ErrorCodes.ValidationFailed, "Lớp được chọn không thuộc năm học hiện hành.");
+            return ServiceResult<PagedResult<Student>>.Ok(await students.GetAllAsync(search, status, classId, unassignedOnly, page, pageSize));
+        });
 
     public Task<ServiceResult<Student>> GetStudentAsync(int id) => ExecuteAsync(async () =>
     {
         var student = await students.GetByIdAsync(id);
+        return student == null ? ServiceResult<Student>.Fail(NotFound, "Không tìm thấy học sinh.") : ServiceResult<Student>.Ok(student);
+    });
+
+    public Task<ServiceResult<Student>> GetAcademicHistoryAsync(int id) => ExecuteAsync(async () =>
+    {
+        var student = await students.GetAcademicHistoryAsync(id);
         return student == null ? ServiceResult<Student>.Fail(NotFound, "Không tìm thấy học sinh.") : ServiceResult<Student>.Ok(student);
     });
 
@@ -88,6 +103,31 @@ public class StudentService(IStudentRepository students, IUserRepository users, 
         {
             logger.LogError(ex, "Lỗi phân lớp học sinh {StudentId} vào lớp {ClassId}", studentId, classId);
             return ServiceResult.Fail(ErrorCodes.DatabaseError, "Không thể phân lớp. Vui lòng tải lại trang và thử lại.");
+        }
+    }
+
+    public async Task<ServiceResult> TransferClassAsync(int studentId, TransferStudentClassDto dto)
+    {
+        if (dto == null || studentId <= 0 || dto.ClassId <= 0 || dto.MembershipId <= 0)
+            return ServiceResult.Fail(ErrorCodes.ValidationFailed, "Vui lòng chọn học sinh, phân lớp hiện tại và lớp đích hợp lệ.");
+        try
+        {
+            return (await students.TransferClassAsync(studentId, dto.MembershipId, dto.ClassId)) switch
+            {
+                StudentTransferResult.Success => ServiceResult.Ok("Đã chuyển lớp và lưu lịch sử phân lớp."),
+                StudentTransferResult.StudentNotFound => ServiceResult.Fail(NotFound, "Không tìm thấy học sinh."),
+                StudentTransferResult.StudentInactive => ServiceResult.Fail(ErrorCodes.ValidationFailed, "Chỉ chuyển lớp cho học sinh đang học."),
+                StudentTransferResult.ClassNotFound => ServiceResult.Fail(ErrorCodes.ClassNotFound, "Lớp đích không tồn tại."),
+                StudentTransferResult.YearNotCurrent => ServiceResult.Fail(ErrorCodes.ValidationFailed, "Chỉ chuyển lớp trong năm học hiện hành."),
+                StudentTransferResult.SameClass => ServiceResult.Fail(ErrorCodes.ValidationFailed, "Lớp đích phải khác lớp hiện tại."),
+                StudentTransferResult.DifferentGrade => ServiceResult.Fail(ErrorCodes.ValidationFailed, "Lớp đích phải cùng khối với lớp hiện tại."),
+                _ => ServiceResult.Fail(ErrorCodes.ValidationFailed, "Phân lớp đã thay đổi hoặc không còn hợp lệ. Vui lòng tải lại trang trước khi chuyển lớp.")
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Lỗi chuyển lớp học sinh {StudentId}", studentId);
+            return ServiceResult.Fail(ErrorCodes.DatabaseError, "Không thể chuyển lớp. Vui lòng tải lại trang và thử lại.");
         }
     }
 
