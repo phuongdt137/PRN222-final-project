@@ -1,6 +1,7 @@
 using HighSchoolManagementSystem.Models.Entities;
 using HighSchoolManagementSystem.MVC.Models.ViewModels.Student;
 using HighSchoolManagementSystem.Services.DTOs;
+using HighSchoolManagementSystem.Services.Common;
 using HighSchoolManagementSystem.Services.Implementations;
 using HighSchoolManagementSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -13,9 +14,11 @@ namespace HighSchoolManagementSystem.MVC.Controllers;
 public class StudentManagementController(IStudentService students) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Index(string? search, string? status, int? classId, bool unassignedOnly = false)
+    public async Task<IActionResult> Index(string? search, string? status, int? classId, bool unassignedOnly = false, int page = 1)
     {
-        var result = await students.GetStudentsAsync(search, status, classId, unassignedOnly);
+        var result = ModelState.IsValid
+            ? await students.GetStudentsAsync(search, status, classId, unassignedOnly, page)
+            : ServiceResult<HighSchoolManagementSystem.Models.PagedResult<Student>>.Fail(ErrorCodes.ValidationFailed, "Bộ lọc hoặc số trang không hợp lệ.");
         var classes = await students.GetCurrentClassesAsync();
         var year = await students.GetCurrentYearAsync();
         if (!result.Success || !classes.Success || !year.Success)
@@ -23,7 +26,8 @@ public class StudentManagementController(IStudentService students) : Controller
         return View(new StudentListViewModel
         {
             Search = search, Status = status, ClassId = classId, UnassignedOnly = unassignedOnly,
-            CurrentYear = year.Data?.YearCode, Students = result.Data?.Select(Map).ToList() ?? new(),
+            CurrentYear = year.Data?.YearCode, Students = result.Data?.Items.Select(Map).ToList() ?? new(),
+            Page = result.Data?.Page ?? 1, TotalPages = result.Data?.TotalPages ?? 1, TotalCount = result.Data?.TotalCount ?? 0,
             Classes = ClassOptions(classes.Data)
         });
     }
@@ -37,7 +41,7 @@ public class StudentManagementController(IStudentService students) : Controller
     }
 
     [HttpGet]
-    public IActionResult Create() => View(new CreateStudentViewModel { AdmissionDate = DateTime.UtcNow.Date });
+    public IActionResult Create() => View(new CreateStudentViewModel { AdmissionDate = SchoolDate.Today });
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateStudentViewModel model)
@@ -112,6 +116,69 @@ public class StudentManagementController(IStudentService students) : Controller
         });
     }
 
+    [HttpGet]
+    public async Task<IActionResult> AcademicHistory(int id)
+    {
+        var result = await students.GetAcademicHistoryAsync(id);
+        if (!result.Success || result.Data == null) return ReadFailure(result.ErrorCode, result.Message);
+        var student = result.Data;
+        var semesters = student.SemesterReports.Select(r => r.Semester)
+            .Concat(student.SemesterSubjectResults.Select(r => r.Semester))
+            .Concat(student.ConductEvaluations.Select(r => r.Semester))
+            .Concat(student.StudentScores.Select(r => r.Assessment.TeachingAssignment.Semester))
+            .DistinctBy(s => s.Id).OrderByDescending(s => s.AcademicYear.StartDate).ThenByDescending(s => s.StartDate);
+        return View(new StudentAcademicHistoryViewModel
+        {
+            Student = Map(student),
+            Memberships = student.StudentClasses.OrderByDescending(sc => sc.Class.AcademicYear.StartDate)
+                .ThenByDescending(sc => sc.JoinedAt).ThenByDescending(sc => sc.Id).ToList(),
+            Semesters = semesters.Select(s => new StudentSemesterHistoryViewModel
+            {
+                Semester = s, Report = student.SemesterReports.FirstOrDefault(r => r.SemesterId == s.Id),
+                Conduct = student.ConductEvaluations.Where(r => r.SemesterId == s.Id).OrderByDescending(r => r.EvaluatedAt).FirstOrDefault(),
+                Subjects = student.SemesterSubjectResults.Where(r => r.SemesterId == s.Id).OrderBy(r => r.Subject.SubjectName).ToList(),
+                Scores = student.StudentScores.Where(r => r.Assessment.TeachingAssignment.SemesterId == s.Id)
+                    .OrderBy(r => r.Assessment.TeachingAssignment.Subject.SubjectName).ThenBy(r => r.Assessment.ConductedAt).ThenBy(r => r.Id).ToList()
+            }).ToList()
+        });
+    }
+
+    [HttpGet]
+    public Task<IActionResult> TransferClass(int id) => TransferPage(id);
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> TransferClass(int id, TransferStudentClassDto model)
+    {
+        if (ModelState.IsValid)
+        {
+            var result = await students.TransferClassAsync(id, model);
+            if (result.ErrorCode == StudentService.NotFound) return NotFound();
+            if (result.Success)
+            {
+                TempData["SuccessMessage"] = result.Message;
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            ModelState.AddModelError(string.Empty, result.Message ?? "Không thể chuyển lớp.");
+        }
+        return await TransferPage(id, model);
+    }
+
+    private async Task<IActionResult> TransferPage(int id, TransferStudentClassDto? submitted = null)
+    {
+        var result = await students.GetStudentAsync(id);
+        if (!result.Success || result.Data == null) return ReadFailure(result.ErrorCode, result.Message);
+        var student = Map(result.Data);
+        var classes = await students.GetCurrentClassesAsync();
+        if (!classes.Success) ModelState.AddModelError(string.Empty, classes.Message ?? "Không thể tải lớp học.");
+        return View("TransferClass", new TransferStudentClassViewModel
+        {
+            Student = student, ClassId = submitted?.ClassId ?? 0,
+            // Retain the original token on validation failure; a stale form requires an explicit reload.
+            MembershipId = submitted?.MembershipId ?? student.CurrentMembershipId ?? 0,
+            Classes = ClassOptions(classes.Data?.Where(c => c.Id != student.CurrentClassId && c.GradeLevelId == student.CurrentGradeId).ToList())
+        });
+    }
+
     private IActionResult ReadFailure(string? code, string? message)
     {
         if (code == StudentService.NotFound) return NotFound();
@@ -125,7 +192,8 @@ public class StudentManagementController(IStudentService students) : Controller
     private static StudentDetailsViewModel Map(Student student)
     {
         var memberships = student.StudentClasses.Where(sc => sc.Class.AcademicYear.IsCurrent).ToList();
-        var current = memberships.FirstOrDefault(sc => sc.Status == "Enrolled" && sc.LeftAt == null);
+        var enrolled = memberships.Where(sc => sc.Status == "Enrolled" && sc.LeftAt == null).ToList();
+        var current = enrolled.Count == 1 ? enrolled[0] : null;
         return new StudentDetailsViewModel
         {
             Id = student.Id, StudentCode = student.StudentCode, FullName = student.User.FullName,
@@ -135,6 +203,7 @@ public class StudentManagementController(IStudentService students) : Controller
             ParentId = student.ParentId, ParentName = student.Parent?.User.FullName, ParentPhone = student.Parent?.User.PhoneNumber,
             ParentEmail = student.Parent?.User.Email, HasAssignment = memberships.Count > 0,
             CurrentClassId = current?.ClassId, CurrentClassName = current?.Class.ClassName,
+            CurrentMembershipId = current?.Id, CurrentGradeId = current?.Class.GradeLevelId,
             CurrentGrade = current?.Class.GradeLevel.LevelName, CurrentYear = current?.Class.AcademicYear.YearCode
         };
     }

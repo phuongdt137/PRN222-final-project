@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using HighSchoolManagementSystem.Services.Common;
 
 namespace HighSchoolManagementSystem.Services.DTOs;
 
@@ -21,6 +22,7 @@ public class UpdateParentDto : IValidatableObject
     public string? Gender { get; set; }
 
     [DataType(DataType.Date), Display(Name = "Ngày sinh")]
+    [MinimumAge(ProfileAgeRules.ParentMinimumAge, ErrorMessage = ProfileAgeRules.ParentMessage)]
     public DateTime? DateOfBirth { get; set; }
 
     [StringLength(100, ErrorMessage = "Nghề nghiệp không được vượt quá 100 ký tự."), Display(Name = "Nghề nghiệp")]
@@ -31,7 +33,7 @@ public class UpdateParentDto : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (DateOfBirth.HasValue && (DateOfBirth.Value.Year < 1920 || DateOfBirth.Value.Date >= DateTime.UtcNow.Date))
+        if (DateOfBirth.HasValue && (DateOfBirth.Value.Year < 1920 || DateOfBirth.Value.Date >= SchoolDate.Today))
             yield return new ValidationResult("Ngày sinh phải từ năm 1920 và trước ngày hiện tại.", new[] { nameof(DateOfBirth) });
     }
 }

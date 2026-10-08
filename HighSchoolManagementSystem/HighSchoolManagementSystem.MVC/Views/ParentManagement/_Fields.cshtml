@@ -1,4 +1,5 @@
 @model HighSchoolManagementSystem.Services.DTOs.UpdateParentDto
+@using HighSchoolManagementSystem.Services.Common
 <div class="row g-3 mb-4">
     <div class="col-md-6">
         <label asp-for="FullName" class="form-label"></label>
@@ -22,12 +23,15 @@
     </div>
     <div class="col-md-4">
         <label asp-for="DateOfBirth" class="form-label"></label>
-        <input asp-for="DateOfBirth" class="form-control" type="date" min="1920-01-01" max="@DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd")"
+        <input asp-for="DateOfBirth" class="form-control" type="date" min="1920-01-01" max="@SchoolDate.Today.AddYears(-ProfileAgeRules.ParentMinimumAge).ToString("yyyy-MM-dd")"
+               data-val="true" data-val-minimumage="@ProfileAgeRules.ParentMessage" data-val-minimumage-years="@ProfileAgeRules.ParentMinimumAge"
+               data-val-minimumage-today="@SchoolDate.Today.ToString("yyyy-MM-dd")"
                data-val-date="Ngày sinh không hợp lệ."
                data-msg-date="Ngày sinh không hợp lệ."
                data-msg-min="Ngày sinh phải từ năm 1920."
-               data-msg-max="Ngày sinh phải trước ngày hiện tại." />
+               data-msg-max="@ProfileAgeRules.ParentMessage" />
         <span asp-validation-for="DateOfBirth" class="text-danger small"></span>
+        <div class="form-text">@ProfileAgeRules.ParentMessage</div>
     </div>
     <div class="col-md-6">
         <label asp-for="Occupation" class="form-label"></label>

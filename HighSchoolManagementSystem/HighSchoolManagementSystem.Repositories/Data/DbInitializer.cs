@@ -173,7 +173,7 @@ public static class DbInitializer
 
             var studentProfile1 = new Student
             {
-                UserId = studentUser.Id,
+                UserId = studentUser1.Id,
                 StudentCode = "HS002",
                 Status = "Active",
                 AdmissionDate = DateTime.UtcNow,

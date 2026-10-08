@@ -1,4 +1,10 @@
 @model HighSchoolManagementSystem.Services.DTOs.UpdateStudentDto
+@using HighSchoolManagementSystem.Services.Common
+@{
+    var ageReference = Model.AdmissionDate ?? SchoolDate.Today;
+    var latestBirth = ageReference.Year > ProfileAgeRules.StudentMinimumAge
+        ? ageReference.AddYears(-ProfileAgeRules.StudentMinimumAge).ToString("yyyy-MM-dd") : "0001-01-01";
+}
 <div class="row g-3 mb-4">
     <div class="col-md-4"><label asp-for="StudentCode" class="form-label"></label><input asp-for="StudentCode" class="form-control" maxlength="20" placeholder="VD: HS002" /><span asp-validation-for="StudentCode" class="text-danger small"></span></div>
     <div class="col-md-8"><label asp-for="FullName" class="form-label"></label><input asp-for="FullName" class="form-control" maxlength="100" /><span asp-validation-for="FullName" class="text-danger small"></span></div>
@@ -7,14 +13,17 @@
     <div class="col-md-4"><label asp-for="Gender" class="form-label"></label><select asp-for="Gender" class="form-select"><option value="">Chưa cung cấp</option><option>Nam</option><option>Nữ</option><option>Khác</option></select><span asp-validation-for="Gender" class="text-danger small"></span></div>
     <div class="col-md-4">
         <label asp-for="DateOfBirth" class="form-label"></label>
-        <input asp-for="DateOfBirth" class="form-control" type="date" min="1920-01-01" max="@DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd")"
+        <input asp-for="DateOfBirth" class="form-control" type="date" min="1920-01-01" max="@latestBirth"
+               data-val="true" data-val-minimumage="@ProfileAgeRules.StudentMessage" data-val-minimumage-years="@ProfileAgeRules.StudentMinimumAge"
+               data-val-minimumage-reference="AdmissionDate" data-val-minimumage-today="@SchoolDate.Today.ToString("yyyy-MM-dd")"
                data-val-date="Ngày sinh không hợp lệ." data-msg-date="Ngày sinh không hợp lệ."
-               data-msg-min="Ngày sinh phải từ năm 1920." data-msg-max="Ngày sinh phải trước ngày hiện tại." />
+               data-msg-min="Ngày sinh phải từ năm 1920." data-msg-max="@ProfileAgeRules.StudentMessage" />
         <span asp-validation-for="DateOfBirth" class="text-danger small"></span>
+        <div class="form-text">@ProfileAgeRules.StudentMessage</div>
     </div>
     <div class="col-md-4">
         <label asp-for="AdmissionDate" class="form-label"></label>
-        <input asp-for="AdmissionDate" class="form-control" type="date" min="1920-01-01" max="@DateTime.UtcNow.ToString("yyyy-MM-dd")"
+        <input asp-for="AdmissionDate" class="form-control" type="date" min="1920-01-01" max="@SchoolDate.Today.ToString("yyyy-MM-dd")"
                data-val-date="Ngày nhập học không hợp lệ." data-msg-date="Ngày nhập học không hợp lệ."
                data-msg-min="Ngày nhập học phải từ năm 1920." data-msg-max="Ngày nhập học không được sau ngày hiện tại." />
         <span asp-validation-for="AdmissionDate" class="text-danger small"></span>
