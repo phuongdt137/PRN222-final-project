@@ -21,4 +21,8 @@ public class ClassListPageViewModel
     public IEnumerable<SelectListItem> AcademicYears { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> GradeLevels { get; set; } = Enumerable.Empty<SelectListItem>();
     public IReadOnlyList<ClassListItemViewModel> Classes { get; set; } = Array.Empty<ClassListItemViewModel>();
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+    public int TotalCount { get; set; }
+    public int TotalPages => PageSize > 0 ? (int)Math.Max(1, Math.Ceiling((double)TotalCount / PageSize)) : 1;
 }

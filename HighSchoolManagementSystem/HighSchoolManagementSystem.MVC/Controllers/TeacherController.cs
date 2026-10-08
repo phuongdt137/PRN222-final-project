@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using HighSchoolManagementSystem.Models.Entities;
 using HighSchoolManagementSystem.MVC.Models.ViewModels;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.Teacher;
 using HighSchoolManagementSystem.Repositories.Interfaces;
 using HighSchoolManagementSystem.Services.Common;
 using HighSchoolManagementSystem.Services.Interfaces;
@@ -15,15 +16,21 @@ public class TeacherController : Controller
     private readonly IClassService _classService;
     private readonly ITeacherRepository _teacherRepository;
     private readonly ITimetableService _timetableService;
+    private readonly ITeacherService _teacherService;
+    private readonly ISubjectService _subjectService;
 
     public TeacherController(
         IClassService classService,
         ITeacherRepository teacherRepository,
-        ITimetableService timetableService)
+        ITimetableService timetableService,
+        ITeacherService teacherService,
+        ISubjectService subjectService)
     {
         _classService = classService;
         _teacherRepository = teacherRepository;
         _timetableService = timetableService;
+        _teacherService = teacherService;
+        _subjectService = subjectService;
     }
 
     public IActionResult Dashboard()
@@ -210,6 +217,100 @@ public class TeacherController : Controller
 
         var model = MapClassStudentsPage(result.Data, accessContext: "Teacher");
         return View("~/Views/Shared/ClassStudents.cshtml", model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> AssignedClasses(int? semesterId, string? search)
+    {
+        var teacher = await ResolveCurrentTeacherAsync();
+        if (teacher == null)
+        {
+            TempData["ErrorMessage"] = "Không tìm thấy hồ sơ giáo viên gắn với tài khoản này.";
+            return View(new TeacherAssignedClassesViewModel());
+        }
+
+        var semestersResult = await _subjectService.GetAvailableSemestersAsync();
+        var allSemesters = semestersResult.Data?.ToList() ?? new();
+
+        int? activeSemesterId = await _timetableService.GetActiveSemesterIdAsync();
+        int? effectiveSemesterId = semesterId ?? activeSemesterId;
+
+        var assignmentsResult = await _teacherService.GetTeachingAssignmentsAsync(
+            semesterId: effectiveSemesterId,
+            teacherId: teacher.Id);
+
+        var rawList = assignmentsResult.Data?.ToList() ?? new List<TeachingAssignment>();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim();
+            rawList = rawList.Where(ta =>
+                (ta.Class?.ClassName != null && ta.Class.ClassName.Contains(s, StringComparison.OrdinalIgnoreCase)) ||
+                (ta.Subject?.SubjectName != null && ta.Subject.SubjectName.Contains(s, StringComparison.OrdinalIgnoreCase)) ||
+                (ta.Subject?.SubjectCode != null && ta.Subject.SubjectCode.Contains(s, StringComparison.OrdinalIgnoreCase))
+            ).ToList();
+        }
+
+        var assignmentItems = rawList.Select(ta =>
+        {
+            var scheduleDetails = ta.TimetableEntries != null && ta.TimetableEntries.Any()
+                ? ta.TimetableEntries
+                    .OrderBy(te => te.DayOfWeek)
+                    .ThenBy(te => te.TimeSlot?.PeriodNo)
+                    .Select(te => $"Thứ {te.DayOfWeek} (Tiết {te.TimeSlot?.PeriodNo ?? 0} • {te.Room?.RoomCode ?? te.Room?.RoomName ?? "P.Học"})")
+                    .ToList()
+                : new List<string>();
+
+            return new TeacherAssignmentItemViewModel
+            {
+                AssignmentId = ta.Id,
+                TeacherId = ta.TeacherId,
+                TeacherCode = teacher.TeacherCode,
+                TeacherName = teacher.User?.FullName ?? "N/A",
+                Specialization = teacher.Specialization,
+                SubjectId = ta.Subject?.Id ?? ta.SubjectId,
+                SubjectCode = ta.Subject?.SubjectCode ?? "N/A",
+                SubjectName = ta.Subject?.SubjectName ?? "N/A",
+                EvaluationType = ta.Subject?.EvaluationType ?? "Score",
+                ClassId = ta.ClassId,
+                ClassName = ta.Class?.ClassName ?? "N/A",
+                GradeLevelName = ta.Class?.GradeLevel?.LevelName,
+                StudentCount = ta.Class?.StudentClasses?.Count(sc => sc.Status == "Enrolled" && sc.LeftAt == null) ?? 0,
+                SemesterId = ta.SemesterId,
+                SemesterName = ta.Semester?.SemesterName ?? "N/A",
+                AcademicYearName = ta.Semester?.AcademicYear?.YearCode ?? "N/A",
+                IsActiveSemester = ta.Semester?.IsActive ?? false,
+                Status = ta.Status,
+                ScheduledPeriodsCount = ta.TimetableEntries?.Count ?? 0,
+                ScheduleDetails = scheduleDetails,
+                TimetableSchedule = scheduleDetails.Any() ? string.Join("; ", scheduleDetails) : null,
+                HasAssessments = ta.Assessments != null && ta.Assessments.Any()
+            };
+        }).ToList();
+
+        var viewModel = new TeacherAssignedClassesViewModel
+        {
+            TeacherId = teacher.Id,
+            TeacherCode = teacher.TeacherCode,
+            TeacherName = teacher.User?.FullName ?? "N/A",
+            Specialization = teacher.Specialization,
+            SemesterFilter = effectiveSemesterId,
+            SearchTerm = search,
+            TotalClassesCount = rawList.Select(ta => ta.ClassId).Distinct().Count(),
+            TotalSubjectsCount = rawList.Select(ta => ta.SubjectId).Distinct().Count(),
+            TotalPeriodsPerWeek = rawList.Sum(ta => ta.TimetableEntries?.Count ?? 0),
+            TotalStudentsCount = rawList.Sum(ta => ta.Class?.StudentClasses?.Count(sc => sc.Status == "Enrolled" && sc.LeftAt == null) ?? 0),
+            AvailableSemesters = allSemesters.Select(s => new SemesterFilterOption
+            {
+                Id = s.Id,
+                SemesterName = s.SemesterName,
+                AcademicYear = s.AcademicYear?.YearCode ?? string.Empty,
+                IsActive = s.IsActive
+            }).ToList(),
+            Assignments = assignmentItems
+        };
+
+        return View(viewModel);
     }
 
     private async Task<Teacher?> ResolveCurrentTeacherAsync()

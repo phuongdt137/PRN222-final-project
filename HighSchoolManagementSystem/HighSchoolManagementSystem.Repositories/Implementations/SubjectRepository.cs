@@ -135,6 +135,12 @@ public class SubjectRepository : ISubjectRepository
         await _context.TeachingAssignments.AddAsync(assignment);
     }
 
+    public Task UpdateAssignmentAsync(TeachingAssignment assignment)
+    {
+        _context.TeachingAssignments.Update(assignment);
+        return Task.CompletedTask;
+    }
+
     public Task DeleteAssignmentAsync(TeachingAssignment assignment)
     {
         if (assignment.TimetableEntries != null && assignment.TimetableEntries.Any())
@@ -143,6 +149,19 @@ public class SubjectRepository : ISubjectRepository
         }
         _context.TeachingAssignments.Remove(assignment);
         return Task.CompletedTask;
+    }
+
+    public async Task<TimetableEntry?> GetTeacherTimetableConflictAsync(int teacherId, int semesterId, int dayOfWeek, int timeSlotId, int? excludeAssignmentId = null)
+    {
+        return await _context.TimetableEntries
+            .Include(te => te.TeachingAssignment).ThenInclude(ta => ta.Class)
+            .Include(te => te.TimeSlot)
+            .FirstOrDefaultAsync(te =>
+                te.TeachingAssignment.TeacherId == teacherId &&
+                te.TeachingAssignment.SemesterId == semesterId &&
+                te.DayOfWeek == dayOfWeek &&
+                te.TimeSlotId == timeSlotId &&
+                (!excludeAssignmentId.HasValue || te.TeachingAssignmentId != excludeAssignmentId.Value));
     }
 
     public async Task<bool> HasScoresOrResultsAsync(int subjectId)

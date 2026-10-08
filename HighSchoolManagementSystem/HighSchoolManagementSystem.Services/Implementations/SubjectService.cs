@@ -10,11 +10,16 @@ namespace HighSchoolManagementSystem.Services.Implementations;
 public class SubjectService : ISubjectService
 {
     private readonly ISubjectRepository _subjectRepository;
+    private readonly ITeacherRepository _teacherRepository;
     private readonly ILogger<SubjectService> _logger;
 
-    public SubjectService(ISubjectRepository subjectRepository, ILogger<SubjectService> logger)
+    public SubjectService(
+        ISubjectRepository subjectRepository, 
+        ITeacherRepository teacherRepository,
+        ILogger<SubjectService> logger)
     {
         _subjectRepository = subjectRepository;
+        _teacherRepository = teacherRepository;
         _logger = logger;
     }
 
@@ -260,6 +265,17 @@ public class SubjectService : ISubjectService
     {
         try
         {
+            var teacher = await _teacherRepository.GetByIdWithDetailsAsync(dto.TeacherId);
+            if (teacher == null)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.TeacherNotFound, "Không tìm thấy thông tin giáo viên.");
+            }
+
+            if (teacher.Status == "Inactive")
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, $"Giáo viên '{teacher.User?.FullName ?? teacher.TeacherCode}' đang tạm dừng công tác, không thể phân công giảng dạy.");
+            }
+
             var subject = await _subjectRepository.GetByIdAsync(dto.SubjectId);
             if (subject == null)
             {
@@ -293,7 +309,7 @@ public class SubjectService : ISubjectService
             var hasDuplicate = await _subjectRepository.HasAssignmentAsync(dto.SubjectId, dto.ClassId, dto.SemesterId);
             if (hasDuplicate)
             {
-                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Lớp học này đã có giáo viên phụ trách môn học trong học kỳ đã chọn.");
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, $"Lớp '{targetClass.ClassName}' đã có giáo viên phụ trách môn '{subject.SubjectName}' trong {targetSemester.SemesterName}.");
             }
 
             var assignment = new TeachingAssignment
@@ -315,6 +331,128 @@ public class SubjectService : ISubjectService
         {
             _logger.LogError(ex, "Lỗi khi phân công giáo viên.");
             return ServiceResult<bool>.Fail(ErrorCodes.DatabaseError, "Đã xảy ra lỗi khi lưu thông tin phân công.");
+        }
+    }
+
+    public async Task<ServiceResult<bool>> UpdateTeachingAssignmentAsync(UpdateTeachingAssignmentDto dto)
+    {
+        try
+        {
+            if (dto.AssignmentId <= 0)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Mã phân công giảng dạy không hợp lệ.");
+            }
+
+            var assignment = await _subjectRepository.GetAssignmentByIdAsync(dto.AssignmentId);
+            if (assignment == null)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Không tìm thấy thông tin phân công giảng dạy.");
+            }
+
+            var teacher = await _teacherRepository.GetByIdWithDetailsAsync(dto.TeacherId);
+            if (teacher == null)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.TeacherNotFound, "Không tìm thấy thông tin giáo viên được chọn.");
+            }
+
+            if (teacher.Status == "Inactive")
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, $"Giáo viên '{teacher.User?.FullName ?? teacher.TeacherCode}' đang tạm dừng công tác, không thể phân công.");
+            }
+
+            var subject = await _subjectRepository.GetByIdAsync(dto.SubjectId);
+            if (subject == null)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.SubjectNotFound, "Môn học không tồn tại.");
+            }
+
+            if (!subject.IsActive)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Môn học đang bị vô hiệu hóa, không thể phân công.");
+            }
+
+            var classes = await _subjectRepository.GetAllClassesAsync();
+            var targetClass = classes.FirstOrDefault(c => c.Id == dto.ClassId);
+            if (targetClass == null)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Lớp học được chọn không tồn tại.");
+            }
+
+            var semesters = await _subjectRepository.GetAllSemestersAsync();
+            var targetSemester = semesters.FirstOrDefault(s => s.Id == dto.SemesterId);
+            if (targetSemester == null)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Học kỳ được chọn không tồn tại.");
+            }
+
+            if (targetClass.AcademicYearId != targetSemester.AcademicYearId)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, $"Lớp học '{targetClass.ClassName}' và Học kỳ '{targetSemester.SemesterName}' không thuộc cùng một năm học.");
+            }
+
+            // Kiểm tra trùng lặp phân công (Class + Subject + Semester) ngoại trừ chính assignment này
+            var hasDuplicate = await _subjectRepository.HasAssignmentAsync(dto.SubjectId, dto.ClassId, dto.SemesterId, excludeAssignmentId: dto.AssignmentId);
+            if (hasDuplicate)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, $"Lớp '{targetClass.ClassName}' đã có giáo viên phụ trách môn '{subject.SubjectName}' trong {targetSemester.SemesterName}.");
+            }
+
+            // Nếu thay đổi Môn học, Lớp học hoặc Học kỳ: kiểm tra xem đã có bài kiểm tra/điểm số hay điểm danh chưa
+            bool isCoreScopeChanged = dto.SubjectId != assignment.SubjectId || dto.ClassId != assignment.ClassId || dto.SemesterId != assignment.SemesterId;
+            if (isCoreScopeChanged)
+            {
+                if (assignment.Assessments != null && assignment.Assessments.Any())
+                {
+                    return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Phân công này đã phát sinh bài kiểm tra và điểm số của học sinh, không thể thay đổi Môn học, Lớp học hoặc Học kỳ. Bạn chỉ có thể bàn giao sang Giáo viên khác hoặc cập nhật trạng thái.");
+                }
+
+                if (assignment.TimetableEntries != null && assignment.TimetableEntries.Any(te => te.AttendanceRecords != null && te.AttendanceRecords.Any()))
+                {
+                    return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Phân công này đã có dữ liệu điểm danh theo thời khóa biểu, không thể thay đổi Môn học, Lớp học hoặc Học kỳ.");
+                }
+            }
+
+            // Kiểm tra xung đột lịch thời khóa biểu nếu đổi giáo viên phụ trách
+            if (dto.TeacherId != assignment.TeacherId && assignment.TimetableEntries != null && assignment.TimetableEntries.Any())
+            {
+                foreach (var te in assignment.TimetableEntries)
+                {
+                    var conflict = await _subjectRepository.GetTeacherTimetableConflictAsync(
+                        dto.TeacherId, 
+                        dto.SemesterId, 
+                        te.DayOfWeek, 
+                        te.TimeSlotId, 
+                        excludeAssignmentId: dto.AssignmentId);
+
+                    if (conflict != null)
+                    {
+                        var periodStr = conflict.TimeSlot?.PeriodNo != null ? $"Tiết {conflict.TimeSlot.PeriodNo}" : "Khung giờ này";
+                        var conflictClass = conflict.TeachingAssignment?.Class?.ClassName ?? "khác";
+                        return ServiceResult<bool>.Fail(
+                            ErrorCodes.TeachingConflict, 
+                            $"Xung đột lịch dạy: Giáo viên '{teacher.User?.FullName ?? teacher.TeacherCode}' đã có lịch dạy vào Thứ {te.DayOfWeek}, {periodStr} tại lớp {conflictClass}. Vui lòng chọn giáo viên khác hoặc điều chỉnh thời khóa biểu trước.");
+                    }
+                }
+            }
+
+            assignment.TeacherId = dto.TeacherId;
+            assignment.SubjectId = dto.SubjectId;
+            assignment.ClassId = dto.ClassId;
+            assignment.SemesterId = dto.SemesterId;
+            assignment.Status = string.IsNullOrWhiteSpace(dto.Status) ? "Active" : dto.Status;
+
+            await _subjectRepository.UpdateAssignmentAsync(assignment);
+            await _subjectRepository.SaveChangesAsync();
+
+            _logger.LogInformation("Đã cập nhật phân công Id: {AssignmentId} (Giáo viên: {TeacherId}, Môn: {SubjectId}, Lớp: {ClassId})", 
+                dto.AssignmentId, dto.TeacherId, dto.SubjectId, dto.ClassId);
+
+            return ServiceResult<bool>.Ok(true, "Cập nhật phân công giảng dạy thành công.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi cập nhật phân công giảng dạy Id: {Id}", dto.AssignmentId);
+            return ServiceResult<bool>.Fail(ErrorCodes.DatabaseError, "Đã xảy ra lỗi khi lưu cập nhật phân công.");
         }
     }
 

@@ -768,8 +768,11 @@ public class StaffController : Controller
     // =========================================================================
 
     [HttpGet]
-    public async Task<IActionResult> Classes(int? academicYearId, int? gradeLevelId)
+    public async Task<IActionResult> Classes(int? academicYearId, int? gradeLevelId, int page = 1, int pageSize = 10)
     {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+
         var yearsResult = await _academicYearService.GetAllAsync();
         var gradesResult = await _gradeLevelService.GetAllAsync();
 
@@ -793,7 +796,26 @@ public class StaffController : Controller
             TempData["ErrorMessage"] = classesResult.Message;
         }
 
-        var page = new ClassListPageViewModel
+        var allItems = (classesResult.Success && classesResult.Data != null)
+            ? classesResult.Data
+                .Select(c => new ClassListItemViewModel
+                {
+                    Id = c.Id,
+                    ClassName = c.ClassName,
+                    AcademicYearCode = c.AcademicYear.YearCode,
+                    GradeLevelName = c.GradeLevel.LevelName,
+                    GradeLevelCode = c.GradeLevel.LevelCode,
+                    HomeroomTeacherName = c.HomeroomTeacher?.User?.FullName,
+                    HomeroomTeacherCode = c.HomeroomTeacher?.TeacherCode,
+                    StudentCount = c.StudentClasses.Count(sc => sc.Status == "Enrolled" && sc.LeftAt == null)
+                })
+                .ToList()
+            : new List<ClassListItemViewModel>();
+
+        var totalCount = allItems.Count;
+        var pagedItems = allItems.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        var viewModel = new ClassListPageViewModel
         {
             SelectedAcademicYearId = academicYearId,
             SelectedGradeLevelId = gradeLevelId,
@@ -811,24 +833,13 @@ public class StaffController : Controller
                     Text = g.LevelName,
                     Selected = gradeLevelId == g.Id
                 }),
-            Classes = classesResult.Success && classesResult.Data != null
-                ? classesResult.Data
-                    .Select(c => new ClassListItemViewModel
-                    {
-                        Id = c.Id,
-                        ClassName = c.ClassName,
-                        AcademicYearCode = c.AcademicYear.YearCode,
-                        GradeLevelName = c.GradeLevel.LevelName,
-                        GradeLevelCode = c.GradeLevel.LevelCode,
-                        HomeroomTeacherName = c.HomeroomTeacher?.User?.FullName,
-                        HomeroomTeacherCode = c.HomeroomTeacher?.TeacherCode,
-                        StudentCount = c.StudentClasses.Count(sc => sc.Status == "Enrolled" && sc.LeftAt == null)
-                    })
-                    .ToList()
-                : Array.Empty<ClassListItemViewModel>()
+            Classes = pagedItems,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
         };
 
-        return View(page);
+        return View(viewModel);
     }
 
     [HttpGet]

@@ -103,6 +103,16 @@
 <div class="edu-card p-3 mb-4">
     <form method="get" asp-action="TeachingAssignments" class="row g-2 align-items-center">
         <div class="col-12 col-md-3">
+            <label class="form-label small text-muted fw-bold mb-1">Tìm kiếm nhanh</label>
+            <div class="input-group input-group-sm">
+                <input type="text" name="search" class="form-control" placeholder="Tên GV, mã GV, môn, lớp..." value="@Model.SearchTerm" />
+                <button type="submit" class="btn btn-primary" title="Tìm kiếm">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-3">
             <label class="form-label small text-muted fw-bold mb-1">Học Kỳ & Năm Học</label>
             <select name="semesterId" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">-- Tất cả học kỳ --</option>
@@ -115,14 +125,14 @@
             </select>
         </div>
 
-        <div class="col-12 col-md-3">
+        <div class="col-12 col-md-2">
             <label class="form-label small text-muted fw-bold mb-1">Giáo Viên</label>
             <select name="teacherId" class="form-select form-select-sm" onchange="this.form.submit()">
                 <option value="">-- Tất cả giáo viên --</option>
                 @foreach (var t in Model.AvailableTeachers)
                 {
                     <!option value="@t.Id" @(Model.TeacherFilter == t.Id ? "selected" : "")>
-                        @t.FullName (@t.TeacherCode) @(!string.IsNullOrEmpty(t.Specialization) ? $" - {t.Specialization}" : "")
+                        @t.FullName (@t.TeacherCode)
                     </!option>
                 }
             </select>
@@ -141,26 +151,24 @@
             </select>
         </div>
 
-        <div class="col-6 col-md-2">
-            <label class="form-label small text-muted fw-bold mb-1">Môn Học</label>
-            <select name="subjectId" class="form-select form-select-sm" onchange="this.form.submit()">
-                <option value="">-- Tất cả môn --</option>
-                @foreach (var sub in Model.AvailableSubjects)
-                {
-                    <!option value="@sub.Id" @(Model.SubjectFilter == sub.Id ? "selected" : "")>
-                        @sub.SubjectCode - @sub.SubjectName
-                    </!option>
-                }
-            </select>
-        </div>
-
-        <div class="col-12 col-md-2 d-flex gap-2 align-self-end">
-            <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
-                <i class="bi bi-funnel-fill me-1"></i> Lọc
-            </button>
-            <a asp-action="TeachingAssignments" class="btn btn-outline-secondary btn-sm" title="Đặt lại bộ lọc">
-                <i class="bi bi-arrow-counterclockwise"></i>
-            </a>
+        <div class="col-6 col-md-2 d-flex gap-1 align-self-end">
+            <div class="flex-grow-1">
+                <label class="form-label small text-muted fw-bold mb-1">Môn Học</label>
+                <select name="subjectId" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">-- Tất cả môn --</option>
+                    @foreach (var sub in Model.AvailableSubjects)
+                    {
+                        <!option value="@sub.Id" @(Model.SubjectFilter == sub.Id ? "selected" : "")>
+                            @sub.SubjectCode - @sub.SubjectName
+                        </!option>
+                    }
+                </select>
+            </div>
+            <div class="align-self-end">
+                <a asp-action="TeachingAssignments" class="btn btn-outline-secondary btn-sm" title="Đặt lại bộ lọc">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
         </div>
     </form>
 </div>
@@ -196,14 +204,14 @@
             <table class="table-edu mb-0 align-middle">
                 <thead>
                     <tr>
-                        <th style="width: 45px;" class="text-center">#</th>
-                        <th style="width: 220px;">Giáo viên phụ trách</th>
-                        <th style="width: 160px;">Lớp học & Sĩ số</th>
-                        <th>Môn học</th>
-                        <th style="width: 180px;">Học kỳ & Năm học</th>
+                        <th style="width: 40px;" class="text-center">#</th>
+                        <th style="width: 170px;">Giáo viên phụ trách</th>
+                        <th style="width: 110px;">Lớp & Sĩ số</th>
+                        <th style="width: 140px;">Môn học</th>
+                        <th style="width: 125px;">Học kỳ & Năm học</th>
                         <th>Thời khóa biểu (Lịch dạy)</th>
-                        <th style="width: 120px;" class="text-center">Trạng thái</th>
-                        <th style="width: 250px; min-width: 250px;">Thao tác</th>
+                        <th style="width: 115px;" class="text-center">Trạng thái</th>
+                        <th style="width: 215px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -216,7 +224,7 @@
                                 <div>
                                     <a asp-action="Assignments" asp-route-id="@assign.TeacherId" 
                                        class="fw-bold text-primary text-decoration-none">
-                                        @assign.TeacherName
+                                       @assign.TeacherName
                                     </a>
                                 </div>
                                 <div class="text-muted small mt-1">
@@ -251,16 +259,16 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="fw-semibold text-dark">
+                                <div class="fw-semibold text-dark small">
                                     @assign.SemesterName
                                     @if (assign.IsActiveSemester)
                                     {
-                                        <span class="badge bg-success-subtle text-success border border-success border-opacity-25 ms-1" style="font-size: 0.7rem;">
+                                        <span class="badge bg-success-subtle text-success border border-success border-opacity-25 ms-1" style="font-size: 0.68rem;">
                                             Đang mở
                                         </span>
                                     }
                                 </div>
-                                <div class="text-muted small">Năm học @assign.AcademicYearName</div>
+                                <div class="text-muted small" style="font-size: 11px;">Năm học @assign.AcademicYearName</div>
                             </td>
                             <td>
                                 @if (assign.ScheduleDetails.Any())
@@ -311,9 +319,24 @@
                                        asp-route-teacherId="@assign.TeacherId" 
                                        asp-route-semesterId="@assign.SemesterId" 
                                        asp-route-editMode="true"
-                                       class="btn btn-sm btn-outline-primary" title="Xếp / Xem thời khóa biểu tuần">
-                                        Thời khóa biểu
+                                       class="btn btn-sm btn-outline-primary" title="Xếp & Xem thời khóa biểu tuần">
+                                        TKB
                                     </a>
+
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-secondary btn-edit-assignment"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editAssignmentModal"
+                                            data-id="@assign.AssignmentId"
+                                            data-teacher-id="@assign.TeacherId"
+                                            data-subject-id="@assign.SubjectId"
+                                            data-class-id="@assign.ClassId"
+                                            data-semester-id="@assign.SemesterId"
+                                            data-status="@assign.Status"
+                                            data-has-assessments="@(assign.HasAssessments.ToString().ToLower())"
+                                            title="Chỉnh sửa phân công giảng dạy">
+                                        Sửa
+                                    </button>
 
                                     <a asp-controller="Score" asp-action="SubjectMatrix" 
                                        asp-route-assignmentId="@assign.AssignmentId" 
@@ -351,20 +374,30 @@
     }
 </div>
 
-@if (Model.TotalPages > 1)
-{
-    <nav aria-label="Phân trang phân công giảng dạy" class="edu-pagination">
+<nav aria-label="Phân trang phân công giảng dạy" class="edu-pagination d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3 pt-2">
+    <span class="text-muted small">
+        Hiển thị <strong>@(((Model.Page - 1) * Model.PageSize) + (Model.Assignments.Any() ? 1 : 0)) - @(Math.Min(Model.Page * Model.PageSize, Model.FilteredCount))</strong> trong tổng số <strong>@Model.FilteredCount</strong> phân công
+    </span>
+    <div class="d-flex align-items-center gap-2">
         @if (Model.Page > 1)
         {
-            <a asp-action="TeachingAssignments" asp-route-page="@(Model.Page - 1)" asp-route-semesterId="@Model.SemesterFilter" asp-route-teacherId="@Model.TeacherFilter" asp-route-classId="@Model.ClassFilter" asp-route-subjectId="@Model.SubjectFilter" asp-route-search="@Model.SearchTerm" class="btn-page">Trang trước</a>
+            <a asp-action="TeachingAssignments" asp-route-page="@(Model.Page - 1)" asp-route-semesterId="@Model.SemesterFilter" asp-route-teacherId="@Model.TeacherFilter" asp-route-classId="@Model.ClassFilter" asp-route-subjectId="@Model.SubjectFilter" asp-route-search="@Model.SearchTerm" class="btn btn-sm btn-outline-primary">Trang trước</a>
         }
-        <span class="page-info">Trang @Model.Page / @Model.TotalPages</span>
+        else
+        {
+            <button class="btn btn-sm btn-outline-secondary" disabled>Trang trước</button>
+        }
+        <span class="badge bg-light text-dark border px-2 py-1">Trang @Model.Page / @Model.TotalPages</span>
         @if (Model.Page < Model.TotalPages)
         {
-            <a asp-action="TeachingAssignments" asp-route-page="@(Model.Page + 1)" asp-route-semesterId="@Model.SemesterFilter" asp-route-teacherId="@Model.TeacherFilter" asp-route-classId="@Model.ClassFilter" asp-route-subjectId="@Model.SubjectFilter" asp-route-search="@Model.SearchTerm" class="btn-page">Trang sau</a>
+            <a asp-action="TeachingAssignments" asp-route-page="@(Model.Page + 1)" asp-route-semesterId="@Model.SemesterFilter" asp-route-teacherId="@Model.TeacherFilter" asp-route-classId="@Model.ClassFilter" asp-route-subjectId="@Model.SubjectFilter" asp-route-search="@Model.SearchTerm" class="btn btn-sm btn-outline-primary">Trang sau</a>
         }
-    </nav>
-}
+        else
+        {
+            <button class="btn btn-sm btn-outline-secondary" disabled>Trang sau</button>
+        }
+    </div>
+</nav>
 
 <!-- Modal Phân Công Giảng Dạy Toàn Trường -->
 <div class="modal fade" id="assignTeacherModal" tabindex="-1" aria-labelledby="assignTeacherModalLabel" aria-hidden="true">
@@ -446,3 +479,155 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Chỉnh Sửa Phân Công -->
+<div class="modal fade" id="editAssignmentModal" tabindex="-1" aria-labelledby="editAssignmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-dark" id="editAssignmentModalLabel">
+                    <i class="bi bi-pencil-square text-warning me-2"></i>Cập Nhật Phân Công Giảng Dạy
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="UpdateSubjectClass" method="post" id="editAssignmentForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="All" />
+                <input type="hidden" name="AssignmentId" id="editAssignmentId" />
+                <input type="hidden" name="SubjectId" id="editHiddenSubjectId" />
+                <input type="hidden" name="ClassId" id="editHiddenClassId" />
+                <input type="hidden" name="SemesterId" id="editHiddenSemesterId" />
+
+                <div class="modal-body p-4">
+                    <div id="editLockedWarning" class="alert alert-warning small d-none mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <strong>Lưu ý:</strong> Phân công này đã có bài kiểm tra/điểm số. Môn học, Lớp học và Học kỳ được cố định để bảo toàn dữ liệu. Bạn có thể đổi Giáo viên hoặc Trạng thái.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">Giáo Viên Phụ Trách <span class="text-danger">*</span></label>
+                        <select name="TeacherId" id="editTeacherId" class="form-select" required>
+                            <option value="">-- Chọn giáo viên --</option>
+                            @foreach (var t in Model.AvailableTeachers)
+                            {
+                                <option value="@t.Id">@t.FullName (@t.TeacherCode) - Tổ @(t.Specialization ?? "N/A")</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">Học Kỳ & Năm Học <span class="text-danger">*</span></label>
+                        <select id="editSemesterId" class="form-select" required>
+                            <option value="">-- Chọn học kỳ --</option>
+                            @foreach (var sem in Model.AvailableSemesters)
+                            {
+                                <option value="@sem.Id">
+                                    @sem.SemesterName (Năm học @sem.AcademicYear) @(sem.IsActive ? " [Hiện tại]" : "")
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">Môn Học Giảng Dạy <span class="text-danger">*</span></label>
+                        <select id="editSubjectId" class="form-select" required>
+                            <option value="">-- Chọn môn học --</option>
+                            @foreach (var sub in Model.AvailableSubjects)
+                            {
+                                <option value="@sub.Id">@sub.SubjectCode - @sub.SubjectName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">Lớp Học Phụ Trách <span class="text-danger">*</span></label>
+                        <select id="editClassId" class="form-select" required>
+                            <option value="">-- Chọn lớp học --</option>
+                            @foreach (var cls in Model.AvailableClasses)
+                            {
+                                <option value="@cls.Id">Lớp @cls.ClassName (@cls.GradeLevelName - Năm học @cls.AcademicYear)</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark">Trạng Thái Phân Công</label>
+                        <select name="Status" id="editStatus" class="form-select">
+                            <option value="Active">Đang giảng dạy (Active)</option>
+                            <option value="Assigned">Đã phân công (Assigned)</option>
+                            <option value="Completed">Hoàn thành (Completed)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light p-3">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-warning px-4 fw-semibold text-dark">
+                        <i class="bi bi-check-circle-fill me-1"></i> Lưu Cập Nhật
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const editButtons = document.querySelectorAll('.btn-edit-assignment');
+            const editId = document.getElementById('editAssignmentId');
+            const editTeacher = document.getElementById('editTeacherId');
+            const editSemester = document.getElementById('editSemesterId');
+            const editSubject = document.getElementById('editSubjectId');
+            const editClass = document.getElementById('editClassId');
+            const editStatus = document.getElementById('editStatus');
+            const hiddenSemester = document.getElementById('editHiddenSemesterId');
+            const hiddenSubject = document.getElementById('editHiddenSubjectId');
+            const hiddenClass = document.getElementById('editHiddenClassId');
+            const lockedWarning = document.getElementById('editLockedWarning');
+
+            function syncHiddenInputs() {
+                hiddenSemester.value = editSemester.value;
+                hiddenSubject.value = editSubject.value;
+                hiddenClass.value = editClass.value;
+            }
+
+            editSemester.addEventListener('change', syncHiddenInputs);
+            editSubject.addEventListener('change', syncHiddenInputs);
+            editClass.addEventListener('change', syncHiddenInputs);
+
+            editButtons.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = this.getAttribute('data-id');
+                    const teacherId = this.getAttribute('data-teacher-id');
+                    const subjectId = this.getAttribute('data-subject-id');
+                    const classId = this.getAttribute('data-class-id');
+                    const semesterId = this.getAttribute('data-semester-id');
+                    const status = this.getAttribute('data-status');
+                    const hasAssessments = this.getAttribute('data-has-assessments') === 'true';
+
+                    editId.value = id;
+                    editTeacher.value = teacherId;
+                    editSemester.value = semesterId;
+                    editSubject.value = subjectId;
+                    editClass.value = classId;
+                    editStatus.value = status || 'Active';
+
+                    syncHiddenInputs();
+
+                    if (hasAssessments) {
+                        editSemester.disabled = true;
+                        editSubject.disabled = true;
+                        editClass.disabled = true;
+                        lockedWarning.classList.remove('d-none');
+                    } else {
+                        editSemester.disabled = false;
+                        editSubject.disabled = false;
+                        editClass.disabled = false;
+                        lockedWarning.classList.add('d-none');
+                    }
+                });
+            });
+        });
+    </script>
+}

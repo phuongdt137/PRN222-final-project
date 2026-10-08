@@ -1,0 +1,289 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Teacher.TeacherAssignedClassesViewModel
+@{
+    ViewData["Title"] = "Lớp & Môn Giảng Dạy Của Tôi";
+}
+
+<div class="content-header mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a asp-controller="Teacher" asp-action="Dashboard" class="text-decoration-none text-muted small">
+                    <i class="bi bi-house-door me-1"></i>Trang chủ
+                </a>
+                <span class="text-muted small">/</span>
+                <span class="text-dark small fw-semibold">Lớp & Môn giảng dạy</span>
+            </div>
+            <h1 class="page-title mb-1">Lớp & Môn Giảng Dạy Của Tôi</h1>
+            <p class="text-muted small mb-0">
+                Giáo viên: <strong class="text-dark">@Model.TeacherName</strong> (@Model.TeacherCode) 
+                • Tổ chuyên môn: <span class="badge bg-light text-dark border">@(Model.Specialization ?? "Chưa phân tổ")</span>
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Timetable" asp-action="MySchedule" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-calendar3 me-1"></i>Xem Thời khóa biểu cá nhân
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+        <div>@TempData["SuccessMessage"]</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+        <div>@TempData["ErrorMessage"]</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="edu-card p-3 d-flex align-items-center justify-content-between h-100">
+            <div>
+                <span class="text-muted d-block small fw-semibold">LỚP PHỤ TRÁCH</span>
+                <span class="fs-4 fw-bold text-primary">@Model.TotalClassesCount</span>
+                <span class="text-muted small d-block">Lớp học bộ môn</span>
+            </div>
+            <div class="p-2 rounded-3 bg-light text-primary fs-3">
+                <i class="bi bi-building"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="edu-card p-3 d-flex align-items-center justify-content-between h-100">
+            <div>
+                <span class="text-muted d-block small fw-semibold">MÔN GIẢNG DẠY</span>
+                <span class="fs-4 fw-bold text-success">@Model.TotalSubjectsCount</span>
+                <span class="text-muted small d-block">Môn học</span>
+            </div>
+            <div class="p-2 rounded-3 bg-light text-success fs-3">
+                <i class="bi bi-book"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="edu-card p-3 d-flex align-items-center justify-content-between h-100">
+            <div>
+                <span class="text-muted d-block small fw-semibold">SỐ TIẾT / TUẦN</span>
+                <span class="fs-4 fw-bold text-info">@Model.TotalPeriodsPerWeek</span>
+                <span class="text-muted small d-block">Tiết giảng dạy đã xếp lịch</span>
+            </div>
+            <div class="p-2 rounded-3 bg-light text-info fs-3">
+                <i class="bi bi-clock-history"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="edu-card p-3 d-flex align-items-center justify-content-between h-100">
+            <div>
+                <span class="text-muted d-block small fw-semibold">TỔNG HỌC SINH</span>
+                <span class="fs-4 fw-bold text-warning">@Model.TotalStudentsCount</span>
+                <span class="text-muted small d-block">Học sinh theo các lớp</span>
+            </div>
+            <div class="p-2 rounded-3 bg-light text-warning fs-3">
+                <i class="bi bi-people"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Toolbar -->
+<div class="edu-card p-3 mb-4">
+    <form method="get" asp-action="AssignedClasses" class="row g-2 align-items-center">
+        <div class="col-12 col-md-4">
+            <label class="form-label small text-muted fw-bold mb-1">Học Kỳ & Năm Học</label>
+            <select name="semesterId" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">-- Tất cả các học kỳ --</option>
+                @foreach (var sem in Model.AvailableSemesters)
+                {
+                    <!option value="@sem.Id" @(Model.SemesterFilter == sem.Id ? "selected" : "")>
+                        @sem.SemesterName - Năm học @sem.AcademicYear @(sem.IsActive ? " [Hiện tại]" : "")
+                    </!option>
+                }
+            </select>
+        </div>
+
+        <div class="col-12 col-md-5">
+            <label class="form-label small text-muted fw-bold mb-1">Tìm kiếm</label>
+            <div class="input-group input-group-sm">
+                <input type="text" name="search" class="form-control" placeholder="Tìm theo tên lớp, tên môn học..." value="@Model.SearchTerm" />
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search me-1"></i>Tìm kiếm
+                </button>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-3 d-flex align-items-end pt-3">
+            @if (Model.SemesterFilter.HasValue || !string.IsNullOrEmpty(Model.SearchTerm))
+            {
+                <a asp-action="AssignedClasses" class="btn btn-outline-secondary btn-sm" title="Đặt lại bộ lọc">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại
+                </a>
+            }
+        </div>
+    </form>
+</div>
+
+<!-- Assignments Table -->
+<div class="edu-card mb-4">
+    <div class="card-table-header">
+        <div class="d-flex align-items-center gap-2">
+            <h2 class="table-card-title mb-0">Danh sách lớp & môn được phân công</h2>
+            <span class="table-counter-badge">@Model.Assignments.Count kết quả</span>
+        </div>
+    </div>
+
+    @if (!Model.Assignments.Any())
+    {
+        <div class="p-5 text-center">
+            <div class="text-muted mb-3" style="font-size: 3rem;">
+                <i class="bi bi-journal-x"></i>
+            </div>
+            <h5 class="fw-bold text-secondary">Chưa có phân công giảng dạy</h5>
+            <p class="text-muted small">Bạn chưa được phân công giảng dạy lớp hoặc môn nào trong học kỳ này.</p>
+            <a asp-action="AssignedClasses" class="btn btn-outline-primary btn-sm mt-2">
+                <i class="bi bi-arrow-repeat me-1"></i>Xem tất cả các học kỳ
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table-edu mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 45px;" class="text-center">#</th>
+                        <th style="width: 170px;">Lớp học & Sĩ số</th>
+                        <th style="width: 220px;">Môn học & Hình thức</th>
+                        <th style="width: 180px;">Học kỳ & Năm học</th>
+                        <th>Lịch giảng dạy (Thời khóa biểu)</th>
+                        <th style="width: 130px;" class="text-center">Trạng thái</th>
+                        <th style="width: 230px; min-width: 230px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int stt = 1; }
+                    @foreach (var a in Model.Assignments)
+                    {
+                        <tr>
+                            <td class="text-center text-muted small fw-semibold">@(stt++)</td>
+                            <td>
+                                <div>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1 fs-6 fw-bold font-monospace">
+                                        @a.ClassName
+                                    </span>
+                                </div>
+                                <div class="text-muted small mt-1">
+                                    @if (!string.IsNullOrEmpty(a.GradeLevelName))
+                                    {
+                                        <span>@(a.GradeLevelName.StartsWith("Khối", StringComparison.OrdinalIgnoreCase) ? a.GradeLevelName : $"Khối {a.GradeLevelName}") • </span>
+                                    }
+                                    <a asp-controller="Teacher" asp-action="ClassStudents" asp-route-id="@a.ClassId" 
+                                       class="text-decoration-none text-muted fw-semibold" title="Xem danh sách học sinh">
+                                        <i class="bi bi-people-fill me-1 text-primary"></i>@a.StudentCount HS
+                                    </a>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">@a.SubjectName</div>
+                                <div class="d-flex align-items-center gap-1 mt-1">
+                                    <span class="badge bg-light text-secondary border font-monospace small">@a.SubjectCode</span>
+                                    @if (a.EvaluationType == "Score")
+                                    {
+                                        <span class="badge bg-info-subtle text-info border border-info border-opacity-25 small" style="font-size: 0.72rem;">
+                                            Tính điểm số
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary border-opacity-25 small" style="font-size: 0.72rem;">
+                                            Đánh giá nhận xét
+                                        </span>
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">
+                                    @a.SemesterName
+                                    @if (a.IsActiveSemester)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success border-opacity-25 ms-1" style="font-size: 0.7rem;">
+                                            Hiện tại
+                                        </span>
+                                    }
+                                </div>
+                                <div class="text-muted small">Năm học @a.AcademicYearName</div>
+                            </td>
+                            <td>
+                                @if (a.ScheduleDetails.Any())
+                                {
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var entry in a.ScheduleDetails)
+                                        {
+                                            <span class="badge bg-light text-dark border px-2 py-1 small fw-normal">
+                                                <i class="bi bi-clock me-1 text-primary"></i>@entry
+                                            </span>
+                                        }
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        Tổng cộng: <strong>@a.ScheduledPeriodsCount</strong> tiết/tuần
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-warning small fst-italic">
+                                        <i class="bi bi-exclamation-circle me-1"></i>Chưa xếp lịch giảng dạy
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (a.Status == "Active" || a.Status == "Assigned")
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success border-opacity-25 px-2 py-1">
+                                        Đang giảng dạy
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                        @a.Status
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1 align-items-center text-nowrap">
+                                    <a asp-controller="Score" asp-action="SubjectMatrix" 
+                                       asp-route-assignmentId="@a.AssignmentId" 
+                                       class="btn btn-sm btn-outline-primary" title="Vào sổ điểm bộ môn lớp này">
+                                        <i class="bi bi-grid-3x3 me-1"></i>Sổ điểm
+                                    </a>
+
+                                    <a asp-controller="Assessment" asp-action="Index" 
+                                       class="btn btn-sm btn-outline-secondary" title="Xem các đầu điểm & bài kiểm tra">
+                                        <i class="bi bi-journal-check me-1"></i>Kiểm tra
+                                    </a>
+
+                                    <a asp-controller="Teacher" asp-action="ClassStudents" 
+                                       asp-route-id="@a.ClassId" 
+                                       class="btn btn-sm btn-outline-secondary" title="Xem danh sách học sinh lớp">
+                                        <i class="bi bi-people"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

@@ -18,6 +18,8 @@ public interface ISubjectRepository
     Task<TeachingAssignment?> GetAssignmentByIdAsync(int id);
     Task<bool> HasAssignmentAsync(int subjectId, int classId, int semesterId, int? excludeAssignmentId = null);
     Task AddAssignmentAsync(TeachingAssignment assignment);
+    Task UpdateAssignmentAsync(TeachingAssignment assignment);
     Task DeleteAssignmentAsync(TeachingAssignment assignment);
+    Task<TimetableEntry?> GetTeacherTimetableConflictAsync(int teacherId, int semesterId, int dayOfWeek, int timeSlotId, int? excludeAssignmentId = null);
     Task<bool> HasScoresOrResultsAsync(int subjectId);
 }

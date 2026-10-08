@@ -1215,3 +1215,14 @@ a:hover {
 .timetable-cell-actions form { margin: 0; }
 .timetable-cell-actions a, .timetable-cell-actions button { border: 0; padding: 0; background: transparent; color: var(--tufts-blue-700); }
 .timetable-cell-actions button { color: var(--status-danger-text); }
+
+/* Outline button styling enhancements */
+.btn-outline-warning {
+  color: #b45309;
+  border-color: #d97706;
+}
+.btn-outline-warning:hover {
+  color: #ffffff;
+  background-color: #d97706;
+  border-color: #d97706;
+}

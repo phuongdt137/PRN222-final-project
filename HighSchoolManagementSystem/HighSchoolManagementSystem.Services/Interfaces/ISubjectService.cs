@@ -16,6 +16,7 @@ public interface ISubjectService
     Task<ServiceResult<IEnumerable<Class>>> GetAvailableClassesAsync();
     Task<ServiceResult<IEnumerable<Semester>>> GetAvailableSemestersAsync();
     Task<ServiceResult<bool>> AssignTeacherAsync(AssignTeacherDto dto);
+    Task<ServiceResult<bool>> UpdateTeachingAssignmentAsync(UpdateTeachingAssignmentDto dto);
     Task<ServiceResult<bool>> UnassignTeacherAsync(int assignmentId);
     Task<ServiceResult<bool>> CheckSubjectHasScoresAsync(int id);
 }

@@ -492,6 +492,31 @@ public class TeacherManagementController : Controller
         return RedirectToAction(nameof(Assignments), new { id = teacherId, semesterId });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateSubjectClass(UpdateTeachingAssignmentDto dto, string? returnUrl = null)
+    {
+        if (dto.AssignmentId <= 0 || dto.TeacherId <= 0 || dto.SubjectId <= 0 || dto.ClassId <= 0 || dto.SemesterId <= 0)
+        {
+            TempData["ErrorMessage"] = "Vui lòng chọn đầy đủ thông tin Giáo viên, Học kỳ, Môn học và Lớp học.";
+            if (returnUrl == "All") return RedirectToAction(nameof(TeachingAssignments));
+            return RedirectToAction(nameof(Assignments), new { id = dto.TeacherId });
+        }
+
+        var result = await _subjectService.UpdateTeachingAssignmentAsync(dto);
+        if (result.Success)
+        {
+            TempData["SuccessMessage"] = "Cập nhật phân công giảng dạy thành công!";
+        }
+        else
+        {
+            TempData["ErrorMessage"] = result.Message ?? "Không thể cập nhật phân công giảng dạy.";
+        }
+
+        if (returnUrl == "All") return RedirectToAction(nameof(TeachingAssignments), new { semesterId = dto.SemesterId });
+        return RedirectToAction(nameof(Assignments), new { id = dto.TeacherId, semesterId = dto.SemesterId });
+    }
+
     [HttpGet]
     public async Task<IActionResult> Create()
     {

@@ -307,3 +307,21 @@ public class AllTeachingAssignmentsViewModel
     public int FilteredCount { get; set; }
     public int TotalPages => Math.Max(1, (int)Math.Ceiling((double)FilteredCount / PageSize));
 }
+
+public class TeacherAssignedClassesViewModel
+{
+    public int TeacherId { get; set; }
+    public string TeacherCode { get; set; } = string.Empty;
+    public string TeacherName { get; set; } = string.Empty;
+    public string? Specialization { get; set; }
+    public int? SemesterFilter { get; set; }
+    public string? SearchTerm { get; set; }
+
+    public int TotalClassesCount { get; set; }
+    public int TotalSubjectsCount { get; set; }
+    public int TotalPeriodsPerWeek { get; set; }
+    public int TotalStudentsCount { get; set; }
+
+    public List<SemesterFilterOption> AvailableSemesters { get; set; } = new();
+    public List<TeacherAssignmentItemViewModel> Assignments { get; set; } = new();
+}
