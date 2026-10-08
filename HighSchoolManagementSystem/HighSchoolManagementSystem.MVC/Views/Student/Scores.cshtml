@@ -1,0 +1,185 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Score.StudentTranscriptViewModel
+@{
+    ViewData["Title"] = "Kết Quả Học Tập Cá Nhân";
+}
+
+<!-- Greeting Banner EIMS Standard -->
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-mortarboard-fill me-1"></i> HỌC SINH • TRA CỨU HỌC TẬP
+        </span>
+        <h1 class="greeting-title">Bảng Điểm Cá Nhân</h1>
+        <p class="greeting-subtitle">
+            Theo dõi chi tiết kết quả học tập các môn, điểm trung bình học kỳ (GPA), xếp loại học lực, hạnh kiểm và nhận xét từ thầy cô.
+        </p>
+    </div>
+</div>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>@TempData["ErrorMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Semester Filter Selector -->
+<div class="edu-card p-3 mb-4">
+    <form method="get" asp-action="Scores" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label for="semesterSelect" class="form-label small fw-semibold text-secondary mb-1">
+                <i class="bi bi-calendar3 me-1 text-primary"></i>Chọn Học Kỳ Cần Tra Cứu
+            </label>
+            <select id="semesterSelect" name="semesterId" class="form-select">
+                @foreach (var s in Model.AvailableSemesters)
+                {
+                    <option value="@s.Id" selected="@(s.Id == Model.SelectedSemesterId)">
+                        @s.SemesterName - Năm @s.AcademicYearCode @(s.IsActive ? "(Hiện tại)" : "")
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="subjectSelect" class="form-label small fw-semibold text-secondary mb-1">
+                <i class="bi bi-book me-1 text-primary"></i>Chọn Môn Học
+            </label>
+            <select id="subjectSelect" name="subjectId" class="form-select">
+                <option value="">Tất cả môn học</option>
+                @if (Model.Transcript != null)
+                {
+                    @foreach (var subject in Model.Transcript.Subjects)
+                    {
+                        <option value="@subject.SubjectId" selected="@(subject.SubjectId == Model.SelectedSubjectId)">@subject.SubjectName</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel me-1"></i>Lọc</button>
+        </div>
+        @if (Model.Transcript != null)
+        {
+            <div class="col-md-2 text-md-end text-muted small">
+                <div>Học sinh: <strong class="text-dark">@Model.Transcript.FullName</strong> (<span class="font-monospace">@Model.Transcript.StudentCode</span>)</div>
+                <div>Lớp: <strong class="text-primary">@Model.Transcript.ClassName</strong> • Năm học: <strong>@Model.Transcript.AcademicYearCode</strong></div>
+            </div>
+        }
+    </form>
+</div>
+
+@if (Model.Transcript == null)
+{
+    <div class="edu-card text-center py-5">
+        <i class="bi bi-journal-x fs-1 text-muted d-block mb-3"></i>
+        <h5 class="fw-bold">Chưa Có Dữ Liệu Bảng Điểm</h5>
+        <p class="text-muted small mb-0">Học kỳ này chưa có điểm số nào được công bố.</p>
+    </div>
+}
+else
+{
+    <!-- Overview KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="edu-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-medium">ĐTB Học Kỳ (GPA)</span>
+                    <h3 class="fw-bold text-primary mb-0 mt-1">
+                        @(Model.Transcript.Gpa.HasValue ? Model.Transcript.Gpa.Value.ToString("0.00") : "--")
+                    </h3>
+                </div>
+                <div class="rounded-circle bg-primary bg-opacity-10 p-2 text-primary">
+                    <i class="bi bi-award fs-3"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="edu-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-medium">Học Lực</span>
+                    <h4 class="fw-bold text-success mb-0 mt-1">
+                        @(string.IsNullOrEmpty(Model.Transcript.AcademicRank) ? "--" : Model.Transcript.AcademicRank)
+                    </h4>
+                </div>
+                <div class="rounded-circle bg-success bg-opacity-10 p-2 text-success">
+                    <i class="bi bi-stars fs-3"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="edu-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-medium">Hạnh Kiểm</span>
+                    <h4 class="fw-bold text-info mb-0 mt-1">
+                        @(string.IsNullOrEmpty(Model.Transcript.ConductGrade) ? "--" : Model.Transcript.ConductGrade)
+                    </h4>
+                </div>
+                <div class="rounded-circle bg-info bg-opacity-10 p-2 text-info">
+                    <i class="bi bi-person-check fs-3"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="edu-card p-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-muted small fw-medium">Thứ Hạng Lớp</span>
+                    <h4 class="fw-bold text-warning mb-0 mt-1">
+                        @(Model.Transcript.ClassRank.HasValue ? "#" + Model.Transcript.ClassRank.Value : "--")
+                    </h4>
+                </div>
+                <div class="rounded-circle bg-warning bg-opacity-10 p-2 text-warning">
+                    <i class="bi bi-trophy fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <partial name="_StudentScoreDetails"
+             model="new HighSchoolManagementSystem.MVC.Models.ViewModels.Score.StudentScoreDetailsViewModel { Transcript = Model.Transcript, SelectedSubjectId = Model.SelectedSubjectId }" />
+
+    <!-- Teacher Feedbacks Section -->
+    <div class="edu-card p-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-chat-quote-fill text-primary me-2"></i>Nhận Xét & Đánh Giá Của Thầy Cô</h5>
+
+        @if (!Model.Transcript.Feedbacks.Any())
+        {
+            <div class="text-center py-4 bg-light rounded-3">
+                <i class="bi bi-chat-left-dots text-muted fs-3 mb-1 d-block"></i>
+                <p class="text-muted small mb-0">Chưa có nhận xét nào từ giáo viên trong học kỳ này.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var fb in Model.Transcript.Feedbacks)
+                {
+                    <div class="col-md-6">
+                        <div class="border rounded-3 p-3 bg-light h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle bg-primary bg-opacity-10 p-2 text-primary" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark small">@fb.TeacherName</div>
+                                        <span class="text-muted" style="font-size: 0.75rem;">@fb.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                </div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">
+                                    @(fb.FeedbackType switch
+                                    {
+                                        "Academic" => "Học tập",
+                                        "Behavior" => "Nề nếp",
+                                        _ => "Chung"
+                                    })
+                                </span>
+                            </div>
+                            <p class="text-dark small mb-0 mt-2" style="white-space: pre-wrap;">@fb.Content</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}

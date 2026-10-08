@@ -1,0 +1,211 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Conduct.PrincipalConductSummaryViewModel
+@{
+    ViewData["Title"] = "Báo Cáo Giám Sát Hạnh Kiểm Toàn Trường";
+}
+
+<!-- Greeting Banner EIMS Standard -->
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-shield-check me-1"></i> BAN GIÁM HIỆU • BÁO CÁO GIÁM SÁT HẠNH KIỂM TOÀN TRƯỜNG
+        </span>
+        <h1 class="greeting-title">Báo Cáo & Thống Kê Hạnh Kiểm Toàn Trường</h1>
+        <p class="greeting-subtitle">
+            Theo dõi tiến độ đánh giá hạnh kiểm của các lớp chủ nhiệm, tỷ lệ phân bổ hạnh kiểm (Tốt, Khá, Đạt, Chưa đạt) và chất lượng nề nếp toàn trường.
+        </p>
+    </div>
+</div>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>@TempData["ErrorMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- Selector Học kỳ -->
+<div class="edu-card p-3 mb-4">
+    <form method="get" asp-action="PrincipalSummary" class="row g-3 align-items-center">
+        <div class="col-md-5">
+            <label for="semesterSelect" class="form-label small fw-semibold text-secondary mb-1">
+                <i class="bi bi-calendar3 me-1"></i> Chọn học kỳ báo cáo:
+            </label>
+            <select id="semesterSelect" name="semesterId" class="form-select form-select-sm" onchange="this.form.submit()">
+                @foreach (var sem in Model.AvailableSemesters)
+                {
+                    <option value="@sem.Id" selected="@(sem.Id == Model.SelectedSemesterId)">
+                        @sem.SemesterName - Năm học @sem.AcademicYearCode @(sem.IsActive ? "(Hiện tại)" : "")
+                    </option>
+                }
+            </select>
+        </div>
+        <div class="col-md-7 text-md-end mt-3 mt-md-0">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> In báo cáo tổng hợp
+            </button>
+        </div>
+    </form>
+</div>
+
+@if (Model.Overview != null)
+{
+    <!-- Tổng quan số liệu toàn trường (KPI Cards) -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="edu-card p-3 text-center border-start border-4 border-primary">
+                <div class="text-muted small fw-semibold">Tổng số lớp</div>
+                <div class="fs-3 fw-bold text-dark mt-1">@Model.Overview.TotalClasses</div>
+                <div class="small text-muted">Lớp học</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="edu-card p-3 text-center border-start border-4 border-info">
+                <div class="text-muted small fw-semibold">Tổng học sinh toàn trường</div>
+                <div class="fs-3 fw-bold text-info mt-1">@Model.Overview.TotalStudents</div>
+                <div class="small text-muted">Học sinh</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="edu-card p-3 text-center border-start border-4 border-success">
+                <div class="text-muted small fw-semibold">Tiến độ đánh giá toàn trường</div>
+                <div class="fs-3 fw-bold text-success mt-1">@Model.Overview.OverallCompletionRate%</div>
+                <div class="small text-muted">@Model.Overview.TotalEvaluated / @Model.Overview.TotalStudents hoàn thành</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="edu-card p-3 text-center border-start border-4 border-warning">
+                <div class="text-muted small fw-semibold">Tỷ lệ Tốt & Khá</div>
+                <div class="fs-3 fw-bold text-primary mt-1">
+                    @(Model.Overview.TotalStudents > 0 ? Math.Round((double)(Model.Overview.TotCount + Model.Overview.KhaCount) / Model.Overview.TotalStudents * 100, 1) : 0)%
+                </div>
+                <div class="small text-muted">Tốt: @Model.Overview.TotCount | Khá: @Model.Overview.KhaCount</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phân bổ Hạnh kiểm toàn trường -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="edu-card p-3 text-center bg-success bg-opacity-10 border border-success border-opacity-25">
+                <div class="small fw-bold text-success">TỐT</div>
+                <div class="fs-4 fw-bolder text-success mt-1">@Model.Overview.TotCount</div>
+                <div class="small text-muted">
+                    @(Model.Overview.TotalStudents > 0 ? Math.Round((double)Model.Overview.TotCount / Model.Overview.TotalStudents * 100, 1) : 0)% toàn trường
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="edu-card p-3 text-center bg-primary bg-opacity-10 border border-primary border-opacity-25">
+                <div class="small fw-bold text-primary">KHÁ</div>
+                <div class="fs-4 fw-bolder text-primary mt-1">@Model.Overview.KhaCount</div>
+                <div class="small text-muted">
+                    @(Model.Overview.TotalStudents > 0 ? Math.Round((double)Model.Overview.KhaCount / Model.Overview.TotalStudents * 100, 1) : 0)% toàn trường
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="edu-card p-3 text-center bg-warning bg-opacity-10 border border-warning border-opacity-25">
+                <div class="small fw-bold text-warning">ĐẠT</div>
+                <div class="fs-4 fw-bolder text-warning mt-1">@Model.Overview.DatCount</div>
+                <div class="small text-muted">
+                    @(Model.Overview.TotalStudents > 0 ? Math.Round((double)Model.Overview.DatCount / Model.Overview.TotalStudents * 100, 1) : 0)% toàn trường
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="edu-card p-3 text-center bg-danger bg-opacity-10 border border-danger border-opacity-25">
+                <div class="small fw-bold text-danger">CHƯA ĐẠT</div>
+                <div class="fs-4 fw-bolder text-danger mt-1">@Model.Overview.ChuaDatCount</div>
+                <div class="small text-muted">
+                    @(Model.Overview.TotalStudents > 0 ? Math.Round((double)Model.Overview.ChuaDatCount / Model.Overview.TotalStudents * 100, 1) : 0)% toàn trường
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bảng tiến độ chi tiết theo từng lớp -->
+    <div class="edu-card p-0 shadow-sm overflow-hidden mb-4">
+        <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-table text-primary me-2"></i> Tiến Độ & Kết Quả Hạnh Kiểm Chi Tiết Theo Lớp
+            </h6>
+            <span class="small text-muted">Học kỳ: <strong>@Model.Overview.SemesterName (@Model.Overview.AcademicYearCode)</strong></span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center" style="width: 45px;">STT</th>
+                        <th style="width: 120px;">Lớp học</th>
+                        <th style="width: 100px;">Khối</th>
+                        <th>Giáo viên chủ nhiệm</th>
+                        <th class="text-center" style="width: 80px;">Sĩ số</th>
+                        <th style="width: 180px;">Tiến độ đánh giá</th>
+                        <th class="text-center" style="width: 70px;">Tốt</th>
+                        <th class="text-center" style="width: 70px;">Khá</th>
+                        <th class="text-center" style="width: 70px;">Đạt</th>
+                        <th class="text-center" style="width: 80px;">Chưa đạt</th>
+                        <th class="text-center" style="width: 120px;">Trạng thái</th>
+                        <th class="text-center" style="width: 110px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int idx = 1; }
+                    @foreach (var c in Model.Overview.ClassProgress)
+                    {
+                        <tr>
+                            <td class="text-center text-muted small">@idx</td>
+                            <td><strong class="text-primary">@c.ClassName</strong></td>
+                            <td><span class="badge bg-light text-dark border">@c.GradeLevelName</span></td>
+                            <td>@c.HomeroomTeacherName</td>
+                            <td class="text-center fw-semibold">@c.TotalStudents</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height: 6px;">
+                                        <div class="progress-bar @(c.IsCompleted ? "bg-success" : "bg-primary")" role="progressbar" style="width: @c.CompletionRate%;" aria-valuenow="@c.CompletionRate" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="small fw-semibold text-muted" style="min-width: 42px;">@c.CompletionRate%</span>
+                                </div>
+                                <div class="text-muted" style="font-size: 11px;">@c.EvaluatedCount/@c.TotalStudents hoàn thành</div>
+                            </td>
+                            <td class="text-center text-success fw-bold">@c.TotCount</td>
+                            <td class="text-center text-primary fw-bold">@c.KhaCount</td>
+                            <td class="text-center text-warning fw-bold">@c.DatCount</td>
+                            <td class="text-center text-danger fw-bold">@c.ChuaDatCount</td>
+                            <td class="text-center">
+                                @if (c.IsCompleted)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                        <i class="bi bi-check-circle"></i> Đã hoàn thành
+                                    </span>
+                                }
+                                else if (c.EvaluatedCount > 0)
+                                {
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                        Đang đánh giá
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                                        Chưa bắt đầu
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Index" asp-route-classId="@c.ClassId" asp-route-semesterId="@Model.SelectedSemesterId"
+                                   class="btn btn-sm btn-outline-primary" title="Xem chi tiết bảng hạnh kiểm lớp">
+                                    <i class="bi bi-eye"></i> Chi tiết
+                                </a>
+                            </td>
+                        </tr>
+                        idx++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

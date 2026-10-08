@@ -1,13 +1,122 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.Score;
+using HighSchoolManagementSystem.Repositories.Interfaces;
+using HighSchoolManagementSystem.Services.Interfaces;
 
 namespace HighSchoolManagementSystem.MVC.Controllers;
 
 [Authorize(Roles = "Parent")]
 public class ParentController : Controller
 {
+    private readonly IParentRepository _parentRepository;
+    private readonly IAcademicYearRepository _academicYearRepository;
+    private readonly IScoreService _scoreService;
+    private readonly ILogger<ParentController> _logger;
+
+    public ParentController(
+        IParentRepository parentRepository,
+        IAcademicYearRepository academicYearRepository,
+        IScoreService scoreService,
+        ILogger<ParentController> logger)
+    {
+        _parentRepository = parentRepository;
+        _academicYearRepository = academicYearRepository;
+        _scoreService = scoreService;
+        _logger = logger;
+    }
+
     public IActionResult Dashboard()
     {
         return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> StudentScores(int? studentId, int? semesterId, int? subjectId)
+    {
+        var parent = await ResolveCurrentParentAsync();
+        if (parent == null)
+        {
+            TempData["ErrorMessage"] = "Không tìm thấy hồ sơ phụ huynh của tài khoản này.";
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        var children = parent.Students.ToList();
+        var allYears = await _academicYearRepository.GetAllAsync();
+
+        var semestersList = new List<SemesterItemOption>();
+        foreach (var yr in allYears)
+        {
+            foreach (var sem in yr.Semesters)
+            {
+                semestersList.Add(new SemesterItemOption
+                {
+                    Id = sem.Id,
+                    SemesterName = sem.SemesterName,
+                    AcademicYearCode = yr.YearCode,
+                    IsActive = sem.IsActive
+                });
+            }
+        }
+
+        var model = new ParentScoresViewModel
+        {
+            Children = children.Select(c => new ParentStudentOption
+            {
+                Id = c.Id,
+                StudentCode = c.StudentCode,
+                FullName = c.User?.FullName ?? string.Empty
+            }).ToList(),
+            AvailableSemesters = semestersList
+        };
+
+        if (!children.Any())
+        {
+            return View(model);
+        }
+
+        int targetStudentId = studentId ?? children.First().Id;
+        if (!children.Any(c => c.Id == targetStudentId))
+        {
+            targetStudentId = children.First().Id;
+        }
+
+        int targetSemesterId = semesterId ?? (semestersList.FirstOrDefault(s => s.IsActive)?.Id ?? (semestersList.FirstOrDefault()?.Id ?? 0));
+
+        model.SelectedStudentId = targetStudentId;
+        model.SelectedSemesterId = targetSemesterId;
+        model.SelectedSubjectId = subjectId;
+
+        if (targetSemesterId > 0)
+        {
+            var transcriptResult = await _scoreService.GetStudentTranscriptAsync(targetStudentId, targetSemesterId, parent.UserId);
+            if (transcriptResult.Success)
+            {
+                model.Transcript = transcriptResult.Data;
+                if (subjectId.HasValue &&
+                    !(model.Transcript?.Subjects.Any(s => s.SubjectId == subjectId.Value) ?? false))
+                {
+                    model.SelectedSubjectId = null;
+                }
+            }
+            else
+            {
+                TempData["ErrorMessage"] = transcriptResult.Message;
+            }
+        }
+
+        return View(model);
+    }
+
+    private async Task<HighSchoolManagementSystem.Models.Entities.Parent?> ResolveCurrentParentAsync()
+    {
+        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdValue, out var userId))
+        {
+            return null;
+        }
+
+        return await _parentRepository.GetByUserIdAsync(userId);
     }
 }

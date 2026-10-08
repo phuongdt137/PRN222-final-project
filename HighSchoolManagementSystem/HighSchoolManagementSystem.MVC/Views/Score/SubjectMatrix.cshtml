@@ -1,0 +1,220 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Score.SubjectScoreMatrixViewModel
+@{
+    ViewData["Title"] = "Sổ Điểm Bộ Môn";
+}
+
+<!-- Greeting Banner EIMS Standard -->
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-grid-3x3 me-1"></i> BỘ MÔN GIẢNG DẠY • SỔ ĐIỂM CHI TIẾT
+        </span>
+        <h1 class="greeting-title">Sổ Điểm Bộ Môn</h1>
+        <p class="greeting-subtitle">
+            Theo dõi ma trận điểm số chi tiết theo từng bài kiểm tra thường xuyên, giữa kỳ, cuối kỳ và điểm trung bình môn của học sinh.
+        </p>
+    </div>
+    @if (Model.Matrix != null && Model.SelectedAssignmentId > 0 && User.IsInRole("Teacher"))
+    {
+        <div class="d-flex align-items-center gap-2">
+            <a asp-controller="Assessment" asp-action="Create" asp-route-assignmentId="@Model.SelectedAssignmentId" class="btn btn-primary px-3 py-2 shadow-sm">
+                <i class="bi bi-plus-circle me-1"></i> Tạo Bài Kiểm Tra Mới
+            </a>
+            <a asp-controller="Assessment" asp-action="Index" asp-route-assignmentId="@Model.SelectedAssignmentId" class="btn btn-light px-3 py-2">
+                <i class="bi bi-list-check me-1"></i> Quản Lý Bài KT
+            </a>
+        </div>
+    }
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill fs-5"></i>
+        <div>@TempData["SuccessMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>@TempData["ErrorMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (!Model.TeacherAssignments.Any())
+{
+    <div class="edu-card text-center py-5">
+        <i class="bi bi-folder-x fs-1 text-muted d-block mb-3"></i>
+        <h5 class="fw-bold text-dark">Chưa Có Lớp Giảng Dạy</h5>
+        <p class="text-muted small mb-0">Tài khoản của bạn hiện chưa được phân công phụ trách giảng dạy lớp học nào.</p>
+    </div>
+}
+else
+{
+    <!-- Filter Selection Toolbar -->
+    <div class="edu-card p-3 mb-4">
+        <form method="get" asp-action="SubjectMatrix" class="row g-3 align-items-end">
+            <div class="col-md-6 col-lg-5">
+                <label for="assignmentSelect" class="form-label small fw-semibold text-secondary mb-1">
+                    <i class="bi bi-mortarboard me-1 text-primary"></i>Chọn Lớp & Môn Học
+                </label>
+                <select id="assignmentSelect" name="assignmentId" class="form-select" onchange="this.form.submit()">
+                    @foreach (var a in Model.TeacherAssignments)
+                    {
+                        <option value="@a.Id" selected="@(a.Id == Model.SelectedAssignmentId)">
+                            @a.ClassName - Môn @a.SubjectName (@a.SemesterName)
+                        </option>
+                    }
+                </select>
+            </div>
+            @if (Model.Matrix != null)
+            {
+                <div class="col-md-6 col-lg-7 text-md-end text-muted small">
+                    <span class="me-3">
+                        <i class="bi bi-people-fill text-primary me-1"></i> Sĩ số: <strong>@Model.Matrix.Students.Count</strong> học sinh
+                    </span>
+                    <span>
+                        <i class="bi bi-file-earmark-text text-info me-1"></i> Tổng số cột điểm: <strong>@Model.Matrix.Assessments.Count</strong>
+                    </span>
+                </div>
+            }
+        </form>
+    </div>
+
+    @if (Model.Matrix == null || !Model.Matrix.Students.Any())
+    {
+        <div class="edu-card text-center py-5">
+            <i class="bi bi-inbox text-muted fs-1 mb-2 d-block"></i>
+            <h5 class="fw-bold">Chưa Có Dữ Liệu Học Sinh</h5>
+            <p class="text-muted small mb-0">Lớp học này hiện chưa có học sinh được ghi danh.</p>
+        </div>
+    }
+    else
+    {
+        <!-- Matrix Grid View Table -->
+        <div class="edu-card p-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-table text-primary me-2"></i>Bảng Điểm: @Model.Matrix.ClassName • Môn @Model.Matrix.SubjectName
+                </h5>
+                <span class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i> Bấm vào tên bài kiểm tra để nhập/chỉnh sửa điểm
+                </span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0 text-center">
+                    <thead class="table-light small">
+                        <tr>
+                            <th rowspan="2" class="align-middle" style="width: 50px;">STT</th>
+                            <th rowspan="2" class="align-middle text-start" style="width: 120px;">Mã HS</th>
+                            <th rowspan="2" class="align-middle text-start" style="min-width: 170px;">Họ Và Tên</th>
+                            
+                            @if (Model.Matrix.Assessments.Any())
+                            {
+                                <th colspan="@Model.Matrix.Assessments.Count" class="text-center bg-primary bg-opacity-10 text-primary fw-bold">
+                                    CÁC CỘT ĐIỂM KIỂM TRA ĐÁNH GIÁ
+                                </th>
+                            }
+                            else
+                            {
+                                <th class="align-middle text-muted">Chưa có bài kiểm tra</th>
+                            }
+
+                            <th rowspan="2" class="align-middle bg-success bg-opacity-10 text-success fw-bold" style="width: 110px;">
+                                ĐTB Môn
+                            </th>
+                            <th rowspan="2" class="align-middle" style="width: 90px;">Đạt / Chưa</th>
+                        </tr>
+                        @if (Model.Matrix.Assessments.Any())
+                        {
+                            <tr>
+                                @foreach (var ass in Model.Matrix.Assessments)
+                                {
+                                    <th class="small fw-semibold py-2 px-2" style="min-width: 95px;">
+                                        <a asp-action="Entry" asp-route-assessmentId="@ass.Id" 
+                                           class="text-decoration-none text-dark fw-bold d-block text-truncate" 
+                                           title="@ass.AssessmentName (Hệ số @ass.Weight)">
+                                            @ass.AssessmentName
+                                        </a>
+                                        <span class="badge bg-light text-muted border mt-1">x@ass.Weight</span>
+                                    </th>
+                                }
+                            </tr>
+                        }
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Matrix.Students.Count; i++)
+                        {
+                            var student = Model.Matrix.Students[i];
+                            <tr>
+                                <td class="text-muted small">@(i + 1)</td>
+                                <td class="text-start">
+                                    <span class="badge bg-light text-dark border font-monospace">@student.StudentCode</span>
+                                </td>
+                                <td class="text-start fw-semibold text-dark">
+                                    <a asp-action="StudentTranscript" asp-route-studentId="@student.StudentId" asp-route-semesterId="@Model.Matrix.SemesterId" title="Xem bảng điểm và nhận xét">@student.FullName</a>
+                                </td>
+
+                                @foreach (var ass in Model.Matrix.Assessments)
+                                {
+                                    var cellScore = student.AssessmentScores.ContainsKey(ass.Id) ? student.AssessmentScores[ass.Id] : null;
+                                    <td class="font-monospace">
+                                        @if (cellScore.HasValue)
+                                        {
+                                            <span class="fw-bold @(cellScore.Value < 5 ? "text-danger" : (cellScore.Value >= 8 ? "text-primary" : "text-dark"))">
+                                                @cellScore.Value.ToString("0.0")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">--</span>
+                                        }
+                                    </td>
+                                }
+
+                                <td class="bg-success bg-opacity-10 font-monospace">
+                                    @if (student.AverageScore.HasValue)
+                                    {
+                                        <span class="fw-bold fs-6 @(student.AverageScore.Value < 5 ? "text-danger" : (student.AverageScore.Value >= 8 ? "text-primary" : "text-success"))">
+                                            @student.AverageScore.Value.ToString("0.0")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">--</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (student.IsPassed)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Đạt</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Chưa</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Ghi chú cách tính điểm chuẩn THPT -->
+            <div class="mt-4 p-3 bg-light rounded-3 border">
+                <h6 class="fw-bold text-dark mb-1 small">
+                    <i class="bi bi-lightbulb-fill text-warning me-1"></i> Quy chế tính Điểm Trung Bình Môn học kỳ:
+                </h6>
+                <p class="small text-muted mb-0">
+                    ĐTB Môn = (Tổng điểm Đánh giá thường xuyên + Điểm Giữa kỳ &times; 2 + Điểm Cuối kỳ &times; 3) / (Tổng các hệ số).
+                    Hệ thống sẽ tự động cập nhật ngay khi bạn lưu điểm ở mỗi bài kiểm tra.
+                </p>
+            </div>
+        </div>
+    }
+}

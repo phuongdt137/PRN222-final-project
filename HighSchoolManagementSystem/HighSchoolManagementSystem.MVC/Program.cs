@@ -27,10 +27,16 @@ builder.Services.AddScoped<IAcademicYearRepository, AcademicYearRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<IGradeLevelRepository, GradeLevelRepository>();
 builder.Services.AddScoped<IClassRepository, ClassRepository>();
+builder.Services.AddScoped<IRoomRepository, RoomRepository>();
+builder.Services.AddScoped<ITimeSlotRepository, TimeSlotRepository>();
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
 builder.Services.AddScoped<IParentRepository, ParentRepository>();
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+builder.Services.AddScoped<IAssessmentRepository, AssessmentRepository>();
+builder.Services.AddScoped<IScoreRepository, ScoreRepository>();
+builder.Services.AddScoped<ITeacherFeedbackRepository, TeacherFeedbackRepository>();
+builder.Services.AddScoped<IConductEvaluationRepository, ConductEvaluationRepository>();
 builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IFileStorageService>(sp =>
@@ -45,6 +51,12 @@ builder.Services.AddScoped<IAcademicYearService, AcademicYearService>();
 builder.Services.AddScoped<ISemesterService, SemesterService>();
 builder.Services.AddScoped<IGradeLevelService, GradeLevelService>();
 builder.Services.AddScoped<IClassService, ClassService>();
+builder.Services.AddScoped<IRoomService, RoomService>();
+builder.Services.AddScoped<ITimeSlotService, TimeSlotService>();
+builder.Services.AddScoped<IAssessmentService, AssessmentService>();
+builder.Services.AddScoped<IScoreService, ScoreService>();
+builder.Services.AddScoped<ITeacherFeedbackService, TeacherFeedbackService>();
+builder.Services.AddScoped<IConductEvaluationService, ConductEvaluationService>();
 
 // Cookie Authentication (No Identity)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -59,7 +71,23 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = SameSiteMode.Lax;
     });
 
+// Globalization & Culture setup (Dùng dấu chấm '.' cho số thập phân điểm số)
+var customCulture = new System.Globalization.CultureInfo("vi-VN");
+customCulture.NumberFormat.NumberDecimalSeparator = ".";
+customCulture.NumberFormat.CurrencyDecimalSeparator = ".";
+
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = customCulture;
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = customCulture;
+
 var app = builder.Build();
+
+var localizationOptions = new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture(customCulture),
+    SupportedCultures = new List<System.Globalization.CultureInfo> { customCulture, System.Globalization.CultureInfo.InvariantCulture },
+    SupportedUICultures = new List<System.Globalization.CultureInfo> { customCulture, System.Globalization.CultureInfo.InvariantCulture }
+};
+app.UseRequestLocalization(localizationOptions);
 
 // Seed initial roles and sample accounts
 using (var scope = app.Services.CreateScope())

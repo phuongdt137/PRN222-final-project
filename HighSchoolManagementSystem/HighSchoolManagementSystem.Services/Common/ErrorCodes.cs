@@ -58,6 +58,11 @@ public static class ErrorCodes
     public const string ClassCapacityExceeded  = "CLS_002"; // Lớp đã đủ sĩ số tối đa
     public const string AcademicYearClosed     = "CLS_003"; // Năm học đã kết thúc, không thể chỉnh sửa
     public const string SemesterNotFound       = "CLS_004"; // Không tìm thấy học kỳ
+    public const string RoomNotFound           = "CLS_005"; // Không tìm thấy phòng học
+    public const string RoomCodeDuplicate      = "CLS_006"; // Mã phòng học đã tồn tại
+    public const string TimeSlotNotFound       = "CLS_007"; // Không tìm thấy tiết học
+    public const string TimeSlotCodeDuplicate  = "CLS_008"; // Mã tiết học đã tồn tại
+    public const string TimeSlotPeriodDuplicate = "CLS_009"; // Số tiết đã tồn tại trong cùng buổi
 
     // =========================================================================
     // 6. ĐIỂM SỐ & ĐÁNH GIÁ (SCR_*)
@@ -65,6 +70,19 @@ public static class ErrorCodes
     public const string ScoreOutOfRange        = "SCR_001"; // Điểm số không nằm trong thang quy định (0 - 10)
     public const string ScoreLocked            = "SCR_002"; // Điểm số đã bị khóa, không thể chỉnh sửa
     public const string AssessmentNotFound     = "SCR_003"; // Không tìm thấy đầu điểm / bài kiểm tra
+    public const string AssessmentMaxEntriesExceeded = "SCR_004"; // Đã đạt số lượng bài kiểm tra tối đa cho loại điểm này
+    public const string AssessmentNameRequired = "SCR_005"; // Tên bài kiểm tra không được để trống
+    public const string AssessmentTypeNotFound = "SCR_006"; // Không tìm thấy loại điểm đánh giá
+    public const string AssessmentAssignmentNotFound = "SCR_007"; // Không tìm thấy phân công giảng dạy
+    public const string AssessmentHasLockedScores = "SCR_008"; // Không thể thay đổi loại kiểm tra khi đã có điểm bị khóa
+    public const string ScoreNotFound          = "SCR_009"; // Không tìm thấy bản ghi điểm số
+    public const string ScoreReasonRequired    = "SCR_010"; // Cần nhập lý do khi điều chỉnh điểm đã có
+    public const string ScoreStudentNotInClass = "SCR_011"; // Học sinh không thuộc danh sách lớp học
+    public const string AssessmentSubmissionIncomplete = "SCR_012"; // Vui lòng nhập đầy đủ điểm cho toàn bộ học sinh trước khi chốt nộp
+    public const string ScoreCommentRequired          = "SCR_013"; // Tất cả học sinh đều phải có nhận xét trước khi chốt nộp
+    public const string AssessmentAlreadyLockedForTeacher = "SCR_014"; // Bài kiểm tra đã chốt nộp và bị khóa. Chỉ Giáo vụ mới có quyền điều chỉnh
+    public const string FeedbackNotFound       = "FDB_001"; // Không tìm thấy phản hồi / nhận xét
+    public const string FeedbackContentRequired = "FDB_002"; // Nội dung phản hồi không được để trống
 
     // =========================================================================
     // 7. CHUYÊN CẦN & ĐƠN NGHỈ PHÉP (ATT_*)
@@ -108,4 +126,11 @@ public static class ErrorCodes
     public const string TeacherEmailDuplicate  = "TEA_004";
     public const string TeacherUsernameDuplicate = "TEA_005";
     public const string TeacherHasAssignments  = "TEA_006";
+    // =========================================================================
+    // 12. ĐÁNH GIÁ HẠNH KIỂM (CND_*)
+    // =========================================================================
+    public const string ConductNotHomeroomTeacher      = "CND_001"; // Chỉ Giáo viên chủ nhiệm mới có quyền đánh giá hạnh kiểm cho lớp này
+    public const string ConductNotFound               = "CND_002"; // Không tìm thấy bản ghi đánh giá hạnh kiểm
+    public const string ConductInvalidGrade           = "CND_003"; // Mức xếp loại hạnh kiểm không hợp lệ (Chỉ chấp nhận: Tốt, Khá, Đạt, Chưa đạt)
+    public const string ConductStudentNotInClass      = "CND_004"; // Học sinh không thuộc danh sách lớp chủ nhiệm này
 }

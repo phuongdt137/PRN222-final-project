@@ -128,60 +128,8 @@ public static class DbInitializer
             parentEntity = await context.Parents.FirstOrDefaultAsync();
         }
 
-        if (!await context.Users.AnyAsync(u => u.Username == "student"))
-        {
-            var studentUser = new User
-            {
-                Username = "student",
-                Email = "student@highschool.edu.vn",
-                FullName = "Học sinh Phạm Minh Đức",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Student@123", 11),
-                PhoneNumber = "0934567890",
-                Gender = "Nam",
-                IsActive = true,
-                CreateAt = DateTime.UtcNow,
-                RoleId = studentRole.RoleId
-            };
-            await context.Users.AddAsync(studentUser);
-            await context.SaveChangesAsync();
-
-            var studentProfile = new Student
-            {
-                UserId = studentUser.Id,
-                StudentCode = "HS001",
-                Status = "Active",
-                AdmissionDate = DateTime.UtcNow,
-                Address = "Số 123 Đường Giải Phóng, Hà Nội",
-                ParentId = parentEntity?.ParentId
-            };
-            await context.Students.AddAsync(studentProfile);
-
-            var studentUser1 = new User
-            {
-                Username = "student1",
-                Email = "student1@highschool.edu.vn",
-                FullName = "Học sinh Quang MInh",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Student@123", 11),
-                PhoneNumber = "0934567890",
-                Gender = "Nam",
-                IsActive = true,
-                CreateAt = DateTime.UtcNow,
-                RoleId = studentRole.RoleId
-            };
-            await context.Users.AddAsync(studentUser1);
-            await context.SaveChangesAsync();
-
-            var studentProfile1 = new Student
-            {
-                UserId = studentUser1.Id,
-                StudentCode = "HS002",
-                Status = "Active",
-                AdmissionDate = DateTime.UtcNow,
-                Address = "Số 123 Đường Giải Phóng, Hà Nội",
-                ParentId = parentEntity?.ParentId
-            };
-            await context.Students.AddAsync(studentProfile1);
-        }
+        // Khởi tạo 20 học sinh mẫu
+        await SeedSampleStudentsAsync(context, studentRole, parentEntity);
 
         if (!await context.Users.AnyAsync(u => u.Email == "phuongw98yb@gmail.com" || u.Username == "phuongw98yb"))
         {
@@ -233,6 +181,22 @@ public static class DbInitializer
             if (!await context.Subjects.AnyAsync(s => s.SubjectCode == sub.SubjectCode))
             {
                 await context.Subjects.AddAsync(sub);
+            }
+        }
+        await context.SaveChangesAsync();
+
+        var defaultAssessmentTypes = new List<AssessmentType>
+        {
+            new AssessmentType { TypeCode = "TX", TypeName = "Đánh giá thường xuyên", Weight = 1.0m, MinEntries = 1, MaxEntries = 5 },
+            new AssessmentType { TypeCode = "GK", TypeName = "Đánh giá giữa kỳ", Weight = 2.0m, MinEntries = 1, MaxEntries = 2 },
+            new AssessmentType { TypeCode = "CK", TypeName = "Đánh giá cuối kỳ", Weight = 3.0m, MinEntries = 1, MaxEntries = 1 }
+        };
+
+        foreach (var type in defaultAssessmentTypes)
+        {
+            if (!await context.AssessmentTypes.AnyAsync(at => at.TypeCode == type.TypeCode))
+            {
+                await context.AssessmentTypes.AddAsync(type);
             }
         }
         await context.SaveChangesAsync();
@@ -341,6 +305,40 @@ public static class DbInitializer
         }
         await context.SaveChangesAsync();
 
+        if (!await context.Rooms.AnyAsync())
+        {
+            await context.Rooms.AddRangeAsync(
+                new Room { RoomCode = "A101", RoomName = "Phòng học A101", Building = "Tòa A", RoomType = "Classroom", Capacity = 45, Status = "Available" },
+                new Room { RoomCode = "A102", RoomName = "Phòng học A102", Building = "Tòa A", RoomType = "Classroom", Capacity = 45, Status = "Available" },
+                new Room { RoomCode = "A201", RoomName = "Phòng học A201", Building = "Tòa A", RoomType = "Classroom", Capacity = 40, Status = "Occupied" },
+                new Room { RoomCode = "B101", RoomName = "Phòng thí nghiệm Hóa", Building = "Tòa B", RoomType = "Lab", Capacity = 30, Status = "Available" },
+                new Room { RoomCode = "B102", RoomName = "Phòng thí nghiệm Lý", Building = "Tòa B", RoomType = "Lab", Capacity = 30, Status = "Maintenance" },
+                new Room { RoomCode = "C101", RoomName = "Phòng máy tính 1", Building = "Tòa C", RoomType = "ComputerLab", Capacity = 40, Status = "Available" },
+                new Room { RoomCode = "C102", RoomName = "Phòng máy tính 2", Building = "Tòa C", RoomType = "ComputerLab", Capacity = 40, Status = "Available" },
+                new Room { RoomCode = "TV01", RoomName = "Thư viện tầng 1", Building = "Tòa thư viện", RoomType = "Library", Capacity = 80, Status = "Available" },
+                new Room { RoomCode = "H01", RoomName = "Phòng họp hội đồng", Building = "Tòa hành chính", RoomType = "Meeting", Capacity = 20, Status = "Available" },
+                new Room { RoomCode = "TD01", RoomName = "Nhà thể dục đa năng", Building = "Khu thể thao", RoomType = "Gym", Capacity = 200, Status = "Available" }
+            );
+            await context.SaveChangesAsync();
+        }
+
+        if (!await context.TimeSlots.AnyAsync())
+        {
+            await context.TimeSlots.AddRangeAsync(
+                new TimeSlot { SlotCode = "T1", PeriodNo = 1, StartTime = new TimeSpan(7, 0, 0), EndTime = new TimeSpan(7, 45, 0), Session = "Morning" },
+                new TimeSlot { SlotCode = "T2", PeriodNo = 2, StartTime = new TimeSpan(7, 50, 0), EndTime = new TimeSpan(8, 35, 0), Session = "Morning" },
+                new TimeSlot { SlotCode = "T3", PeriodNo = 3, StartTime = new TimeSpan(8, 40, 0), EndTime = new TimeSpan(9, 25, 0), Session = "Morning" },
+                new TimeSlot { SlotCode = "T4", PeriodNo = 4, StartTime = new TimeSpan(9, 40, 0), EndTime = new TimeSpan(10, 25, 0), Session = "Morning" },
+                new TimeSlot { SlotCode = "T5", PeriodNo = 5, StartTime = new TimeSpan(10, 30, 0), EndTime = new TimeSpan(11, 15, 0), Session = "Morning" },
+                new TimeSlot { SlotCode = "T6", PeriodNo = 6, StartTime = new TimeSpan(13, 0, 0), EndTime = new TimeSpan(13, 45, 0), Session = "Afternoon" },
+                new TimeSlot { SlotCode = "T7", PeriodNo = 7, StartTime = new TimeSpan(13, 50, 0), EndTime = new TimeSpan(14, 35, 0), Session = "Afternoon" },
+                new TimeSlot { SlotCode = "T8", PeriodNo = 8, StartTime = new TimeSpan(14, 40, 0), EndTime = new TimeSpan(15, 25, 0), Session = "Afternoon" },
+                new TimeSlot { SlotCode = "T9", PeriodNo = 9, StartTime = new TimeSpan(15, 40, 0), EndTime = new TimeSpan(16, 25, 0), Session = "Afternoon" },
+                new TimeSlot { SlotCode = "T10", PeriodNo = 10, StartTime = new TimeSpan(16, 30, 0), EndTime = new TimeSpan(17, 15, 0), Session = "Afternoon" }
+            );
+            await context.SaveChangesAsync();
+        }
+
         var math10 = await context.Subjects.FirstOrDefaultAsync(s => s.SubjectCode == "MATH10");
         var tin10 = await context.Subjects.FirstOrDefaultAsync(s => s.SubjectCode == "TIN10");
 
@@ -398,21 +396,24 @@ public static class DbInitializer
 
         await context.SaveChangesAsync();
 
-        // Xếp học sinh mẫu vào lớp 10A1
-        var studentHs001 = await context.Students.FirstOrDefaultAsync(s => s.StudentCode == "HS001");
-        if (studentHs001 != null && class10A1 != null)
+        // Xếp 20 học sinh mẫu vào lớp 10A1
+        if (class10A1 != null)
         {
-            if (!await context.StudentClasses.AnyAsync(sc => sc.StudentId == studentHs001.Id && sc.ClassId == class10A1.Id))
+            var studentsToEnroll = await context.Students.ToListAsync();
+            foreach (var st in studentsToEnroll)
             {
-                await context.StudentClasses.AddAsync(new StudentClass
+                if (!await context.StudentClasses.AnyAsync(sc => sc.StudentId == st.Id && sc.ClassId == class10A1.Id))
                 {
-                    StudentId = studentHs001.Id,
-                    ClassId = class10A1.Id,
-                    JoinedAt = DateTime.UtcNow,
-                    Status = "Enrolled"
-                });
-                await context.SaveChangesAsync();
+                    await context.StudentClasses.AddAsync(new StudentClass
+                    {
+                        StudentId = st.Id,
+                        ClassId = class10A1.Id,
+                        JoinedAt = DateTime.UtcNow,
+                        Status = "Enrolled"
+                    });
+                }
             }
+            await context.SaveChangesAsync();
         }
 
         // 4. Seed năm học mẫu (để Staff xem danh sách)
@@ -518,6 +519,158 @@ public static class DbInitializer
             if (preferred != null)
             {
                 preferred.IsActive = true;
+                await context.SaveChangesAsync();
+            }
+        }
+    }
+
+    private static async Task SeedSampleStudentsAsync(
+        AppDbContext context,
+        Role studentRole,
+        Parent? parentEntity)
+    {
+        var sampleStudents = new (string Code, string Username, string Email, string FullName, string Gender, string Phone, string Address, DateTime Dob)[]
+        {
+            ("HS001", "student", "student@highschool.edu.vn", "Phạm Minh Đức", "Nam", "0934567890", "Số 123 Giải Phóng, Hai Bà Trưng, Hà Nội", new DateTime(2010, 3, 15)),
+            ("HS002", "student02", "student02@highschool.edu.vn", "Trần Thị Bích", "Nữ", "0901000002", "Số 45 Hoàn Kiếm, Hà Nội", new DateTime(2010, 5, 20)),
+            ("HS003", "student03", "student03@highschool.edu.vn", "Lê Hoàng Cường", "Nam", "0901000003", "Số 78 Đống Đa, Hà Nội", new DateTime(2010, 1, 10)),
+            ("HS004", "student04", "student04@highschool.edu.vn", "Phạm Thu Dung", "Nữ", "0901000004", "Số 15 Cầu Giấy, Hà Nội", new DateTime(2010, 8, 22)),
+            ("HS005", "student05", "student05@highschool.edu.vn", "Hoàng Gia Huy", "Nam", "0901000005", "Số 89 Hai Bà Trưng, Hà Nội", new DateTime(2010, 11, 5)),
+            ("HS006", "student06", "student06@highschool.edu.vn", "Vũ Mai Linh", "Nữ", "0901000006", "Số 33 Thanh Xuân, Hà Nội", new DateTime(2010, 4, 18)),
+            ("HS007", "student07", "student07@highschool.edu.vn", "Đặng Quang Minh", "Nam", "0901000007", "Số 67 Hoàng Mai, Hà Nội", new DateTime(2010, 9, 30)),
+            ("HS008", "student08", "student08@highschool.edu.vn", "Bùi Lan Anh", "Nữ", "0901000008", "Số 22 Tây Hồ, Hà Nội", new DateTime(2010, 2, 14)),
+            ("HS009", "student09", "student09@highschool.edu.vn", "Đỗ Tuấn Kiệt", "Nam", "0901000009", "Số 90 Long Biên, Hà Nội", new DateTime(2010, 7, 7)),
+            ("HS010", "student10", "student10@highschool.edu.vn", "Hồ Bảo Ngọc", "Nữ", "0901000010", "Số 54 Hà Đông, Hà Nội", new DateTime(2010, 12, 1)),
+            ("HS011", "student11", "student11@highschool.edu.vn", "Ngô Phương Thảo", "Nữ", "0901000011", "Số 19 Nam Từ Liêm, Hà Nội", new DateTime(2010, 6, 25)),
+            ("HS012", "student12", "student12@highschool.edu.vn", "Dương Minh Trí", "Nam", "0901000012", "Số 81 Bắc Từ Liêm, Hà Nội", new DateTime(2010, 10, 12)),
+            ("HS013", "student13", "student13@highschool.edu.vn", "Lý Thanh Tùng", "Nam", "0901000013", "Số 37 Gia Lâm, Hà Nội", new DateTime(2010, 3, 3)),
+            ("HS014", "student14", "student14@highschool.edu.vn", "Trịnh Thùy Trang", "Nữ", "0901000014", "Số 62 Đông Anh, Hà Nội", new DateTime(2010, 8, 8)),
+            ("HS015", "student15", "student15@highschool.edu.vn", "Mai Văn Hưng", "Nam", "0901000015", "Số 11 Sóc Sơn, Hà Nội", new DateTime(2010, 11, 28)),
+            ("HS016", "student16", "student16@highschool.edu.vn", "Cao Thục Anh", "Nữ", "0901000016", "Số 48 Thanh Trì, Hà Nội", new DateTime(2010, 1, 19)),
+            ("HS017", "student17", "student17@highschool.edu.vn", "Lương Đức Phúc", "Nam", "0901000017", "Số 73 Thường Tín, Hà Nội", new DateTime(2010, 5, 4)),
+            ("HS018", "student18", "student18@highschool.edu.vn", "Phan Gia Khánh", "Nam", "0901000018", "Số 29 Phú Xuyên, Hà Nội", new DateTime(2010, 9, 16)),
+            ("HS019", "student19", "student19@highschool.edu.vn", "Tạ Nhật Minh", "Nam", "0901000019", "Số 85 Hoài Đức, Hà Nội", new DateTime(2010, 7, 23)),
+            ("HS020", "student20", "student20@highschool.edu.vn", "Đoàn Yến Nhi", "Nữ", "0901000020", "Số 41 Đan Phượng, Hà Nội", new DateTime(2010, 4, 9))
+        };
+
+        string? defaultPasswordHash = null;
+
+        foreach (var item in sampleStudents)
+        {
+            var studentUser = await context.Users.FirstOrDefaultAsync(u => u.Username == item.Username || u.Email == item.Email);
+            if (studentUser == null)
+            {
+                defaultPasswordHash ??= BCrypt.Net.BCrypt.HashPassword("Student@123", 11);
+                studentUser = new User
+                {
+                    Username = item.Username,
+                    Email = item.Email,
+                    FullName = item.FullName,
+                    PasswordHash = defaultPasswordHash,
+                    PhoneNumber = item.Phone,
+                    Gender = item.Gender,
+                    DateOfBirth = item.Dob,
+                    IsActive = true,
+                    CreateAt = DateTime.UtcNow,
+                    RoleId = studentRole.RoleId
+                };
+                await context.Users.AddAsync(studentUser);
+                await context.SaveChangesAsync();
+            }
+
+            var studentProfile = await context.Students.FirstOrDefaultAsync(s => s.UserId == studentUser.Id || s.StudentCode == item.Code);
+            if (studentProfile == null)
+            {
+                studentProfile = new Student
+                {
+                    UserId = studentUser.Id,
+                    StudentCode = item.Code,
+                    Status = "Active",
+                    AdmissionDate = new DateTime(2026, 9, 1),
+                    Address = item.Address,
+                    ParentId = parentEntity?.ParentId
+                };
+                await context.Students.AddAsync(studentProfile);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        // =========================================================================
+        // SEED CONDUCT EVALUATIONS (HẠNH KIỂM MẪU)
+        // =========================================================================
+        if (!await context.ConductEvaluations.AnyAsync())
+        {
+            var classesWithHomeroom = await context.Classes
+                .Include(c => c.HomeroomTeacher)
+                .Include(c => c.StudentClasses).ThenInclude(sc => sc.Student)
+                .Where(c => c.HomeroomTeacherId != null)
+                .ToListAsync();
+
+            var activeSemester = await context.Semesters.FirstOrDefaultAsync(s => s.IsActive)
+                                ?? await context.Semesters.FirstOrDefaultAsync();
+
+            if (activeSemester != null && classesWithHomeroom.Any())
+            {
+                var sampleEvals = new List<ConductEvaluation>();
+                var sampleReports = new List<SemesterReport>();
+
+                foreach (var cls in classesWithHomeroom)
+                {
+                    var students = cls.StudentClasses
+                        .Where(sc => sc.Status == "Enrolled" && sc.LeftAt == null)
+                        .Select(sc => sc.Student)
+                        .ToList();
+
+                    int sIdx = 0;
+                    foreach (var st in students)
+                    {
+                        string grade = (sIdx % 4 == 0) ? "Tốt" : ((sIdx % 4 == 1) ? "Tốt" : ((sIdx % 4 == 2) ? "Khá" : "Đạt"));
+                        string comment = grade == "Tốt"
+                            ? "Chăm ngoan, lễ phép, gương mẫu trong học tập và tích cực tham gia các phong trào thi đua của lớp."
+                            : (grade == "Khá"
+                                ? "Ngoan ngoãn, chấp hành tốt nội quy trường lớp, có ý thức kỷ luật tốt."
+                                : "Cơ bản chấp hành nội quy, đôi lúc còn mất trật tự, cần rèn luyện thêm tính tự giác.");
+
+                        var eval = new ConductEvaluation
+                        {
+                            StudentId = st.Id,
+                            SemesterId = activeSemester.Id,
+                            HomeroomTeacherId = cls.HomeroomTeacherId!.Value,
+                            ConductGrade = grade,
+                            TeacherComment = comment,
+                            EvaluatedAt = DateTime.UtcNow.AddDays(-2)
+                        };
+                        sampleEvals.Add(eval);
+
+                        var rep = await context.SemesterReports.FirstOrDefaultAsync(r => r.StudentId == st.Id && r.SemesterId == activeSemester.Id);
+                        if (rep != null)
+                        {
+                            rep.ConductGrade = grade;
+                            rep.TeacherComments = comment;
+                        }
+                        else
+                        {
+                            sampleReports.Add(new SemesterReport
+                            {
+                                StudentId = st.Id,
+                                SemesterId = activeSemester.Id,
+                                ConductGrade = grade,
+                                TeacherComments = comment
+                            });
+                        }
+
+                        sIdx++;
+                    }
+                }
+
+                if (sampleEvals.Any())
+                {
+                    await context.ConductEvaluations.AddRangeAsync(sampleEvals);
+                }
+                if (sampleReports.Any())
+                {
+                    await context.SemesterReports.AddRangeAsync(sampleReports);
+                }
                 await context.SaveChangesAsync();
             }
         }

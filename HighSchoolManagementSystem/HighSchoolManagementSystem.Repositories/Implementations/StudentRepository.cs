@@ -39,6 +39,7 @@ public class StudentRepository(AppDbContext context) : IStudentRepository
     }
 
     public Task<Student?> GetByIdAsync(int id) => WithDetails().FirstOrDefaultAsync(s => s.Id == id);
+    public Task<Student?> GetByUserIdAsync(int userId) => WithDetails().FirstOrDefaultAsync(s => s.UserId == userId);
     // Separate collection queries avoid multiplying memberships, scores and reports in one SQL join.
     public Task<Student?> GetAcademicHistoryAsync(int id) => context.Students.AsNoTracking().AsSplitQuery()
         .Include(s => s.User)

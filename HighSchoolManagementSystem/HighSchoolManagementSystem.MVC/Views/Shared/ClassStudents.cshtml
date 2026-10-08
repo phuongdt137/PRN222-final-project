@@ -71,6 +71,7 @@
                         <th>Số điện thoại</th>
                         <th>Ngày vào lớp</th>
                         <th class="text-center">Trạng thái</th>
+                        <th class="text-center" style="width: 140px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -88,6 +89,19 @@
                             <td>@item.JoinedAt.ToString("dd/MM/yyyy")</td>
                             <td class="text-center">
                                 <span class="badge-status badge-status-success">@item.EnrollmentStatus</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    <a asp-controller="Score" asp-action="StudentTranscript" asp-route-studentId="@item.StudentId" class="btn btn-sm btn-outline-success px-2 py-1" title="Xem bảng điểm học sinh">
+                                        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Điểm
+                                    </a>
+                                    @if (Model.AccessContext != "Teacher")
+                                    {
+                                        <a asp-controller="StudentManagement" asp-action="Details" asp-route-id="@item.StudentId" class="btn btn-sm btn-outline-primary px-2 py-1" title="Xem hồ sơ học sinh">
+                                            <i class="bi bi-person-vcard"></i>
+                                        </a>
+                                    }
+                                </div>
                             </td>
                         </tr>
                         index++;

@@ -15,19 +15,25 @@ public class StaffController : Controller
     private readonly IClassService _classService;
     private readonly IGradeLevelService _gradeLevelService;
     private readonly ITeacherService _teacherService;
+    private readonly IRoomService _roomService;
+    private readonly ITimeSlotService _timeSlotService;
 
     public StaffController(
         IAcademicYearService academicYearService,
         ISemesterService semesterService,
         IClassService classService,
         IGradeLevelService gradeLevelService,
-        ITeacherService teacherService)
+        ITeacherService teacherService,
+        IRoomService roomService,
+        ITimeSlotService timeSlotService)
     {
         _academicYearService = academicYearService;
         _semesterService = semesterService;
         _classService = classService;
         _gradeLevelService = gradeLevelService;
         _teacherService = teacherService;
+        _roomService = roomService;
+        _timeSlotService = timeSlotService;
     }
 
     public IActionResult Dashboard()
@@ -428,6 +434,338 @@ public class StaffController : Controller
     // =========================================================================
     // LỚP HỌC
     // =========================================================================
+    // PHÒNG HỌC
+    // =========================================================================
+
+    [HttpGet]
+    public async Task<IActionResult> Rooms(string? status, string? roomType)
+    {
+        // Lần đầu vào trang (không có query): mặc định chỉ hiện phòng Available.
+        // Nếu user chọn "-- Tất cả trạng thái --" thì query có status rỗng → không gán mặc định.
+        if (!Request.Query.ContainsKey("status") && string.IsNullOrWhiteSpace(status))
+        {
+            status = "Available";
+        }
+
+        var roomsResult = await _roomService.GetByFiltersAsync(status, roomType);
+        var typesResult = await _roomService.GetRoomTypesAsync();
+
+        if (!roomsResult.Success)
+        {
+            TempData["ErrorMessage"] = roomsResult.Message;
+        }
+
+        var knownTypes = new[] { "Classroom", "Lab", "ComputerLab", "Library", "Meeting", "Gym" };
+        var roomTypes = typesResult.Success && typesResult.Data != null && typesResult.Data.Count > 0
+            ? typesResult.Data
+            : knownTypes;
+
+        static string TypeLabel(string type) => type switch
+        {
+            "Classroom" => "Phòng học",
+            "Lab" => "Phòng thí nghiệm",
+            "ComputerLab" => "Phòng máy",
+            "Library" => "Thư viện",
+            "Meeting" => "Phòng họp",
+            "Gym" => "Nhà đa năng",
+            _ => type
+        };
+
+        var page = new RoomListPageViewModel
+        {
+            SelectedStatus = status,
+            SelectedRoomType = roomType,
+            Statuses = new[]
+            {
+                new SelectListItem { Value = "Available", Text = "Sẵn sàng", Selected = status == "Available" },
+                new SelectListItem { Value = "Occupied", Text = "Đang sử dụng", Selected = status == "Occupied" },
+                new SelectListItem { Value = "Maintenance", Text = "Bảo trì", Selected = status == "Maintenance" }
+            },
+            RoomTypes = roomTypes.Select(t => new SelectListItem
+            {
+                Value = t,
+                Text = TypeLabel(t),
+                Selected = roomType == t
+            }),
+            Rooms = roomsResult.Success && roomsResult.Data != null
+                ? roomsResult.Data.Select(r => new RoomListItemViewModel
+                {
+                    Id = r.Id,
+                    RoomCode = r.RoomCode,
+                    RoomName = r.RoomName,
+                    Building = r.Building,
+                    RoomType = r.RoomType,
+                    Capacity = r.Capacity,
+                    Status = r.Status
+                }).ToList()
+                : Array.Empty<RoomListItemViewModel>()
+        };
+
+        return View(page);
+    }
+
+    [HttpGet]
+    public IActionResult CreateRoom()
+    {
+        var model = new CreateRoomViewModel();
+        PopulateRoomFormDropdowns(model);
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateRoom(CreateRoomViewModel model)
+    {
+        PopulateRoomFormDropdowns(model);
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var result = await _roomService.CreateAsync(
+            model.RoomCode,
+            model.RoomName,
+            model.Building,
+            model.RoomType,
+            model.Capacity,
+            model.Status);
+
+        if (!result.Success)
+        {
+            ModelState.AddModelError(string.Empty, result.Message ?? "Không thể tạo phòng học.");
+            return View(model);
+        }
+
+        TempData["SuccessMessage"] = $"Đã tạo phòng \"{result.Data!.RoomCode}\" thành công.";
+        return RedirectToAction(nameof(Rooms), new { status = result.Data.Status });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> EditRoom(int id)
+    {
+        var result = await _roomService.GetByIdAsync(id);
+        if (!result.Success || result.Data == null)
+        {
+            TempData["ErrorMessage"] = result.Message ?? "Không tìm thấy phòng học.";
+            return RedirectToAction(nameof(Rooms));
+        }
+
+        var room = result.Data;
+        var model = new EditRoomViewModel
+        {
+            Id = room.Id,
+            RoomCode = room.RoomCode,
+            RoomName = room.RoomName,
+            Building = room.Building,
+            RoomType = room.RoomType,
+            Capacity = room.Capacity,
+            Status = room.Status
+        };
+
+        PopulateRoomFormDropdowns(model);
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditRoom(EditRoomViewModel model)
+    {
+        PopulateRoomFormDropdowns(model);
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var result = await _roomService.UpdateAsync(
+            model.Id,
+            model.RoomCode,
+            model.RoomName,
+            model.Building,
+            model.RoomType,
+            model.Capacity,
+            model.Status);
+
+        if (!result.Success)
+        {
+            if (result.ErrorCode == ErrorCodes.RoomNotFound)
+            {
+                TempData["ErrorMessage"] = result.Message;
+                return RedirectToAction(nameof(Rooms));
+            }
+
+            ModelState.AddModelError(string.Empty, result.Message ?? "Không thể cập nhật phòng học.");
+            return View(model);
+        }
+
+        TempData["SuccessMessage"] = $"Đã cập nhật phòng \"{result.Data!.RoomCode}\" thành công.";
+        return RedirectToAction(nameof(Rooms), new { status = result.Data.Status });
+    }
+
+    private static void PopulateRoomFormDropdowns(CreateRoomViewModel model)
+    {
+        model.RoomTypes = new[]
+        {
+            new SelectListItem { Value = "Classroom", Text = "Phòng học", Selected = model.RoomType == "Classroom" },
+            new SelectListItem { Value = "Lab", Text = "Phòng thí nghiệm", Selected = model.RoomType == "Lab" },
+            new SelectListItem { Value = "ComputerLab", Text = "Phòng máy", Selected = model.RoomType == "ComputerLab" },
+            new SelectListItem { Value = "Library", Text = "Thư viện", Selected = model.RoomType == "Library" },
+            new SelectListItem { Value = "Meeting", Text = "Phòng họp", Selected = model.RoomType == "Meeting" },
+            new SelectListItem { Value = "Gym", Text = "Nhà đa năng", Selected = model.RoomType == "Gym" }
+        };
+
+        model.Statuses = new[]
+        {
+            new SelectListItem { Value = "Available", Text = "Sẵn sàng", Selected = model.Status == "Available" },
+            new SelectListItem { Value = "Occupied", Text = "Đang sử dụng", Selected = model.Status == "Occupied" },
+            new SelectListItem { Value = "Maintenance", Text = "Bảo trì", Selected = model.Status == "Maintenance" }
+        };
+    }
+
+    // =========================================================================
+    // TIẾT HỌC / KHUNG GIỜ
+    // =========================================================================
+
+    [HttpGet]
+    public async Task<IActionResult> TimeSlots(string? session)
+    {
+        var result = await _timeSlotService.GetByFiltersAsync(session);
+        if (!result.Success)
+        {
+            TempData["ErrorMessage"] = result.Message;
+        }
+
+        var page = new TimeSlotListPageViewModel
+        {
+            SelectedSession = session,
+            Sessions = new[]
+            {
+                new SelectListItem { Value = "Morning", Text = "Buổi sáng", Selected = session == "Morning" },
+                new SelectListItem { Value = "Afternoon", Text = "Buổi chiều", Selected = session == "Afternoon" }
+            },
+            TimeSlots = result.Success && result.Data != null
+                ? result.Data.Select(t => new TimeSlotListItemViewModel
+                {
+                    Id = t.Id,
+                    SlotCode = t.SlotCode,
+                    PeriodNo = t.PeriodNo,
+                    StartTime = t.StartTime,
+                    EndTime = t.EndTime,
+                    Session = t.Session
+                }).ToList()
+                : Array.Empty<TimeSlotListItemViewModel>()
+        };
+
+        return View(page);
+    }
+
+    [HttpGet]
+    public IActionResult CreateTimeSlot()
+    {
+        var model = new CreateTimeSlotViewModel();
+        PopulateTimeSlotFormDropdowns(model);
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateTimeSlot(CreateTimeSlotViewModel model)
+    {
+        PopulateTimeSlotFormDropdowns(model);
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var result = await _timeSlotService.CreateAsync(
+            model.SlotCode,
+            model.PeriodNo,
+            model.StartTime,
+            model.EndTime,
+            model.Session);
+
+        if (!result.Success)
+        {
+            ModelState.AddModelError(string.Empty, result.Message ?? "Không thể tạo tiết học.");
+            return View(model);
+        }
+
+        TempData["SuccessMessage"] = $"Đã tạo tiết \"{result.Data!.SlotCode}\" thành công.";
+        return RedirectToAction(nameof(TimeSlots), new { session = result.Data.Session });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> EditTimeSlot(int id)
+    {
+        var result = await _timeSlotService.GetByIdAsync(id);
+        if (!result.Success || result.Data == null)
+        {
+            TempData["ErrorMessage"] = result.Message ?? "Không tìm thấy tiết học.";
+            return RedirectToAction(nameof(TimeSlots));
+        }
+
+        var slot = result.Data;
+        var model = new EditTimeSlotViewModel
+        {
+            Id = slot.Id,
+            SlotCode = slot.SlotCode,
+            PeriodNo = slot.PeriodNo,
+            StartTime = slot.StartTime,
+            EndTime = slot.EndTime,
+            Session = slot.Session
+        };
+
+        PopulateTimeSlotFormDropdowns(model);
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EditTimeSlot(EditTimeSlotViewModel model)
+    {
+        PopulateTimeSlotFormDropdowns(model);
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var result = await _timeSlotService.UpdateAsync(
+            model.Id,
+            model.SlotCode,
+            model.PeriodNo,
+            model.StartTime,
+            model.EndTime,
+            model.Session);
+
+        if (!result.Success)
+        {
+            if (result.ErrorCode == ErrorCodes.TimeSlotNotFound)
+            {
+                TempData["ErrorMessage"] = result.Message;
+                return RedirectToAction(nameof(TimeSlots));
+            }
+
+            ModelState.AddModelError(string.Empty, result.Message ?? "Không thể cập nhật tiết học.");
+            return View(model);
+        }
+
+        TempData["SuccessMessage"] = $"Đã cập nhật tiết \"{result.Data!.SlotCode}\" thành công.";
+        return RedirectToAction(nameof(TimeSlots), new { session = result.Data.Session });
+    }
+
+    private static void PopulateTimeSlotFormDropdowns(CreateTimeSlotViewModel model)
+    {
+        model.Sessions = new[]
+        {
+            new SelectListItem { Value = "Morning", Text = "Buổi sáng", Selected = model.Session == "Morning" },
+            new SelectListItem { Value = "Afternoon", Text = "Buổi chiều", Selected = model.Session == "Afternoon" }
+        };
+    }
+
+    // =========================================================================
 
     [HttpGet]
     public async Task<IActionResult> Classes(int? academicYearId, int? gradeLevelId)
@@ -539,6 +877,7 @@ public class StaffController : Controller
             Students = enrolledStudents
                 .Select(sc => new ClassStudentItemViewModel
                 {
+                    StudentId = sc.StudentId,
                     StudentCode = sc.Student.StudentCode,
                     StudentName = sc.Student.User.FullName,
                     Gender = sc.Student.User.Gender,
@@ -577,6 +916,7 @@ public class StaffController : Controller
                 .OrderBy(sc => sc.Student.StudentCode)
                 .Select(sc => new ClassStudentItemViewModel
                 {
+                    StudentId = sc.StudentId,
                     StudentCode = sc.Student.StudentCode,
                     StudentName = sc.Student.User.FullName,
                     Gender = sc.Student.User.Gender,

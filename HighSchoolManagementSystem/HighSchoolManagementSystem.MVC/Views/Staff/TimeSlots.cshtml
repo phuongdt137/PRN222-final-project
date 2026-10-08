@@ -1,0 +1,134 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.TimeSlotListPageViewModel
+@{
+    ViewData["Title"] = "Tiết học / Khung giờ";
+}
+
+<div class="greeting-banner">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> QUẢN LÝ ĐÀO TẠO
+        </span>
+        <h1 class="greeting-title">Khung giờ tiết học</h1>
+        <p class="greeting-subtitle">
+            Xem, tạo và cập nhật các tiết học đã cấu hình (buổi sáng / buổi chiều).
+        </p>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <div>@TempData["SuccessMessage"]</div>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>@TempData["ErrorMessage"]</div>
+    </div>
+}
+
+<div class="card-table-wrap mb-3">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Bộ lọc</h2>
+            <p class="table-card-subtitle">Lọc theo buổi học.</p>
+        </div>
+    </div>
+    <div class="p-4">
+        <form asp-action="TimeSlots" method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="session">Buổi học</label>
+                <select name="session" id="session" class="form-select" asp-items="Model.Sessions">
+                    <option value="">-- Tất cả buổi --</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-funnel me-1"></i>Lọc
+                </button>
+                <a asp-action="TimeSlots" class="btn btn-secondary">Xóa lọc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Danh sách tiết học</h2>
+            <p class="table-card-subtitle">Sắp xếp theo số tiết và giờ bắt đầu.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="table-counter-badge">Tổng: @Model.TimeSlots.Count tiết</span>
+            <a asp-action="CreateTimeSlot" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Tạo tiết học
+            </a>
+        </div>
+    </div>
+
+    @if (Model.TimeSlots.Count == 0)
+    {
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-clock-history" style="font-size: 2rem;"></i>
+            <p class="mt-2 mb-3">Chưa có khung giờ tiết học nào khớp bộ lọc.</p>
+            <a asp-action="CreateTimeSlot" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Tạo tiết học
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table-edu mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 70px;">#</th>
+                        <th>Mã tiết</th>
+                        <th class="text-center">Tiết số</th>
+                        <th>Giờ bắt đầu</th>
+                        <th>Giờ kết thúc</th>
+                        <th class="text-center">Buổi</th>
+                        <th class="text-center" style="width: 120px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var index = 1;
+                    }
+                    @foreach (var item in Model.TimeSlots)
+                    {
+                        var sessionLabel = item.Session switch
+                        {
+                            "Morning" => "Sáng",
+                            "Afternoon" => "Chiều",
+                            _ => item.Session
+                        };
+                        var sessionClass = item.Session == "Morning" ? "badge-status-success" : "badge-status-info";
+                        <tr>
+                            <td>@index</td>
+                            <td><strong>@item.SlotCode</strong></td>
+                            <td class="text-center">@item.PeriodNo</td>
+                            <td>@item.StartTime.ToString(@"hh\:mm")</td>
+                            <td>@item.EndTime.ToString(@"hh\:mm")</td>
+                            <td class="text-center">
+                                <span class="badge-status @sessionClass">@sessionLabel</span>
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="EditTimeSlot" asp-route-id="@item.Id"
+                                   class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;"
+                                   title="Cập nhật">
+                                    <i class="bi bi-pencil-square me-1"></i>Sửa
+                                </a>
+                            </td>
+                        </tr>
+                        index++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

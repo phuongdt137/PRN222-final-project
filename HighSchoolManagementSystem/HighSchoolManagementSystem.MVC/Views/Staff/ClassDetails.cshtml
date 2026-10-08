@@ -20,6 +20,9 @@
         <a asp-action="ClassStudents" asp-route-id="@Model.Id" class="btn btn-secondary btn-sm">
             <i class="bi bi-people me-1"></i>Xem học sinh
         </a>
+        <a asp-controller="Score" asp-action="HomeroomScores" asp-route-classId="@Model.Id" class="btn btn-secondary btn-sm">
+            <i class="bi bi-card-checklist me-1"></i>Bảng điểm lớp
+        </a>
         <a asp-action="EditClass" asp-route-id="@Model.Id" class="btn btn-secondary btn-sm">
             <i class="bi bi-pencil-square me-1"></i>Sửa lớp
         </a>

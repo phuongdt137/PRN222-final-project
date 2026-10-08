@@ -10,6 +10,7 @@ public interface IStudentRepository
 {
     Task<PagedResult<Student>> GetAllAsync(string? search, string? status, int? classId, bool unassignedOnly, int page, int pageSize);
     Task<Student?> GetByIdAsync(int id);
+    Task<Student?> GetByUserIdAsync(int userId);
     Task<Student?> GetAcademicHistoryAsync(int id);
     Task<bool> ExistsByCodeAsync(string code, int? excludedId = null);
     Task<Role?> GetStudentRoleAsync();

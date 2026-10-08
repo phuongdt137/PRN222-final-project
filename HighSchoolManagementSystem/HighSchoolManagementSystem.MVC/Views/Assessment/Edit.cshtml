@@ -1,0 +1,158 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Assessment.EditAssessmentViewModel
+@{
+    ViewData["Title"] = "Chỉnh Sửa Bài Kiểm Tra";
+}
+
+<!-- Greeting Banner EIMS Standard -->
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-pencil-square me-1"></i> BỘ MÔN GIẢNG DẠY • CHỈNH SỬA ĐẦU ĐIỂM
+        </span>
+        <h1 class="greeting-title">Chỉnh Sửa Bài Kiểm Tra</h1>
+        <p class="greeting-subtitle">
+            Cập nhật tên bài kiểm tra, hình thức đánh giá hoặc ngày tổ chức cho lớp học.
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a asp-action="Index" asp-route-assignmentId="@Model.TeachingAssignmentId" class="btn btn-secondary px-3 py-2 shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i>
+            <span>Quay Lại Danh Sách</span>
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        <!-- Thông tin lớp môn học hiện tại -->
+        @if (Model.AssessmentDetails != null)
+        {
+            <div class="edu-card p-3 mb-4 bg-light">
+                <div class="row g-2 align-items-center">
+                    <div class="col-12 col-md-6">
+                        <div class="small text-muted">LỚP & MÔN HỌC</div>
+                        <div class="fw-bold text-primary fs-6">
+                            Lớp @Model.AssessmentDetails.ClassName — Môn @Model.AssessmentDetails.SubjectName
+                        </div>
+                        <div class="small text-muted">
+                            Học kỳ: @Model.AssessmentDetails.SemesterName (@Model.AssessmentDetails.AcademicYearCode)
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 text-md-end">
+                        <div class="small text-muted">TIẾN ĐỘ ĐIỂM SỐ</div>
+                        <div>
+                            <span class="badge bg-white text-dark border px-2 py-1">
+                                Đã vào điểm: <strong>@Model.AssessmentDetails.GradedStudentsCount / @Model.AssessmentDetails.TotalStudents</strong> học sinh
+                            </span>
+                        </div>
+                        @if (Model.HasLockedScores)
+                        {
+                            <div class="mt-1">
+                                <span class="badge-status badge-status-warning">
+                                    <i class="bi bi-lock-fill"></i> Có @Model.AssessmentDetails.LockedScoresCount điểm đã bị khóa
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="edu-card shadow-sm">
+            <div class="edu-card-header">
+                <h2 class="edu-card-title">
+                    <i class="bi bi-pencil-fill text-primary me-2"></i>Biểu Mẫu Chỉnh Sửa
+                </h2>
+            </div>
+
+            <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="TeachingAssignmentId" />
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4" role="alert"></div>
+
+                @if (Model.HasLockedScores)
+                {
+                    <div class="alert alert-warning d-flex align-items-center gap-2 mb-4" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                        <div>
+                            <strong>Lưu ý:</strong> Bài kiểm tra này đã có điểm số bị khóa, do đó bạn không thể thay đổi loại bài kiểm tra.
+                        </div>
+                    </div>
+                }
+
+                <div class="row g-3">
+                    <!-- Chọn Loại Kiểm Tra / Đánh Giá -->
+                    <div class="col-12">
+                        <label asp-for="AssessmentTypeId" class="form-label required">Loại bài kiểm tra / Hình thức đánh giá <span class="text-danger">*</span></label>
+                        <div class="row g-3">
+                            @foreach (var type in Model.AvailableTypes)
+                            {
+                                <div class="col-12 col-md-4">
+                                    <div class="border rounded-3 p-3 h-100 bg-white shadow-sm position-relative @(Model.HasLockedScores && type.Id != Model.AssessmentTypeId ? "opacity-50" : "")">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" asp-for="AssessmentTypeId" value="@type.Id" id="type_@type.Id" disabled="@(Model.HasLockedScores && type.Id != Model.AssessmentTypeId)" />
+                                            <label class="form-check-label fw-bold text-dark" for="type_@type.Id">
+                                                @type.TypeName
+                                            </label>
+                                        </div>
+                                        <div class="mt-2 ps-4 small text-muted">
+                                            <div><i class="bi bi-check2-circle text-primary me-1"></i>Hệ số: <strong>x@(type.Weight.ToString("G29"))</strong></div>
+                                            <div><i class="bi bi-hash text-muted me-1"></i>Tối đa: <strong>@type.MaxEntries bài</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @if (Model.HasLockedScores)
+                        {
+                            <!-- Giữ nguyên AssessmentTypeId trong hidden input nếu radio bị disabled -->
+                            <input type="hidden" asp-for="AssessmentTypeId" />
+                        }
+                        <span asp-validation-for="AssessmentTypeId" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Tên Bài Kiểm Tra -->
+                    <div class="col-12 col-md-8">
+                        <label asp-for="AssessmentName" class="form-label required">Tên bài kiểm tra <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted">
+                                <i class="bi bi-file-earmark-text-fill"></i>
+                            </span>
+                            <input asp-for="AssessmentName" class="form-control" 
+                                   placeholder="VD: Kiểm tra 15 phút số 1, Bài kiểm tra giữa kỳ..." autofocus />
+                        </div>
+                        <span asp-validation-for="AssessmentName" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Ngày Tổ Chức Kiểm Tra -->
+                    <div class="col-12 col-md-4">
+                        <label asp-for="ConductedAt" class="form-label">Ngày tổ chức kiểm tra</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted">
+                                <i class="bi bi-calendar3"></i>
+                            </span>
+                            <input asp-for="ConductedAt" type="date" class="form-control" />
+                        </div>
+                        <span asp-validation-for="ConductedAt" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="col-12 mt-4 pt-3 border-top d-flex align-items-center justify-content-end gap-2">
+                        <a asp-action="Index" asp-route-assignmentId="@Model.TeachingAssignmentId" class="btn btn-secondary px-4 py-2">
+                            <i class="bi bi-x-circle me-1"></i>Hủy Bỏ
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm">
+                            <i class="bi bi-check-circle-fill me-1"></i>Lưu Thay Đổi
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

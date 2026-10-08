@@ -28,6 +28,11 @@ public class ParentRepository(AppDbContext context) : IParentRepository
         .Include(p => p.Students).ThenInclude(s => s.User)
         .FirstOrDefaultAsync(p => p.ParentId == id);
 
+    public Task<Parent?> GetByUserIdAsync(int userId) => context.Parents
+        .Include(p => p.User).ThenInclude(u => u.Role)
+        .Include(p => p.Students).ThenInclude(s => s.User)
+        .FirstOrDefaultAsync(p => p.UserId == userId);
+
     public Task<Role?> GetParentRoleAsync() => context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Parent");
 
     public async Task AddAsync(Parent parent) => await context.Parents.AddAsync(parent);

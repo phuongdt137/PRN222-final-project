@@ -12,6 +12,7 @@ public class ClassTeacherItemViewModel
 
 public class ClassStudentItemViewModel
 {
+    public int StudentId { get; set; }
     public string StudentCode { get; set; } = null!;
     public string StudentName { get; set; } = null!;
     public string? Gender { get; set; }

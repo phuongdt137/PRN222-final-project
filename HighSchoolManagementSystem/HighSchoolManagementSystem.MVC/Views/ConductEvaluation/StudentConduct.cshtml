@@ -1,0 +1,250 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Conduct.ParentConductViewModel
+@{
+    ViewData["Title"] = "Sổ Liên Lạc - Hạnh Kiểm Con Em";
+}
+
+<!-- Greeting Banner EIMS Standard -->
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-book-half me-1"></i> SỔ LIÊN LẠC ĐIỆN TỬ • HẠNH KIỂM & NỀ NẾP CỦA CON
+        </span>
+        <h1 class="greeting-title">Kết Quả Rèn Luyện & Hạnh Kiểm Con Em</h1>
+        <p class="greeting-subtitle">
+            Cầu nối thông tin giữa Gia đình và Nhà trường: Theo dõi hạnh kiểm, chuyên cần và lắng nghe nhận xét định hướng của Giáo viên chủ nhiệm.
+        </p>
+    </div>
+</div>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>@TempData["ErrorMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (!Model.Children.Any())
+{
+    <div class="edu-card text-center py-5">
+        <i class="bi bi-people fs-1 text-muted d-block mb-3"></i>
+        <h5 class="fw-bold text-dark">Chưa Có Hồ Sơ Học Sinh Liên Kết</h5>
+        <p class="text-muted small mb-0">Tài khoản phụ huynh hiện tại chưa được liên kết với hồ sơ học sinh nào trong hệ thống.</p>
+    </div>
+}
+else
+{
+    <!-- Selector Bar (Chọn con & Học kỳ) -->
+    <div class="edu-card p-3 mb-4">
+        <form method="get" asp-action="StudentConduct" class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <label for="studentSelect" class="form-label small fw-semibold text-secondary mb-1">
+                    <i class="bi bi-person-heart me-1"></i> Chọn con em:
+                </label>
+                <select id="studentSelect" name="studentId" class="form-select form-select-sm" onchange="this.form.submit()">
+                    @foreach (var ch in Model.Children)
+                    {
+                        <option value="@ch.Id" selected="@(ch.Id == Model.SelectedStudentId)">
+                            @ch.FullName (@ch.StudentCode)
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label for="semesterSelect" class="form-label small fw-semibold text-secondary mb-1">
+                    <i class="bi bi-calendar3 me-1"></i> Học kỳ:
+                </label>
+                <select id="semesterSelect" name="semesterId" class="form-select form-select-sm" onchange="this.form.submit()">
+                    @foreach (var sem in Model.AvailableSemesters)
+                    {
+                        <option value="@sem.Id" selected="@(sem.Id == Model.SelectedSemesterId)">
+                            @sem.SemesterName - @sem.AcademicYearCode @(sem.IsActive ? "(Hiện tại)" : "")
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a asp-controller="Parent" asp-action="StudentScores" asp-route-studentId="@Model.SelectedStudentId" asp-route-semesterId="@Model.SelectedSemesterId"
+                   class="btn btn-sm btn-outline-primary me-2">
+                    <i class="bi bi-mortarboard me-1"></i> Xem bảng điểm của con
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i> In
+                </button>
+            </div>
+        </form>
+    </div>
+
+    @if (Model.Detail != null)
+    {
+        <!-- Thẻ Báo Cáo Hạnh Kiểm Của Con -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-5">
+                <div class="edu-card p-4 h-100 text-center shadow-sm d-flex flex-column justify-content-center align-items-center">
+                    <div class="text-muted small fw-semibold text-uppercase tracking-wider mb-2">
+                        Xếp Loại Hạnh Kiểm • @Model.Detail.SemesterName
+                    </div>
+
+                    @if (string.Equals(Model.Detail.ConductGrade, "Tốt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="rounded-circle p-4 bg-success bg-opacity-10 text-success mb-3" style="width: 110px; height: 110px; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-award-fill" style="font-size: 54px;"></i>
+                        </div>
+                        <h2 class="fw-bolder text-success mb-1">TỐT</h2>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1">Con ngoan ngoãn & gương mẫu</span>
+                    }
+                    else if (string.Equals(Model.Detail.ConductGrade, "Khá", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="rounded-circle p-4 bg-primary bg-opacity-10 text-primary mb-3" style="width: 110px; height: 110px; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-hand-thumbs-up-fill" style="font-size: 54px;"></i>
+                        </div>
+                        <h2 class="fw-bolder text-primary mb-1">KHÁ</h2>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1">Chấp hành tốt nội quy</span>
+                    }
+                    else if (string.Equals(Model.Detail.ConductGrade, "Đạt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="rounded-circle p-4 bg-warning bg-opacity-10 text-warning mb-3" style="width: 110px; height: 110px; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-check-circle-fill" style="font-size: 54px;"></i>
+                        </div>
+                        <h2 class="fw-bolder text-warning mb-1">ĐẠT</h2>
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1">Gia đình cùng phối hợp rèn luyện</span>
+                    }
+                    else if (string.Equals(Model.Detail.ConductGrade, "Chưa đạt", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="rounded-circle p-4 bg-danger bg-opacity-10 text-danger mb-3" style="width: 110px; height: 110px; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-exclamation-triangle-fill" style="font-size: 54px;"></i>
+                        </div>
+                        <h2 class="fw-bolder text-danger mb-1">CHƯA ĐẠT</h2>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1">Cần liên hệ ngay với GVCN</span>
+                    }
+                    else
+                    {
+                        <div class="rounded-circle p-4 bg-secondary bg-opacity-10 text-secondary mb-3" style="width: 110px; height: 110px; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-hourglass-split" style="font-size: 54px;"></i>
+                        </div>
+                        <h3 class="fw-bold text-muted mb-1">CHƯA ĐÁNH GIÁ</h3>
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-1">Đang chờ kỳ tổng kết</span>
+                    }
+
+                    <div class="small text-muted mt-3">
+                        Học sinh: <strong>@Model.Detail.FullName</strong> • Lớp: <strong>@Model.Detail.ClassName</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="edu-card p-4 h-100 shadow-sm d-flex flex-column justify-content-between">
+                    <div>
+                        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                            <i class="bi bi-chat-quote-fill text-primary me-2"></i> Lời Nhận Xét Của Giáo Viên Chủ Nhiệm
+                        </h6>
+
+                        <div class="p-3 bg-light rounded-3 mb-4 border">
+                            <p class="mb-0 text-dark fs-6 fst-italic" style="min-height: 80px;">
+                                "@(string.IsNullOrWhiteSpace(Model.Detail.TeacherComment) ? "Chưa có lời nhận xét cụ thể từ Giáo viên chủ nhiệm." : Model.Detail.TeacherComment)"
+                            </p>
+                        </div>
+
+                        <!-- Thống kê Chuyên cần & Học tập -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light text-center">
+                                    <div class="small text-muted">ĐTB Học kỳ</div>
+                                    <div class="fw-bold text-primary fs-5 mt-1">
+                                        @(Model.Detail.Gpa.HasValue ? Model.Detail.Gpa.Value.ToString("0.0") : "--")
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light text-center">
+                                    <div class="small text-muted">Học lực</div>
+                                    <div class="fw-bold text-dark fs-5 mt-1">
+                                        @(Model.Detail.AcademicRank ?? "--")
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light text-center">
+                                    <div class="small text-muted">Số buổi vắng</div>
+                                    <div class="fw-bold fs-5 mt-1 @(Model.Detail.AbsentsCount > 0 ? "text-danger" : "text-success")">
+                                        V:@Model.Detail.AbsentsCount | P:@Model.Detail.ExcusedCount
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center text-muted small pt-3 border-top">
+                        <span>GVCN: <strong>@(Model.Detail.HomeroomTeacherName ?? "Chưa phân công")</strong></span>
+                        <span>Ngày đánh giá: <strong>@(Model.Detail.EvaluatedAt.HasValue ? Model.Detail.EvaluatedAt.Value.ToString("dd/MM/yyyy HH:mm") : "--")</strong></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Lịch sử hạnh kiểm qua các kỳ -->
+    @if (Model.History.Any())
+    {
+        <div class="edu-card p-0 shadow-sm overflow-hidden mb-4">
+            <div class="p-3 border-bottom bg-light">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-clock-history text-primary me-2"></i> Lịch Sử Quá Trình Rèn Luyện Của Con Qua Các Học Kỳ
+                </h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Học kỳ</th>
+                            <th>Năm học</th>
+                            <th>Lớp</th>
+                            <th class="text-center">Xếp loại Hạnh kiểm</th>
+                            <th>Lời nhận xét của GVCN</th>
+                            <th>GVCN đánh giá</th>
+                            <th class="text-center">Ngày đánh giá</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var h in Model.History)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@h.SemesterName</td>
+                                <td>@h.AcademicYearCode</td>
+                                <td><span class="badge bg-light text-dark border">@h.ClassName</span></td>
+                                <td class="text-center">
+                                    @if (string.Equals(h.ConductGrade, "Tốt", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Tốt</span>
+                                    }
+                                    else if (string.Equals(h.ConductGrade, "Khá", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Khá</span>
+                                    }
+                                    else if (string.Equals(h.ConductGrade, "Đạt", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">Đạt</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Chưa đạt</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="small text-truncate" style="max-width: 320px;" title="@h.TeacherComment">
+                                        @(string.IsNullOrWhiteSpace(h.TeacherComment) ? Html.Raw("<span class='text-muted fst-italic'>Chưa có nhận xét</span>") : h.TeacherComment)
+                                    </div>
+                                </td>
+                                <td>@h.HomeroomTeacherName</td>
+                                <td class="text-center small text-muted">@h.EvaluatedAt.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}

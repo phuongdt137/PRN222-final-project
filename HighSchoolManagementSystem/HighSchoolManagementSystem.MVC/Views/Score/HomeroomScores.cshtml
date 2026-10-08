@@ -1,0 +1,339 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Score.HomeroomScoresViewModel
+@{
+    ViewData["Title"] = "Bảng Điểm Tổng Hợp Lớp Chủ Nhiệm";
+}
+
+<!-- Greeting Banner EIMS Standard -->
+<div class="greeting-banner mb-4">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            @if (User.IsInRole("Staff"))
+            {
+                <span><i class="bi bi-folder-check me-1"></i> QUẢN LÝ ĐÀO TẠO • BẢNG ĐIỂM TỔNG HỢP</span>
+            }
+            else
+            {
+                <span><i class="bi bi-person-badge-fill me-1"></i> GIÁO VIÊN CHỦ NHIỆM • BẢNG ĐIỂM TỔNG HỢP</span>
+            }
+        </span>
+        <h1 class="greeting-title">
+            @(User.IsInRole("Staff") ? "Bảng Điểm Lớp Học" : "Bảng Điểm Lớp Chủ Nhiệm")
+        </h1>
+        <p class="greeting-subtitle">
+            Theo dõi tổng hợp kết quả học tập tất cả các môn, điểm trung bình học kỳ (GPA), xếp loại học lực, hạnh kiểm và trích lục học bạ học sinh.
+        </p>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill fs-5"></i>
+        <div>@TempData["SuccessMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 d-flex align-items-center gap-2 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div>@TempData["ErrorMessage"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (!Model.HomeroomClasses.Any())
+{
+    <div class="edu-card text-center py-5">
+        <i class="bi bi-person-x fs-1 text-muted d-block mb-3"></i>
+        <h5 class="fw-bold text-dark">@(User.IsInRole("Staff") ? "Chưa Có Lớp Học Nào" : "Bạn Chưa Được Phân Công Lớp Chủ Nhiệm")</h5>
+        <p class="text-muted small mb-0">@(User.IsInRole("Staff") ? "Chưa tìm thấy lớp học nào trong hệ thống." : "Tài khoản giáo viên hiện tại chưa được chỉ định làm Giáo viên chủ nhiệm cho lớp học nào.")</p>
+    </div>
+}
+else
+{
+    <!-- Filter Bar -->
+    <div class="edu-card p-3 mb-4">
+        <form method="get" asp-action="HomeroomScores" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="classSelect" class="form-label small fw-semibold text-secondary mb-1">
+                    <i class="bi bi-building me-1 text-primary"></i>@(User.IsInRole("Staff") ? "Chọn Lớp Học" : "Chọn Lớp Chủ Nhiệm")
+                </label>
+                <select id="classSelect" name="classId" class="form-select" onchange="this.form.submit()">
+                    @foreach (var c in Model.HomeroomClasses)
+                    {
+                        <option value="@c.Id" selected="@(c.Id == Model.SelectedClassId)">
+                            Lớp @c.ClassName (@c.AcademicYearCode)
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="semesterSelect" class="form-label small fw-semibold text-secondary mb-1">
+                    <i class="bi bi-calendar3 me-1 text-primary"></i>Chọn Học Kỳ
+                </label>
+                <select id="semesterSelect" name="semesterId" class="form-select" onchange="this.form.submit()">
+                    @foreach (var s in Model.Semesters)
+                    {
+                        <option value="@s.Id" selected="@(s.Id == Model.SelectedSemesterId)">
+                            @s.SemesterName - Năm @s.AcademicYearCode @(s.IsActive ? "(Hiện tại)" : "")
+                        </option>
+                    }
+                </select>
+            </div>
+            @if (Model.Report != null)
+            {
+                <div class="col-md-4 text-md-end text-muted small">
+                    <div>GVCN: <strong class="text-dark">@Model.Report.HomeroomTeacherName</strong></div>
+                    <div>Sĩ số: <strong class="text-primary">@Model.Report.Students.Count</strong> học sinh</div>
+                </div>
+            }
+        </form>
+    </div>
+
+    @if (Model.Report == null || !Model.Report.Students.Any())
+    {
+        <div class="edu-card text-center py-5">
+            <i class="bi bi-inbox text-muted fs-1 mb-2 d-block"></i>
+            <h5 class="fw-bold">Chưa Có Dữ Liệu Bảng Điểm</h5>
+            <p class="text-muted small mb-0">Chưa tìm thấy danh sách học sinh hoặc điểm số của lớp trong học kỳ này.</p>
+        </div>
+    }
+    else
+    {
+        <!-- Homeroom Score Table -->
+        <div class="edu-card p-4">
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-table text-primary me-2"></i>Bảng Điểm Tổng Hợp: Lớp @Model.Report.ClassName • @Model.Report.SemesterName
+                </h5>
+                <div class="d-flex align-items-center gap-2">
+                    <a asp-controller="ConductEvaluation" asp-action="Index" asp-route-classId="@Model.SelectedClassId" asp-route-semesterId="@Model.SelectedSemesterId"
+                       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 shadow-sm">
+                        <i class="bi bi-star-half"></i> Đánh giá hạnh kiểm
+                    </a>
+                    <span class="text-muted small d-none d-md-inline">
+                        <i class="bi bi-award me-1"></i> Quy chế xếp loại theo Thông tư THPT
+                    </span>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0 text-center small">
+                    <thead class="table-light">
+                        <tr>
+                            <th rowspan="2" class="align-middle" style="width: 45px;">STT</th>
+                            <th rowspan="2" class="align-middle text-start" style="width: 100px;">Mã HS</th>
+                            <th rowspan="2" class="align-middle text-start" style="min-width: 160px;">Họ Và Tên</th>
+
+                            @if (Model.Report.Subjects.Any())
+                            {
+                                <th colspan="@Model.Report.Subjects.Count" class="text-center bg-primary bg-opacity-10 text-primary fw-bold">
+                                    ĐIỂM TRUNG BÌNH CÁC MÔN HỌC
+                                </th>
+                            }
+                            else
+                            {
+                                <th class="align-middle text-muted">Chưa có môn học</th>
+                            }
+
+                            <th rowspan="2" class="align-middle bg-success bg-opacity-10 text-success fw-bold" style="width: 75px;">
+                                ĐTB (GPA)
+                            </th>
+                            <th rowspan="2" class="align-middle" style="width: 90px;">Học Lực</th>
+                            <th rowspan="2" class="align-middle" style="width: 90px;">Hạnh Kiểm</th>
+                            <th rowspan="2" class="align-middle" style="width: 65px;">Hạng</th>
+                            <th rowspan="2" class="align-middle" style="width: 100px;">Nhận Xét</th>
+                        </tr>
+                        @if (Model.Report.Subjects.Any())
+                        {
+                            <tr>
+                                @foreach (var sub in Model.Report.Subjects)
+                                {
+                                    <th class="py-2 px-1 text-truncate" style="min-width: 70px; max-width: 110px;" title="@sub.SubjectName">
+                                        @if (User.IsInRole("Staff"))
+                                        {
+                                            <a asp-action="SubjectMatrix" asp-route-assignmentId="@sub.AssignmentId" title="Xem và điều chỉnh điểm môn học">@sub.SubjectName</a>
+                                        }
+                                        else
+                                        {
+                                            @sub.SubjectName
+                                        }
+                                    </th>
+                                }
+                            </tr>
+                        }
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Report.Students.Count; i++)
+                        {
+                            var student = Model.Report.Students[i];
+                            <tr>
+                                <td class="text-muted">@(i + 1)</td>
+                                <td class="text-start">
+                                    <span class="badge bg-light text-dark border font-monospace">@student.StudentCode</span>
+                                </td>
+                                <td class="text-start fw-semibold text-dark">
+                                    @student.FullName
+                                </td>
+
+                                @foreach (var sub in Model.Report.Subjects)
+                                {
+                                    var avgScore = student.SubjectAverages.ContainsKey(sub.Id) 
+                                        ? student.SubjectAverages[sub.Id] 
+                                        : null;
+
+                                    <td class="font-monospace">
+                                        @if (avgScore.HasValue)
+                                        {
+                                            <span class="fw-semibold @(avgScore.Value < 5 ? "text-danger" : (avgScore.Value >= 8 ? "text-primary" : "text-dark"))">
+                                                @avgScore.Value.ToString("0.0")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">--</span>
+                                        }
+                                    </td>
+                                }
+
+                                <td class="bg-success bg-opacity-10 font-monospace">
+                                    @if (student.Gpa.HasValue)
+                                    {
+                                        <span class="fw-bold fs-6 @(student.Gpa.Value < 5 ? "text-danger" : (student.Gpa.Value >= 8 ? "text-primary" : "text-success"))">
+                                            @student.Gpa.Value.ToString("0.00")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">--</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(student.AcademicRank))
+                                    {
+                                        string badgeClass = student.AcademicRank switch
+                                        {
+                                            "Giỏi" => "bg-primary text-white",
+                                            "Khá" => "bg-success text-white",
+                                            "Trung bình" => "bg-warning text-dark",
+                                            _ => "bg-danger text-white"
+                                        };
+                                        <span class="badge @badgeClass">@student.AcademicRank</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">--</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(student.ConductGrade))
+                                    {
+                                        <span class="badge bg-light text-dark border">@student.ConductGrade</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">--</span>
+                                    }
+                                </td>
+                                <td class="font-monospace fw-bold">
+                                    @(student.ClassRank.HasValue ? student.ClassRank.Value.ToString() : "--")
+                                </td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <a asp-action="StudentTranscript" 
+                                           asp-route-studentId="@student.StudentId" 
+                                           asp-route-semesterId="@Model.SelectedSemesterId" 
+                                           class="btn btn-sm btn-outline-info px-2 py-1" 
+                                           title="Xem chi tiết học bạ & bảng điểm">
+                                            <i class="bi bi-file-earmark-text"></i>
+                                        </a>
+                                        @if (User.IsInRole("Teacher"))
+                                        {
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-primary px-2 py-1 btn-open-feedback" 
+                                                    data-studentid="@student.StudentId" 
+                                                    data-studentname="@student.FullName"
+                                                    title="Gửi nhận xét học sinh">
+                                                <i class="bi bi-chat-left-text me-1"></i>Nhận xét
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+<!-- Modal Nhận Xét Học Sinh -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow">
+            <form asp-action="AddFeedback" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="feedbackStudentId" name="StudentId" />
+                <input type="hidden" name="SemesterId" value="@(Model.SelectedSemesterId ?? 0)" />
+                <input type="hidden" name="ReturnUrl" value="@Context.Request.Path@Context.Request.QueryString" />
+
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="feedbackModalLabel">
+                        <i class="bi bi-chat-left-text text-primary me-2"></i>Nhận Xét: <span id="feedbackStudentName" class="text-primary"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="feedbackType" class="form-label small fw-semibold text-secondary">Loại Nhận Xét</label>
+                        <select class="form-select" id="feedbackType" name="FeedbackType">
+                            <option value="Academic">Học tập & Tiến bộ</option>
+                            <option value="Behavior">Ý thức & Nề nếp</option>
+                            <option value="General" selected>Nhận xét chung</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="feedbackContent" class="form-label small fw-semibold text-secondary">Nội Dung Nhận Xét <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="feedbackContent" name="Content" rows="4" maxlength="1000"
+                                  placeholder="Ví dụ: Em có tinh thần tự giác cao trong giờ học, chăm chỉ làm bài tập về nhà..." required></textarea>
+                    </div>
+                    <div class="small text-muted">
+                        <i class="bi bi-info-circle me-1"></i> Nhận xét này sẽ hiển thị trực tiếp cho học sinh và phụ huynh xem khi tra cứu kết quả học tập.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-send-fill me-1"></i> Gửi Nhận Xét
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const feedbackModalEl = document.getElementById("feedbackModal");
+        const feedbackModal = new bootstrap.Modal(feedbackModalEl);
+        const feedbackBtns = document.querySelectorAll(".btn-open-feedback");
+
+        feedbackBtns.forEach(btn => {
+            btn.addEventListener("click", function () {
+                const studentId = this.getAttribute("data-studentid");
+                const studentName = this.getAttribute("data-studentname");
+
+                document.getElementById("feedbackStudentId").value = studentId;
+                document.getElementById("feedbackStudentName").innerText = studentName;
+                document.getElementById("feedbackContent").value = "";
+
+                feedbackModal.show();
+            });
+        });
+    });
+</script>
+}

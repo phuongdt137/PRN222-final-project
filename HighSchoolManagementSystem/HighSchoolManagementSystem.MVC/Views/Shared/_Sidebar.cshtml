@@ -41,7 +41,8 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="ConductEvaluation" asp-action="PrincipalSummary"
+                       class="sidebar-link @(currentController == "ConductEvaluation" && currentAction == "PrincipalSummary" ? "active" : "")">
                         <i class="bi bi-shield-check"></i>
                         <span>Kỷ luật & Nề nếp</span>
                     </a>
@@ -142,9 +143,17 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="Staff" asp-action="Rooms"
+                       class="sidebar-link @(currentController == "Staff" && (currentAction == "Rooms" || currentAction == "CreateRoom" || currentAction == "EditRoom") ? "active" : "")">
                         <i class="bi bi-door-open"></i>
                         <span>Quản lý phòng học</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a asp-controller="Staff" asp-action="TimeSlots"
+                       class="sidebar-link @(currentController == "Staff" && (currentAction == "TimeSlots" || currentAction == "CreateTimeSlot" || currentAction == "EditTimeSlot") ? "active" : "")">
+                        <i class="bi bi-clock-history"></i>
+                        <span>Khung giờ tiết học</span>
                     </a>
                 </li>
             </ul>
@@ -171,9 +180,17 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="ConductEvaluation" asp-action="Index"
+                       class="sidebar-link @(currentController == "ConductEvaluation" ? "active" : "")">
+                        <i class="bi bi-star-half"></i>
+                        <span>Quản lý hạnh kiểm</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a asp-controller="Score" asp-action="HomeroomScores"
+                       class="sidebar-link @(currentController == "Score" && (currentAction == "HomeroomScores" || currentAction == "StudentTranscript") ? "active" : "")">
                         <i class="bi bi-printer"></i>
-                        <span>Cấp bảng điểm & Giấy tờ</span>
+                        <span>Bảng điểm & Học bạ</span>
                     </a>
                 </li>
             </ul>
@@ -220,9 +237,17 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="ConductEvaluation" asp-action="Index"
+                       class="sidebar-link @(currentController == "ConductEvaluation" ? "active" : "")">
+                        <i class="bi bi-star-half"></i>
+                        <span>Đánh giá hạnh kiểm</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a asp-controller="Score" asp-action="HomeroomScores"
+                       class="sidebar-link @(currentController == "Score" && currentAction == "HomeroomScores" ? "active" : "")">
                         <i class="bi bi-award"></i>
-                        <span>Hạnh kiểm & Rèn luyện</span>
+                        <span>Bảng điểm lớp CN</span>
                     </a>
                 </li>
             </ul>
@@ -230,15 +255,17 @@
             <div class="sidebar-section-title">BỘ MÔN GIẢNG DẠY</div>
             <ul class="sidebar-menu-list">
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="Assessment" asp-action="Index"
+                       class="sidebar-link @(currentController == "Assessment" ? "active" : "")">
                         <i class="bi bi-journal-check"></i>
-                        <span>Sổ điểm bộ môn</span>
+                        <span>Bài kiểm tra & Đầu điểm</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
-                        <i class="bi bi-clock-history"></i>
-                        <span>Lịch kiểm tra</span>
+                    <a asp-controller="Score" asp-action="SubjectMatrix"
+                       class="sidebar-link @(currentController == "Score" && (currentAction == "SubjectMatrix" || currentAction == "Entry") ? "active" : "")">
+                        <i class="bi bi-grid-3x3"></i>
+                        <span>Sổ điểm bộ môn</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
@@ -267,7 +294,8 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="Student" asp-action="Scores"
+                       class="sidebar-link @(currentController == "Student" && currentAction == "Scores" ? "active" : "")">
                         <i class="bi bi-file-earmark-text"></i>
                         <span>Tra cứu bảng điểm</span>
                     </a>
@@ -283,9 +311,10 @@
             <div class="sidebar-section-title">RÈN LUYỆN & THỦ TỤC</div>
             <ul class="sidebar-menu-list">
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="ConductEvaluation" asp-action="MyConduct"
+                       class="sidebar-link @(currentController == "ConductEvaluation" && currentAction == "MyConduct" ? "active" : "")">
                         <i class="bi bi-patch-check"></i>
-                        <span>Điểm rèn luyện</span>
+                        <span>Điểm rèn luyện & Hạnh kiểm</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
@@ -320,7 +349,8 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="Parent" asp-action="StudentScores"
+                       class="sidebar-link @(currentController == "Parent" && currentAction == "StudentScores" ? "active" : "")">
                         <i class="bi bi-mortarboard"></i>
                         <span>Kết quả học tập</span>
                     </a>
@@ -348,9 +378,10 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="ConductEvaluation" asp-action="StudentConduct"
+                       class="sidebar-link @(currentController == "ConductEvaluation" && currentAction == "StudentConduct" ? "active" : "")">
                         <i class="bi bi-book"></i>
-                        <span>Sổ liên lạc điện tử</span>
+                        <span>Sổ liên lạc & Hạnh kiểm</span>
                     </a>
                 </li>
             </ul>

@@ -35,7 +35,12 @@
                 <td>@student.Email<div class="small text-muted">@(student.PhoneNumber ?? "Chưa có số điện thoại")</div></td>
                 <td>@(student.CurrentClassName ?? (student.HasAssignment ? "Đã kết thúc phân lớp" : "Chưa phân lớp"))</td>
                 <td><span class="badge @(student.Status == "Active" ? "bg-success" : "bg-secondary")">@StudentDetailsViewModel.StatusText(student.Status)</span></td>
-                <td><div class="d-flex flex-wrap gap-2"><a asp-action="Details" asp-route-id="@student.Id" class="btn btn-sm btn-outline-primary">Chi tiết</a><a asp-action="Edit" asp-route-id="@student.Id" class="btn btn-sm btn-outline-secondary">Sửa</a>
+                <td><div class="d-flex flex-wrap gap-2">
+                    <a asp-action="Details" asp-route-id="@student.Id" class="btn btn-sm btn-outline-primary">Chi tiết</a>
+                    <a asp-controller="Score" asp-action="StudentTranscript" asp-route-studentId="@student.Id" class="btn btn-sm btn-outline-success" title="Xem bảng điểm và học bạ">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Bảng điểm
+                    </a>
+                    <a asp-action="Edit" asp-route-id="@student.Id" class="btn btn-sm btn-outline-secondary">Sửa</a>
                     @if (student.Status == "Active" && !student.HasAssignment)
                     {
                         <a asp-action="AssignClass" asp-route-id="@student.Id" class="btn btn-sm btn-outline-primary">Phân lớp</a>
