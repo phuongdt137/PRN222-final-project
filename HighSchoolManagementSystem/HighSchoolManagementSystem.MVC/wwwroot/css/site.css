@@ -200,10 +200,10 @@ a:hover {
   color: #FFFFFF !important;
 }
 
-/* Nút Outline Primary */
+/* Nút Outline */
 .btn-outline-primary {
   background-color: transparent;
-  border-color: var(--color-primary);
+  border: 1px solid var(--color-primary);
   color: var(--color-primary) !important;
 }
 .btn-outline-primary:hover {
@@ -212,16 +212,82 @@ a:hover {
   color: #FFFFFF !important;
 }
 
+.btn-outline-secondary {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border-strong) !important;
+  color: var(--color-text-main) !important;
+}
+.btn-outline-secondary:hover {
+  background-color: var(--color-bg-subtle);
+  border-color: #94A3B8 !important;
+  color: var(--color-text-heading) !important;
+}
+
+.btn-outline-danger {
+  background-color: #FFF5F5;
+  border: 1px solid #FCA5A5 !important;
+  color: #DC2626 !important;
+}
+.btn-outline-danger:hover {
+  background-color: #DC2626;
+  border-color: #DC2626 !important;
+  color: #FFFFFF !important;
+}
+
+.btn-outline-success {
+  background-color: #F0FDF4;
+  border: 1px solid #86EFAC !important;
+  color: #16A34A !important;
+}
+.btn-outline-success:hover {
+  background-color: #16A34A;
+  border-color: #16A34A !important;
+  color: #FFFFFF !important;
+}
+
 /* Kích thước nút */
 .btn-sm {
   padding: 4px 10px;
   font-size: 13px;
   border-radius: var(--radius-base);
+  white-space: nowrap;
 }
 .btn-lg {
   padding: 10px 24px;
   font-size: 15px;
   border-radius: var(--radius-base);
+}
+
+/* Thanh phân trang giáo dục chuẩn */
+.edu-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+}
+.edu-pagination .btn-page {
+  padding: 5px 14px;
+  border-radius: var(--radius-base);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--color-border-strong);
+  background-color: #FFFFFF;
+  color: var(--color-text-main);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+}
+.edu-pagination .btn-page:hover {
+  background-color: var(--tufts-blue-50);
+  border-color: var(--tufts-blue-400);
+  color: var(--tufts-blue-800);
+}
+.edu-pagination .page-info {
+  font-weight: 600;
+  color: var(--color-text-heading);
 }
 
 /* ==========================================================================

@@ -26,6 +26,10 @@ public class SubjectListViewModel
     public int InactiveCount { get; set; }
     public int ScoreCount { get; set; }
     public int PassFailCount { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+    public int FilteredCount { get; set; }
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling((double)FilteredCount / PageSize));
 }
 
 public class SubjectAssignmentItemViewModel

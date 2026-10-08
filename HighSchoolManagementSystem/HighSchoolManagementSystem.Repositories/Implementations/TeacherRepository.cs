@@ -70,6 +70,10 @@ public class TeacherRepository : ITeacherRepository
                 .ThenInclude(c => c.AcademicYear)
             .Include(t => t.TeachingAssignments)
                 .ThenInclude(ta => ta.Class)
+                    .ThenInclude(c => c.GradeLevel)
+            .Include(t => t.TeachingAssignments)
+                .ThenInclude(ta => ta.Class)
+                    .ThenInclude(c => c.StudentClasses)
             .Include(t => t.TeachingAssignments)
                 .ThenInclude(ta => ta.Subject)
             .Include(t => t.TeachingAssignments)
@@ -81,6 +85,8 @@ public class TeacherRepository : ITeacherRepository
             .Include(t => t.TeachingAssignments)
                 .ThenInclude(ta => ta.TimetableEntries)
                     .ThenInclude(te => te.Room)
+            .Include(t => t.TeachingAssignments)
+                .ThenInclude(ta => ta.Assessments)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
 
@@ -116,6 +122,38 @@ public class TeacherRepository : ITeacherRepository
     public async Task<Role?> GetTeacherRoleAsync()
     {
         return await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Teacher");
+    }
+
+    public async Task<IReadOnlyList<TeachingAssignment>> GetTeachingAssignmentsAsync(int? semesterId = null, int? teacherId = null, int? classId = null, int? subjectId = null)
+    {
+        var query = _context.TeachingAssignments
+            .Include(ta => ta.Teacher).ThenInclude(t => t.User)
+            .Include(ta => ta.Subject)
+            .Include(ta => ta.Class).ThenInclude(c => c.GradeLevel)
+            .Include(ta => ta.Class).ThenInclude(c => c.StudentClasses)
+            .Include(ta => ta.Semester).ThenInclude(s => s.AcademicYear)
+            .Include(ta => ta.TimetableEntries).ThenInclude(te => te.TimeSlot)
+            .Include(ta => ta.TimetableEntries).ThenInclude(te => te.Room)
+            .Include(ta => ta.Assessments)
+            .AsQueryable();
+
+        if (semesterId.HasValue && semesterId.Value > 0)
+            query = query.Where(ta => ta.SemesterId == semesterId.Value);
+
+        if (teacherId.HasValue && teacherId.Value > 0)
+            query = query.Where(ta => ta.TeacherId == teacherId.Value);
+
+        if (classId.HasValue && classId.Value > 0)
+            query = query.Where(ta => ta.ClassId == classId.Value);
+
+        if (subjectId.HasValue && subjectId.Value > 0)
+            query = query.Where(ta => ta.SubjectId == subjectId.Value);
+
+        return await query
+            .OrderByDescending(ta => ta.Semester.IsActive)
+            .ThenBy(ta => ta.Class.ClassName)
+            .ThenBy(ta => ta.Subject.SubjectName)
+            .ToListAsync();
     }
 
     public async Task AddAsync(Teacher teacher)

@@ -19,7 +19,7 @@ public class SubjectController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? search, string? evaluationType, string? status)
+    public async Task<IActionResult> Index(string? search, string? evaluationType, string? status, int page = 1, int pageSize = 10)
     {
         bool? isActiveFilter = status switch
         {
@@ -40,6 +40,15 @@ public class SubjectController : Controller
         var filterResult = await _subjectService.GetAllSubjectsAsync(search, evaluationType, isActiveFilter);
         var filteredList = filterResult.Data?.ToList() ?? new();
 
+        int pageNumber = Math.Max(1, page);
+        int size = pageSize is < 1 or > 100 ? 10 : pageSize;
+        int filteredCount = filteredList.Count;
+
+        var pagedList = filteredList
+            .Skip((pageNumber - 1) * size)
+            .Take(size)
+            .ToList();
+
         var viewModel = new SubjectListViewModel
         {
             SearchTerm = search,
@@ -50,7 +59,10 @@ public class SubjectController : Controller
             InactiveCount = inactiveCount,
             ScoreCount = scoreCount,
             PassFailCount = passFailCount,
-            Subjects = filteredList.Select(s => new SubjectListItemViewModel
+            Page = pageNumber,
+            PageSize = size,
+            FilteredCount = filteredCount,
+            Subjects = pagedList.Select(s => new SubjectListItemViewModel
             {
                 Id = s.Id,
                 SubjectCode = s.SubjectCode,

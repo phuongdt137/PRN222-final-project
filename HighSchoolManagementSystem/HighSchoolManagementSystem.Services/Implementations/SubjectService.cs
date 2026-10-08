@@ -271,6 +271,25 @@ public class SubjectService : ISubjectService
                 return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Môn học đang bị vô hiệu hóa, không thể phân công.");
             }
 
+            var classes = await _subjectRepository.GetAllClassesAsync();
+            var targetClass = classes.FirstOrDefault(c => c.Id == dto.ClassId);
+            if (targetClass == null)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Lớp học được chọn không tồn tại.");
+            }
+
+            var semesters = await _subjectRepository.GetAllSemestersAsync();
+            var targetSemester = semesters.FirstOrDefault(s => s.Id == dto.SemesterId);
+            if (targetSemester == null)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Học kỳ được chọn không tồn tại.");
+            }
+
+            if (targetClass.AcademicYearId != targetSemester.AcademicYearId)
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, $"Lớp học '{targetClass.ClassName}' và Học kỳ '{targetSemester.SemesterName}' không thuộc cùng một năm học.");
+            }
+
             var hasDuplicate = await _subjectRepository.HasAssignmentAsync(dto.SubjectId, dto.ClassId, dto.SemesterId);
             if (hasDuplicate)
             {
@@ -312,6 +331,11 @@ public class SubjectService : ISubjectService
             if (assignment.Assessments != null && assignment.Assessments.Any())
             {
                 return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Không thể hủy phân công này vì đã phát sinh dữ liệu bảng điểm đánh giá của học sinh.");
+            }
+
+            if (assignment.TimetableEntries != null && assignment.TimetableEntries.Any(te => te.AttendanceRecords != null && te.AttendanceRecords.Any()))
+            {
+                return ServiceResult<bool>.Fail(ErrorCodes.ValidationFailed, "Không thể hủy phân công này vì đã có dữ liệu điểm danh theo thời khóa biểu.");
             }
 
             await _subjectRepository.DeleteAssignmentAsync(assignment);

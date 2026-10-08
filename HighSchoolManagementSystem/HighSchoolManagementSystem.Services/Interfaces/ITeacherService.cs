@@ -13,4 +13,5 @@ public interface ITeacherService
     Task<ServiceResult<Teacher>> UpdateTeacherAsync(UpdateTeacherDto dto);
     Task<ServiceResult<bool>> ToggleTeacherStatusAsync(int id);
     Task<ServiceResult<IEnumerable<string>>> GetSpecializationsAsync();
+    Task<ServiceResult<IReadOnlyList<TeachingAssignment>>> GetTeachingAssignmentsAsync(int? semesterId = null, int? teacherId = null, int? classId = null, int? subjectId = null);
 }

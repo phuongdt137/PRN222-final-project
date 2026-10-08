@@ -13,6 +13,7 @@ public interface ITeacherRepository
     Task<bool> ExistsByEmailAsync(string email, int? excludeUserId = null);
     Task<bool> ExistsByUsernameAsync(string username, int? excludeUserId = null);
     Task<Role?> GetTeacherRoleAsync();
+    Task<IReadOnlyList<TeachingAssignment>> GetTeachingAssignmentsAsync(int? semesterId = null, int? teacherId = null, int? classId = null, int? subjectId = null);
     Task AddAsync(Teacher teacher);
     Task UpdateAsync(Teacher teacher);
     Task SaveChangesAsync();

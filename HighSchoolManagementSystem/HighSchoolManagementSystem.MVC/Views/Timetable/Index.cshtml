@@ -16,6 +16,44 @@
     </form>
 </div>
 
+@if (!Model.SelectedTeacherId.HasValue)
+{
+    <div class="alert alert-info d-flex align-items-center mb-4 shadow-sm" role="alert">
+        <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+        <div>
+            <strong>Chưa chọn giáo viên:</strong> Vui lòng chọn một giáo viên từ dropdown ở bộ lọc phía trên và bấm <strong>"Xem lịch"</strong> để tra cứu hoặc xếp thời khóa biểu giảng dạy.
+        </div>
+    </div>
+}
+else if (!Model.EditMode)
+{
+    <div class="alert alert-primary d-flex flex-wrap align-items-center justify-content-between mb-4 shadow-sm gap-2" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-calendar-check-fill fs-4 me-3 text-primary"></i>
+            <div>
+                <strong>Đang ở chế độ xem lịch:</strong> Để thêm tiết dạy mới hoặc chỉnh sửa lịch học, hãy bấm vào nút <strong>"Sửa thời khóa biểu"</strong> (các ô trống sẽ xuất hiện biểu tượng dấu <strong>+</strong> để click thêm).
+            </div>
+        </div>
+        <a class="btn btn-primary btn-sm px-3 fw-semibold text-nowrap" asp-action="Index" asp-route-teacherId="@Model.SelectedTeacherId" asp-route-semesterId="@Model.SelectedSemesterId" asp-route-weekStart="@Model.WeekStart.ToString("yyyy-MM-dd")" asp-route-editMode="true">
+            <i class="bi bi-pencil-square me-1"></i> Bật Xếp Lịch (+)
+        </a>
+    </div>
+}
+else
+{
+    <div class="alert alert-success d-flex flex-wrap align-items-center justify-content-between mb-4 shadow-sm gap-2" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-pencil-fill fs-4 me-3 text-success"></i>
+            <div>
+                <strong>Đang ở chế độ xếp lịch:</strong> Click vào biểu tượng dấu cộng <span class="badge bg-success text-white px-2 py-1 mx-1">+</span> tại bất kỳ ô tiết học nào để xếp môn học và phòng học cho giáo viên.
+            </div>
+        </div>
+        <a class="btn btn-secondary btn-sm px-3 fw-semibold text-nowrap" asp-action="Index" asp-route-teacherId="@Model.SelectedTeacherId" asp-route-semesterId="@Model.SelectedSemesterId" asp-route-weekStart="@Model.WeekStart.ToString("yyyy-MM-dd")">
+            <i class="bi bi-check-lg me-1"></i> Hoàn Tất Xếp Lịch
+        </a>
+    </div>
+}
+
 <div class="card-table-wrap">
     <div class="card-table-header timetable-week-header">
         <div><h2 class="table-card-title">Thời khóa biểu tuần</h2></div>

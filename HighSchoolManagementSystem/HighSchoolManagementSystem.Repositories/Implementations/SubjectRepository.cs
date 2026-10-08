@@ -118,6 +118,9 @@ public class SubjectRepository : ISubjectRepository
             .Include(ta => ta.Teacher)
             .Include(ta => ta.Class)
             .Include(ta => ta.Semester)
+            .Include(ta => ta.Assessments)
+            .Include(ta => ta.TimetableEntries)
+                .ThenInclude(te => te.AttendanceRecords)
             .FirstOrDefaultAsync(ta => ta.Id == id);
     }
 
@@ -134,6 +137,10 @@ public class SubjectRepository : ISubjectRepository
 
     public Task DeleteAssignmentAsync(TeachingAssignment assignment)
     {
+        if (assignment.TimetableEntries != null && assignment.TimetableEntries.Any())
+        {
+            _context.TimetableEntries.RemoveRange(assignment.TimetableEntries);
+        }
         _context.TeachingAssignments.Remove(assignment);
         return Task.CompletedTask;
     }

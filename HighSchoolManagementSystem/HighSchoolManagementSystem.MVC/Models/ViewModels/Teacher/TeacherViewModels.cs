@@ -28,6 +28,10 @@ public class TeacherListViewModel
     public int TotalCount { get; set; }
     public int ActiveCount { get; set; }
     public int InactiveCount { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+    public int FilteredCount { get; set; }
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling((double)FilteredCount / PageSize));
 }
 
 public class TeacherHomeroomItemViewModel
@@ -48,6 +52,21 @@ public class TeacherAssignmentItemViewModel
     public string AcademicYearName { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string? TimetableSchedule { get; set; }
+
+    public int ClassId { get; set; }
+    public string? GradeLevelName { get; set; }
+    public int StudentCount { get; set; }
+    public string EvaluationType { get; set; } = "Score";
+    public int SemesterId { get; set; }
+    public bool IsActiveSemester { get; set; }
+    public int ScheduledPeriodsCount { get; set; }
+    public List<string> ScheduleDetails { get; set; } = new();
+    public bool HasAssessments { get; set; }
+
+    public int TeacherId { get; set; }
+    public string TeacherCode { get; set; } = string.Empty;
+    public string TeacherName { get; set; } = string.Empty;
+    public string? Specialization { get; set; }
 }
 
 public class TeacherSubjectItemViewModel
@@ -187,4 +206,104 @@ public class EditTeacherViewModel
 
     [Display(Name = "Trạng thái hoạt động")]
     public string Status { get; set; } = "Active";
+}
+
+public class TeacherAssignmentsViewModel
+{
+    public int TeacherId { get; set; }
+    public int UserId { get; set; }
+    public string TeacherCode { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? PhoneNumber { get; set; }
+    public string? Specialization { get; set; }
+    public string? Qualification { get; set; }
+    public string Status { get; set; } = "Active";
+    public int? MaxPeriodsPerWeek { get; set; }
+    public string? AvatarUrl { get; set; }
+
+    public List<TeacherHomeroomItemViewModel> HomeroomClasses { get; set; } = new();
+
+    // Filters
+    public int? SemesterFilter { get; set; }
+    public int? SubjectFilter { get; set; }
+    public string? StatusFilter { get; set; }
+    public string? SearchTerm { get; set; }
+
+    // Filter Options
+    public List<SemesterFilterOption> AvailableSemesters { get; set; } = new();
+    public List<SubjectFilterOption> AvailableSubjects { get; set; } = new();
+    public List<ClassFilterOption> AvailableClasses { get; set; } = new();
+
+    // List of assignments
+    public List<TeacherAssignmentItemViewModel> Assignments { get; set; } = new();
+
+    // Summary statistics
+    public int TotalAssignmentsCount { get; set; }
+    public int TotalClassesCount { get; set; }
+    public int TotalSubjectsCount { get; set; }
+    public int TotalDistinctSubjectsCount { get; set; }
+    public int TotalScheduledPeriods { get; set; }
+    public bool IsOverloaded => MaxPeriodsPerWeek.HasValue && MaxPeriodsPerWeek.Value > 0 && TotalScheduledPeriods > MaxPeriodsPerWeek.Value;
+    public double WorkloadPercentage => (MaxPeriodsPerWeek.HasValue && MaxPeriodsPerWeek.Value > 0)
+        ? Math.Round((double)TotalScheduledPeriods / MaxPeriodsPerWeek.Value * 100, 1)
+        : 0;
+}
+
+public class SemesterFilterOption
+{
+    public int Id { get; set; }
+    public string SemesterName { get; set; } = string.Empty;
+    public string AcademicYear { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+}
+
+public class SubjectFilterOption
+{
+    public int Id { get; set; }
+    public string SubjectCode { get; set; } = string.Empty;
+    public string SubjectName { get; set; } = string.Empty;
+    public string EvaluationType { get; set; } = "Score";
+    public bool IsSpecialized { get; set; }
+}
+
+public class ClassFilterOption
+{
+    public int Id { get; set; }
+    public string ClassName { get; set; } = string.Empty;
+    public string GradeLevelName { get; set; } = string.Empty;
+    public string AcademicYear { get; set; } = string.Empty;
+}
+
+public class TeacherFilterOption
+{
+    public int Id { get; set; }
+    public string TeacherCode { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string? Specialization { get; set; }
+}
+
+public class AllTeachingAssignmentsViewModel
+{
+    public int? SemesterFilter { get; set; }
+    public int? TeacherFilter { get; set; }
+    public int? ClassFilter { get; set; }
+    public int? SubjectFilter { get; set; }
+    public string? SearchTerm { get; set; }
+
+    public List<SemesterFilterOption> AvailableSemesters { get; set; } = new();
+    public List<TeacherFilterOption> AvailableTeachers { get; set; } = new();
+    public List<ClassFilterOption> AvailableClasses { get; set; } = new();
+    public List<SubjectFilterOption> AvailableSubjects { get; set; } = new();
+
+    public List<TeacherAssignmentItemViewModel> Assignments { get; set; } = new();
+
+    public int TotalAssignmentsCount { get; set; }
+    public int TotalTeachersCount { get; set; }
+    public int TotalClassesCount { get; set; }
+    public int TotalSubjectsCount { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+    public int FilteredCount { get; set; }
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling((double)FilteredCount / PageSize));
 }

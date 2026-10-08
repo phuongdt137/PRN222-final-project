@@ -301,4 +301,18 @@ public class TeacherService : ITeacherService
             return ServiceResult<IEnumerable<string>>.Fail(ErrorCodes.DatabaseError, "Không thể tải danh sách bộ môn.");
         }
     }
+
+    public async Task<ServiceResult<IReadOnlyList<TeachingAssignment>>> GetTeachingAssignmentsAsync(int? semesterId = null, int? teacherId = null, int? classId = null, int? subjectId = null)
+    {
+        try
+        {
+            var list = await _teacherRepository.GetTeachingAssignmentsAsync(semesterId, teacherId, classId, subjectId);
+            return ServiceResult<IReadOnlyList<TeachingAssignment>>.Ok(list);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi tải danh sách phân công giảng dạy toàn trường.");
+            return ServiceResult<IReadOnlyList<TeachingAssignment>>.Fail(ErrorCodes.DatabaseError, "Không thể tải danh sách phân công giảng dạy.");
+        }
+    }
 }

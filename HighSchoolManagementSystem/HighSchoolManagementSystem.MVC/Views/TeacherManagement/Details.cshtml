@@ -238,14 +238,15 @@
             else
             {
                 <div class="table-responsive">
-                    <table class="table-edu m-0">
+                    <table class="table-edu m-0 align-middle">
                         <thead>
                             <tr>
-                                <th style="width: 50px;" class="text-center">#</th>
-                                <th>Lớp</th>
+                                <th style="width: 45px;" class="text-center">#</th>
+                                <th style="width: 140px;">Lớp học</th>
                                 <th>Môn học</th>
-                                <th>Học kỳ</th>
-                                <th class="text-center">Trạng thái</th>
+                                <th>Học kỳ & Năm học</th>
+                                <th>Lịch dạy (TKB)</th>
+                                <th style="width: 110px;" class="text-center">Trạng thái</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -254,7 +255,16 @@
                             {
                                 <tr>
                                     <td class="text-center text-muted small">@sttAss</td>
-                                    <td class="fw-bold text-primary">@a.ClassName</td>
+                                    <td>
+                                        <div class="fw-bold text-primary font-monospace">@a.ClassName</div>
+                                        <div class="text-muted small">
+                                            @if (!string.IsNullOrEmpty(a.GradeLevelName))
+                                            {
+                                                <span>@(a.GradeLevelName.StartsWith("Khối", StringComparison.OrdinalIgnoreCase) ? a.GradeLevelName : $"Khối {a.GradeLevelName}") • </span>
+                                            }
+                                            <span>@a.StudentCount HS</span>
+                                        </div>
+                                    </td>
                                     <td>
                                         @if (a.SubjectId > 0)
                                         {
@@ -267,9 +277,30 @@
                                         {
                                             <div class="fw-semibold">@a.SubjectName</div>
                                         }
-                                        <div class="text-muted small font-monospace">@a.SubjectCode</div>
+                                        <div class="d-flex align-items-center gap-1 mt-1">
+                                            <span class="badge bg-light text-secondary border font-monospace small">@a.SubjectCode</span>
+                                            @if (a.EvaluationType == "Score")
+                                            {
+                                                <span class="badge bg-info-subtle text-info small" style="font-size: 0.7rem;">Tính điểm</span>
+                                            }
+                                        </div>
                                     </td>
-                                    <td>@a.SemesterName (@a.AcademicYearName)</td>
+                                    <td>
+                                        <div class="fw-semibold text-dark">@a.SemesterName</div>
+                                        <div class="text-muted small">Năm học @a.AcademicYearName</div>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(a.TimetableSchedule))
+                                        {
+                                            <span class="small text-dark">
+                                                <i class="bi bi-clock me-1 text-primary"></i>@a.TimetableSchedule
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small fst-italic">Chưa xếp lịch</span>
+                                        }
+                                    </td>
                                     <td class="text-center">
                                         <span class="badge bg-light text-dark border">
                                             @a.Status
