@@ -87,10 +87,43 @@ public class UserService : IUserService
             CreateAt = DateTime.UtcNow
         };
 
+        if (string.Equals(role.RoleName, "Student", StringComparison.OrdinalIgnoreCase))
+        {
+            var studentCode = await _userRepository.GenerateNextStudentCodeAsync();
+            user.Student = new Student
+            {
+                StudentCode = studentCode,
+                AdmissionDate = dto.AdmissionDate?.Date ?? DateTime.Today,
+                Address = dto.Address?.Trim(),
+                Status = "Active"
+            };
+        }
+        else if (string.Equals(role.RoleName, "Teacher", StringComparison.OrdinalIgnoreCase))
+        {
+            var teacherCode = await _userRepository.GenerateNextTeacherCodeAsync();
+            user.Teacher = new Teacher
+            {
+                TeacherCode = teacherCode,
+                Specialization = dto.Specialization?.Trim(),
+                Qualification = dto.Qualification?.Trim(),
+                MaxPeriodsPerWeek = dto.MaxPeriodsPerWeek is > 0 ? dto.MaxPeriodsPerWeek : 20,
+                HireDate = dto.HireDate?.Date,
+                Status = "Active"
+            };
+        }
+        else if (string.Equals(role.RoleName, "Parent", StringComparison.OrdinalIgnoreCase))
+        {
+            user.Parent = new Parent
+            {
+                Occupation = dto.Occupation?.Trim(),
+                EmergencyContact = dto.EmergencyContact?.Trim()
+            };
+        }
+
         await _userRepository.AddAsync(user);
         await _userRepository.SaveChangesAsync();
         user.Role = role;
-        return ServiceResult<User>.Ok(user, "Tạo tài khoản thành công.");
+        return ServiceResult<User>.Ok(user, "Tạo tài khoản và hồ sơ thành công.");
     }
 
     public async Task<ServiceResult<User>> UpdateUserAccountAsync(int userId, UpdateUserAccountDto dto)

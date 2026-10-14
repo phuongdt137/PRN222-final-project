@@ -36,6 +36,8 @@ public class UserDetailsViewModel : UserListItemViewModel
     public string? PhoneNumber { get; set; }
     public string? Gender { get; set; }
     public DateTime? DateOfBirth { get; set; }
+    public string? ProfileCode { get; set; }
+    public string? ProfileDetails { get; set; }
 }
 
 public class CreateUserViewModel
@@ -71,6 +73,39 @@ public class CreateUserViewModel
 
     [Display(Name = "Kích hoạt tài khoản")]
     public bool IsActive { get; set; } = true;
+
+    // Student profile fields
+    [Display(Name = "Ngày nhập học")]
+    public DateTime? AdmissionDate { get; set; }
+
+    [Display(Name = "Địa chỉ")]
+    [StringLength(255)]
+    public string? Address { get; set; }
+
+    // Teacher profile fields
+    [Display(Name = "Tổ bộ môn / Chuyên môn")]
+    [StringLength(100)]
+    public string? Specialization { get; set; }
+
+    [Display(Name = "Trình độ")]
+    [StringLength(100)]
+    public string? Qualification { get; set; }
+
+    [Display(Name = "Số tiết tối đa / tuần")]
+    [Range(1, 40, ErrorMessage = "Số tiết tối đa từ 1 đến 40.")]
+    public int? MaxPeriodsPerWeek { get; set; } = 20;
+
+    [Display(Name = "Ngày tuyển dụng")]
+    public DateTime? HireDate { get; set; }
+
+    // Parent profile fields
+    [Display(Name = "Nghề nghiệp")]
+    [StringLength(100)]
+    public string? Occupation { get; set; }
+
+    [Display(Name = "Số liên hệ khẩn cấp")]
+    [StringLength(50)]
+    public string? EmergencyContact { get; set; }
 }
 
 public class EditUserViewModel

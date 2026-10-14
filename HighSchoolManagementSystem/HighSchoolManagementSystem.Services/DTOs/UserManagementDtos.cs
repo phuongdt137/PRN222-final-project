@@ -25,6 +25,20 @@ public class CreateUserDto
     public DateTime? DateOfBirth { get; set; }
     public int RoleId { get; set; }
     public bool IsActive { get; set; } = true;
+
+    // Student profile fields
+    public DateTime? AdmissionDate { get; set; }
+    public string? Address { get; set; }
+
+    // Teacher profile fields
+    public string? Specialization { get; set; }
+    public string? Qualification { get; set; }
+    public int? MaxPeriodsPerWeek { get; set; }
+    public DateTime? HireDate { get; set; }
+
+    // Parent profile fields
+    public string? Occupation { get; set; }
+    public string? EmergencyContact { get; set; }
 }
 
 public class UpdateUserAccountDto

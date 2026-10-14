@@ -137,4 +137,64 @@ public class UserRepository : IUserRepository
     {
         await _context.SaveChangesAsync();
     }
+
+    public async Task<string> GenerateNextStudentCodeAsync()
+    {
+        var existingCodes = await _context.Students
+            .Select(s => s.StudentCode)
+            .ToListAsync();
+
+        int maxNum = 0;
+        foreach (var code in existingCodes)
+        {
+            if (!string.IsNullOrWhiteSpace(code) && code.StartsWith("HS", StringComparison.OrdinalIgnoreCase))
+            {
+                var numPart = code.Substring(2);
+                if (int.TryParse(numPart, out var n) && n > maxNum)
+                {
+                    maxNum = n;
+                }
+            }
+        }
+
+        int nextNum = maxNum + 1;
+        var candidate = $"HS{nextNum:D3}";
+        while (existingCodes.Any(c => string.Equals(c, candidate, StringComparison.OrdinalIgnoreCase)))
+        {
+            nextNum++;
+            candidate = $"HS{nextNum:D3}";
+        }
+
+        return candidate;
+    }
+
+    public async Task<string> GenerateNextTeacherCodeAsync()
+    {
+        var existingCodes = await _context.Teachers
+            .Select(t => t.TeacherCode)
+            .ToListAsync();
+
+        int maxNum = 0;
+        foreach (var code in existingCodes)
+        {
+            if (!string.IsNullOrWhiteSpace(code) && code.StartsWith("GV", StringComparison.OrdinalIgnoreCase))
+            {
+                var numPart = code.Substring(2);
+                if (int.TryParse(numPart, out var n) && n < 900 && n > maxNum)
+                {
+                    maxNum = n;
+                }
+            }
+        }
+
+        int nextNum = maxNum + 1;
+        var candidate = $"GV{nextNum:D3}";
+        while (existingCodes.Any(c => string.Equals(c, candidate, StringComparison.OrdinalIgnoreCase)))
+        {
+            nextNum++;
+            candidate = $"GV{nextNum:D3}";
+        }
+
+        return candidate;
+    }
 }

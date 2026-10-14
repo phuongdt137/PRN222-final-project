@@ -92,7 +92,15 @@ public class UserManagementController : Controller
             Gender = model.Gender,
             DateOfBirth = model.DateOfBirth,
             RoleId = model.RoleId,
-            IsActive = model.IsActive
+            IsActive = model.IsActive,
+            AdmissionDate = model.AdmissionDate,
+            Address = model.Address,
+            Specialization = model.Specialization,
+            Qualification = model.Qualification,
+            MaxPeriodsPerWeek = model.MaxPeriodsPerWeek,
+            HireDate = model.HireDate,
+            Occupation = model.Occupation,
+            EmergencyContact = model.EmergencyContact
         });
 
         if (!result.Success)
@@ -269,6 +277,22 @@ public class UserManagementController : Controller
 
     private static UserDetailsViewModel MapDetails(User user)
     {
+        string? profileCode = user.Student?.StudentCode ?? user.Teacher?.TeacherCode;
+        string? profileDetails = null;
+
+        if (user.Student != null)
+        {
+            profileDetails = $"Học sinh • Mã: {user.Student.StudentCode} • Trạng thái: {user.Student.Status} • Ngày nhập học: {user.Student.AdmissionDate?.ToString("dd/MM/yyyy") ?? "Chưa rõ"}";
+        }
+        else if (user.Teacher != null)
+        {
+            profileDetails = $"Giáo viên • Mã: {user.Teacher.TeacherCode} • Chuyên môn: {user.Teacher.Specialization ?? "Chưa phân"} • Trình độ: {user.Teacher.Qualification ?? "Chưa cập nhật"}";
+        }
+        else if (user.Parent != null)
+        {
+            profileDetails = $"Phụ huynh • Nghề nghiệp: {user.Parent.Occupation ?? "Chưa cập nhật"} • LH khẩn cấp: {user.Parent.EmergencyContact ?? "Chưa cập nhật"}";
+        }
+
         return new UserDetailsViewModel
         {
             Id = user.Id,
@@ -280,7 +304,9 @@ public class UserManagementController : Controller
             CreateAt = user.CreateAt,
             PhoneNumber = user.PhoneNumber,
             Gender = user.Gender,
-            DateOfBirth = user.DateOfBirth
+            DateOfBirth = user.DateOfBirth,
+            ProfileCode = profileCode,
+            ProfileDetails = profileDetails
         };
     }
 }
