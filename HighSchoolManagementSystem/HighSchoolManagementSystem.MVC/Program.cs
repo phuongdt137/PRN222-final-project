@@ -59,6 +59,7 @@ builder.Services.AddScoped<IScoreService, ScoreService>();
 builder.Services.AddScoped<ITeacherFeedbackService, TeacherFeedbackService>();
 builder.Services.AddScoped<IConductEvaluationService, ConductEvaluationService>();
 builder.Services.AddScoped<ITimetableService, TimetableService>();
+builder.Services.AddScoped<IPrincipalService, PrincipalService>();
 
 // Cookie Authentication (No Identity)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

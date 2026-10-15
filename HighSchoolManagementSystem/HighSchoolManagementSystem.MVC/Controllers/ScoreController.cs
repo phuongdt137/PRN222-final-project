@@ -10,7 +10,7 @@ using HighSchoolManagementSystem.Services.Interfaces;
 
 namespace HighSchoolManagementSystem.MVC.Controllers;
 
-[Authorize(Roles = "Teacher,Staff")]
+[Authorize(Roles = "Teacher,Staff,Principal")]
 public class ScoreController : Controller
 {
     private readonly IScoreService _scoreService;
@@ -305,7 +305,7 @@ public class ScoreController : Controller
     [HttpGet]
     public async Task<IActionResult> HomeroomScores(int? classId, int? semesterId)
     {
-        bool isStaff = User.IsInRole("Staff");
+        bool isStaff = User.IsInRole("Staff") || User.IsInRole("Principal");
         Teacher? teacher = null;
         List<ClassItemOption> availableClasses;
 
@@ -405,8 +405,9 @@ public class ScoreController : Controller
     [HttpGet]
     public async Task<IActionResult> StudentTranscript(int studentId, int? semesterId, int? subjectId)
     {
-        var teacher = User.IsInRole("Staff") ? null : await ResolveCurrentTeacherAsync();
-        if (!User.IsInRole("Staff") && teacher == null) return Forbid();
+        bool isPrivileged = User.IsInRole("Staff") || User.IsInRole("Principal");
+        var teacher = isPrivileged ? null : await ResolveCurrentTeacherAsync();
+        if (!isPrivileged && teacher == null) return Forbid();
         if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Forbid();
         var allYears = await _academicYearRepository.GetAllAsync();
         var semestersList = new List<SemesterItemOption>();

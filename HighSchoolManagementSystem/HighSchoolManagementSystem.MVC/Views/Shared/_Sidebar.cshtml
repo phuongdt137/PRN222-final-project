@@ -29,15 +29,24 @@
             <div class="sidebar-section-title">GIÁM SÁT TOÀN TRƯỜNG</div>
             <ul class="sidebar-menu-list">
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
-                        <i class="bi bi-calendar-check"></i>
-                        <span>Báo cáo chuyên cần</span>
+                    <a asp-controller="Principal" asp-action="AcademicReview"
+                       class="sidebar-link @(currentController == "Principal" && currentAction == "AcademicReview" ? "active" : "")">
+                        <i class="bi bi-patch-check-fill"></i>
+                        <span>Rà soát & Chốt sổ</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
-                        <i class="bi bi-bar-chart-line"></i>
+                    <a asp-controller="Principal" asp-action="AcademicReports"
+                       class="sidebar-link @(currentController == "Principal" && currentAction == "AcademicReports" ? "active" : "")">
+                        <i class="bi bi-bar-chart-line-fill"></i>
                         <span>Báo cáo học tập</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a asp-controller="Principal" asp-action="AttendanceReports"
+                       class="sidebar-link @(currentController == "Principal" && currentAction == "AttendanceReports" ? "active" : "")">
+                        <i class="bi bi-calendar-check-fill"></i>
+                        <span>Báo cáo chuyên cần</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
@@ -54,14 +63,22 @@
                         <span>Hồ sơ giáo viên</span>
                     </a>
                 </li>
+                <li class="sidebar-menu-item">
+                    <a asp-controller="StudentManagement" asp-action="Index"
+                       class="sidebar-link @(currentController == "StudentManagement" ? "active" : "")">
+                        <i class="bi bi-mortarboard"></i>
+                        <span>Hồ sơ học sinh</span>
+                    </a>
+                </li>
             </ul>
 
             <div class="sidebar-section-title">QUẢN TRỊ HỆ THỐNG</div>
             <ul class="sidebar-menu-list">
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="Staff" asp-action="AcademicYears"
+                       class="sidebar-link @(currentController == "Staff" && currentAction == "AcademicYears" ? "active" : "")">
                         <i class="bi bi-calendar-event"></i>
-                        <span>Cấu hình năm học</span>
+                        <span>Năm học & Học kỳ</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item">

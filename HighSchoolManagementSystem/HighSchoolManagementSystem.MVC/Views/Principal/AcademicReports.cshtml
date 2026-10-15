@@ -1,0 +1,234 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Principal.AcademicReportsViewModel
+@{
+    ViewData["Title"] = "Báo Cáo Học Tập & Thống Kê Toàn Trường";
+}
+
+<div class="greeting-banner">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> BÁO CÁO & THỐNG KÊ
+        </span>
+        <h1 class="greeting-title">Báo Cáo Tổng Kết Học Tập Toàn Trường</h1>
+        <p class="greeting-subtitle">
+            Học kỳ: <strong>@Model.SemesterName</strong> · Năm học: <strong>@Model.AcademicYearCode</strong>
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a asp-action="ExportAcademicReportCsv" asp-route-semesterId="@Model.SemesterId" asp-route-gradeLevelId="@Model.SelectedGradeLevelId" class="btn btn-success btn-sm shadow-sm">
+            <i class="bi bi-file-earmark-excel-fill me-1"></i>Xuất Báo Cáo (CSV / Excel)
+        </a>
+        <a asp-action="AcademicReview" asp-route-semesterId="@Model.SemesterId" class="btn btn-secondary btn-sm shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại rà soát
+        </a>
+    </div>
+</div>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>@TempData["ErrorMessage"]</div>
+    </div>
+}
+
+<!-- Bộ lọc tìm kiếm -->
+<div class="card-table-wrap mb-4 p-3 bg-light">
+    <form method="get" asp-action="AcademicReports" class="row g-2 align-items-center">
+        <div class="col-12 col-md-4">
+            <label class="form-label small text-muted mb-1">Học kỳ</label>
+            <select name="semesterId" asp-items="Model.SemesterOptions" class="form-select form-select-sm" onchange="this.form.submit()"></select>
+        </div>
+        <div class="col-12 col-md-3">
+            <label class="form-label small text-muted mb-1">Khối lớp</label>
+            <select name="gradeLevelId" asp-items="Model.GradeLevelOptions" class="form-select form-select-sm" onchange="this.form.submit()"></select>
+        </div>
+        <div class="col-12 col-md-3">
+            <label class="form-label small text-muted mb-1">Môn học</label>
+            <select name="subjectId" asp-items="Model.SubjectOptions" class="form-select form-select-sm" onchange="this.form.submit()"></select>
+        </div>
+        <div class="col-12 col-md-2 d-flex align-items-end">
+            <a asp-action="AcademicReports" asp-route-semesterId="@Model.SemesterId" class="btn btn-secondary btn-sm w-100">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Section 1: Thống kê theo Khối Lớp -->
+<div class="card-table-wrap mb-4">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">1. Phân Loại Học Lực Theo Khối Lớp</h2>
+            <p class="table-card-subtitle">Thống kê số lượng và tỷ lệ học sinh xếp loại Giỏi, Khá, Đạt, Chưa đạt theo từng khối.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th>Khối Lớp</th>
+                    <th class="text-center">Tổng Số Học Sinh</th>
+                    <th class="text-center">ĐTB GPA</th>
+                    <th class="text-center text-success">Giỏi (>= 8.0)</th>
+                    <th class="text-center text-info">Khá (>= 6.5)</th>
+                    <th class="text-center text-warning">Đạt (>= 5.0)</th>
+                    <th class="text-center text-danger">Chưa Đạt (&lt; 5.0)</th>
+                    <th class="text-center">Tỷ Lệ Đạt Chuẩn</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.GradeSummaries.Any())
+                {
+                    @foreach (var g in Model.GradeSummaries)
+                    {
+                        int totalPassed = g.ExcellentCount + g.GoodCount + g.PassCount;
+                        decimal passRate = g.TotalStudents > 0 ? Math.Round((decimal)totalPassed / g.TotalStudents * 100m, 1) : 0m;
+                        <tr>
+                            <td><strong>@g.GradeName</strong></td>
+                            <td class="text-center">@g.TotalStudents</td>
+                            <td class="text-center fw-bold text-primary">@(g.AverageGpa?.ToString("0.00") ?? "—")</td>
+                            <td class="text-center fw-semibold text-success">@g.ExcellentCount</td>
+                            <td class="text-center fw-semibold text-info">@g.GoodCount</td>
+                            <td class="text-center fw-semibold text-warning">@g.PassCount</td>
+                            <td class="text-center fw-semibold text-danger">@g.FailCount</td>
+                            <td class="text-center">
+                                <span class="badge-status @(passRate >= 90 ? "badge-status-success" : passRate >= 75 ? "badge-status-info" : "badge-status-warning")">
+                                    @passRate%
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">Chưa có dữ liệu tổng kết cho khối học này.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Section 2: Hiệu suất theo Môn Học -->
+<div class="card-table-wrap mb-4">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">2. Hiệu Suất Giảng Dạy & Kết Quả Theo Bộ Môn</h2>
+            <p class="table-card-subtitle">Điểm trung bình và tỷ lệ đạt chuẩn của từng bộ môn trong học kỳ.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 100px;">Mã Môn</th>
+                    <th>Tên Môn Học</th>
+                    <th class="text-center">Số Bài Đã Kiểm Tra</th>
+                    <th class="text-center">Điểm Trung Bình</th>
+                    <th class="text-center">Tỷ Lệ Đạt (>= 5.0)</th>
+                    <th class="text-center">Tỷ Lệ Giỏi (>= 8.0)</th>
+                    <th class="text-center">Đánh Giá Bộ Môn</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.SubjectSummaries.Any())
+                {
+                    @foreach (var s in Model.SubjectSummaries)
+                    {
+                        <tr>
+                            <td><span class="badge bg-light text-dark border">@s.SubjectCode</span></td>
+                            <td><strong>@s.SubjectName</strong></td>
+                            <td class="text-center">@s.TotalAssessments</td>
+                            <td class="text-center fw-bold">@(s.AverageScore?.ToString("0.00") ?? "—")</td>
+                            <td class="text-center fw-semibold text-success">@s.PassRate%</td>
+                            <td class="text-center fw-semibold text-info">@s.ExcellentRate%</td>
+                            <td class="text-center">
+                                @if (s.PassRate >= 90m)
+                                {
+                                    <span class="badge-status badge-status-success">Chất lượng cao</span>
+                                }
+                                else if (s.PassRate >= 70m)
+                                {
+                                    <span class="badge-status badge-status-info">Ổn định</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-status badge-status-warning">Cần bồi dưỡng</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">Không tìm thấy dữ liệu bộ môn phù hợp.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Section 3: Bảng vinh danh Top 20 học sinh xuất sắc -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">3. Bảng Vinh Danh Học Sinh Xuất Sắc Toàn Trường</h2>
+            <p class="table-card-subtitle">Top học sinh có điểm trung bình GPA học kỳ cao nhất toàn trường.</p>
+        </div>
+        <span class="table-counter-badge">Top @Model.TopStudents.Count học sinh</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 70px;" class="text-center">Thứ Hạng</th>
+                    <th>Mã Học Sinh</th>
+                    <th>Họ và Tên</th>
+                    <th>Lớp Học</th>
+                    <th class="text-center">Điểm GPA</th>
+                    <th class="text-center">Học Lực</th>
+                    <th class="text-center">Hạnh Kiểm</th>
+                    <th class="text-center">Danh Hiệu</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.TopStudents.Any())
+                {
+                    @foreach (var st in Model.TopStudents)
+                    {
+                        string rankBadge = st.Rank switch
+                        {
+                            1 => "bg-warning text-dark border border-warning",
+                            2 => "bg-secondary-subtle text-dark border",
+                            3 => "bg-danger-subtle text-danger border border-danger",
+                            _ => "bg-light text-muted"
+                        };
+                        <tr>
+                            <td class="text-center">
+                                <span class="badge @rankBadge rounded-pill px-2">@st.Rank</span>
+                            </td>
+                            <td><code>@st.StudentCode</code></td>
+                            <td><strong>@st.FullName</strong></td>
+                            <td>@st.ClassName</td>
+                            <td class="text-center fw-bold text-success fs-6">@(st.Gpa?.ToString("0.00") ?? "—")</td>
+                            <td class="text-center"><span class="badge-status badge-status-success">@st.AcademicRank</span></td>
+                            <td class="text-center"><span class="badge-status badge-status-info">@st.ConductGrade</span></td>
+                            <td class="text-center">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Học sinh xuất sắc</span>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">Chưa có dữ liệu xếp hạng học sinh cho học kỳ này.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

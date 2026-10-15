@@ -1,0 +1,148 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Principal.AttendanceReportsViewModel
+@{
+    ViewData["Title"] = "Báo Cáo Thống Kê Chuyên Cần";
+}
+
+<div class="greeting-banner">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> GIÁM SÁT TOÀN TRƯỜNG
+        </span>
+        <h1 class="greeting-title">Báo Cáo Thống Kê Chuyên Cần Toàn Trường</h1>
+        <p class="greeting-subtitle">
+            Khoảng thời gian: <strong>@Model.FromDate.ToString("dd/MM/yyyy")</strong> đến <strong>@Model.ToDate.ToString("dd/MM/yyyy")</strong> · @Model.SemesterName
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a asp-action="ExportAttendanceReportCsv" asp-route-semesterId="@Model.SemesterId" asp-route-gradeLevelId="@Model.SelectedGradeLevelId" asp-route-fromDate="@Model.FromDate.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.ToDate.ToString("yyyy-MM-dd")" class="btn btn-success btn-sm shadow-sm">
+            <i class="bi bi-file-earmark-excel-fill me-1"></i>Xuất Báo Cáo (CSV / Excel)
+        </a>
+        <a asp-action="Dashboard" class="btn btn-secondary btn-sm shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i>Trang chủ
+        </a>
+    </div>
+</div>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>@TempData["ErrorMessage"]</div>
+    </div>
+}
+
+<!-- Bộ lọc tìm kiếm -->
+<div class="card-table-wrap mb-4 p-3 bg-light">
+    <form method="get" asp-action="AttendanceReports" class="row g-2 align-items-center">
+        <div class="col-12 col-md-3">
+            <label class="form-label small text-muted mb-1">Học kỳ</label>
+            <select name="semesterId" asp-items="Model.SemesterOptions" class="form-select form-select-sm" onchange="this.form.submit()"></select>
+        </div>
+        <div class="col-12 col-md-3">
+            <label class="form-label small text-muted mb-1">Khối lớp</label>
+            <select name="gradeLevelId" asp-items="Model.GradeLevelOptions" class="form-select form-select-sm" onchange="this.form.submit()"></select>
+        </div>
+        <div class="col-12 col-md-2">
+            <label class="form-label small text-muted mb-1">Từ ngày</label>
+            <input type="date" name="fromDate" value="@Model.FromDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+        </div>
+        <div class="col-12 col-md-2">
+            <label class="form-label small text-muted mb-1">Đến ngày</label>
+            <input type="date" name="toDate" value="@Model.ToDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+        </div>
+        <div class="col-12 col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+                <i class="bi bi-funnel me-1"></i>Lọc báo cáo
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Tổng quan thống kê nhanh -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="p-3 bg-white border rounded shadow-sm">
+            <div class="text-muted small">Tỷ lệ chuyên cần chung</div>
+            <div class="fs-4 fw-bold text-success">@Model.OverallAttendanceRate.ToString("0.0")%</div>
+            <div class="small text-muted">Toàn trường</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="p-3 bg-white border rounded shadow-sm">
+            <div class="text-muted small">Tổng lượt có mặt</div>
+            <div class="fs-4 fw-bold text-primary">@Model.TotalPresent.ToString("N0")</div>
+            <div class="small text-muted">/@Model.TotalRecords.ToString("N0") lượt ghi nhận</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="p-3 bg-white border rounded shadow-sm">
+            <div class="text-muted small">Vắng có phép</div>
+            <div class="fs-4 fw-bold text-warning">@Model.TotalExcused.ToString("N0")</div>
+            <div class="small text-muted">Có đơn xin phép</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="p-3 bg-white border rounded shadow-sm">
+            <div class="text-muted small">Vắng không phép</div>
+            <div class="fs-4 fw-bold text-danger">@Model.TotalUnexcused.ToString("N0")</div>
+            <div class="small text-muted">Cần nhắc nhở & kỷ luật</div>
+        </div>
+    </div>
+</div>
+
+<!-- Chi tiết chuyên cần theo từng lớp -->
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Chi Tiết Tình Hình Chuyên Cần Theo Từng Lớp</h2>
+            <p class="table-card-subtitle">Thống kê số lượt vắng và tỷ lệ chuyên cần phân loại theo từng lớp học.</p>
+        </div>
+        <span class="table-counter-badge">@Model.ClassStats.Count lớp học</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 60px;" class="text-center">STT</th>
+                    <th>Khối Lớp</th>
+                    <th>Tên Lớp Học</th>
+                    <th class="text-center">Sĩ Số Lớp</th>
+                    <th class="text-center text-warning">Tổng Số Buổi Vắng</th>
+                    <th class="text-center text-secondary">Số Buổi Đi Muộn</th>
+                    <th class="text-center">Tỷ Lệ Chuyên Cần</th>
+                    <th class="text-center">Đánh Giá Nề Nếp</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.ClassStats.Any())
+                {
+                    int idx = 1;
+                    @foreach (var c in Model.ClassStats)
+                    {
+                        string evalLabel = c.AttendanceRate >= 98m ? "Xuất sắc" : c.AttendanceRate >= 95m ? "Tốt" : "Cần chấn chỉnh";
+                        string evalCss = c.AttendanceRate >= 98m ? "badge-status-success" : c.AttendanceRate >= 95m ? "badge-status-info" : "badge-status-warning";
+                        <tr>
+                            <td class="text-center">@idx</td>
+                            <td>@c.GradeName</td>
+                            <td><strong>@c.ClassName</strong></td>
+                            <td class="text-center">@c.TotalStudents học sinh</td>
+                            <td class="text-center fw-semibold text-warning">@c.TotalAbsents</td>
+                            <td class="text-center fw-semibold text-secondary">@c.TotalLate</td>
+                            <td class="text-center fw-bold fs-6">@c.AttendanceRate.ToString("0.0")%</td>
+                            <td class="text-center">
+                                <span class="badge-status @evalCss">@evalLabel</span>
+                            </td>
+                        </tr>
+                        idx++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">Không có dữ liệu chuyên cần phù hợp với bộ lọc.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

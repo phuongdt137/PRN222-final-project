@@ -1,9 +1,10 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Principal.PrincipalDashboardViewModel
 @{
     ViewData["Title"] = "Bảng Điều Hành - Hiệu Trưởng";
     var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Thầy/Cô Hiệu Trưởng";
 }
 
-<!-- Greeting Banner kiểu EIMS -->
+<!-- Greeting Banner -->
 <div class="greeting-banner">
     <div class="greeting-text-wrap">
         <span class="greeting-kicker">
@@ -12,27 +13,55 @@
         <h1 class="greeting-title">Xin chào, @displayName</h1>
         <p class="greeting-subtitle">
             Hệ thống giám sát tổng quan tình hình đào tạo, chuyên cần, nề nếp kỷ luật và đội ngũ nhân sự toàn trường.
+            @if (!string.IsNullOrEmpty(Model.CurrentSemesterName))
+            {
+                <span class="badge bg-white text-primary border ms-2">@Model.CurrentSemesterName - Năm học @Model.CurrentYearCode</span>
+            }
         </p>
     </div>
-    <div class="live-clock-card">
-        <div class="clock-info text-end">
-            <div class="clock-date" id="liveClockDate">Đang đồng bộ...</div>
-            <div class="clock-time" id="liveClockTime">--:--:--</div>
-        </div>
-        <div class="clock-icon-box">
-            <i class="bi bi-clock"></i>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a asp-action="AcademicReview" class="btn btn-primary btn-sm shadow-sm">
+            <i class="bi bi-patch-check-fill me-1"></i>Rà soát & Chốt sổ
+        </a>
+        <a asp-action="AcademicReports" class="btn btn-secondary btn-sm shadow-sm">
+            <i class="bi bi-bar-chart-line-fill me-1"></i>Báo cáo học tập
+        </a>
+        <div class="live-clock-card d-none d-md-flex">
+            <div class="clock-info text-end">
+                <div class="clock-date" id="liveClockDate">Đang đồng bộ...</div>
+                <div class="clock-time" id="liveClockTime">--:--:--</div>
+            </div>
+            <div class="clock-icon-box">
+                <i class="bi bi-clock"></i>
+            </div>
         </div>
     </div>
 </div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <div>@TempData["SuccessMessage"]</div>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>@TempData["ErrorMessage"]</div>
+    </div>
+}
 
 <!-- Section 1: KPI & Chỉ số hoạt động -->
 <div class="dashboard-section-header">
     <div class="section-title-wrap">
         <h2>Chỉ số hoạt động & Thống kê toàn trường</h2>
-        <p>Tổng hợp nhanh dữ liệu mới nhất về quy mô học sinh, chuyên cần và đội ngũ nhân sự.</p>
+        <p>Dữ liệu thời gian thực được đồng bộ trực tiếp từ hệ thống quản lý học sinh, đào tạo và nhân sự.</p>
     </div>
     <div class="section-right-meta">
-        <i class="bi bi-arrow-repeat me-1"></i>Cập nhật tự động theo thời gian thực
+        <i class="bi bi-arrow-repeat me-1"></i>Dữ liệu trực tiếp từ cơ sở dữ liệu
     </div>
 </div>
 
@@ -46,13 +75,21 @@
             <div class="stat-kicker">QUY MÔ NHÀ TRƯỜNG</div>
             <div class="stat-title">Tổng số học sinh</div>
             <div class="stat-main">
-                <div class="stat-number">1,450</div>
+                <div class="stat-number">@Model.TotalStudents.ToString("N0")</div>
                 <div class="stat-label">Học sinh đang theo học chính quy</div>
             </div>
             <div class="stat-breakdown-bar">
-                <div class="breakdown-pill pill-blue">K10: 520</div>
-                <div class="breakdown-pill pill-blue">K11: 480</div>
-                <div class="breakdown-pill pill-blue">K12: 450</div>
+                @if (Model.StudentsByGrade.Any())
+                {
+                    @foreach (var item in Model.StudentsByGrade)
+                    {
+                        <div class="breakdown-pill pill-blue">@item.Key: @item.Value</div>
+                    }
+                }
+                else
+                {
+                    <div class="breakdown-pill pill-blue">Đang cập nhật lớp học</div>
+                }
             </div>
         </div>
     </div>
@@ -66,13 +103,13 @@
             <div class="stat-kicker">CHUYÊN CẦN HÔM NAY</div>
             <div class="stat-title">Tỷ lệ hiện diện toàn trường</div>
             <div class="stat-main">
-                <div class="stat-number">98.4%</div>
-                <div class="stat-label">1,427 / 1,450 học sinh có mặt</div>
+                <div class="stat-number">@Model.TodayAttendanceRate.ToString("0.0")%</div>
+                <div class="stat-label">@Model.TodayPresentCount / @Model.TodayTotalAttendanceRecords học sinh có mặt</div>
             </div>
             <div class="stat-breakdown-bar">
-                <div class="breakdown-pill pill-green">Có mặt: 1,427</div>
-                <div class="breakdown-pill pill-yellow">Có phép: 19</div>
-                <div class="breakdown-pill pill-red">K.phép: 4</div>
+                <div class="breakdown-pill pill-green">Có mặt: @Model.TodayPresentCount</div>
+                <div class="breakdown-pill pill-yellow">Có phép: @Model.TodayExcusedCount</div>
+                <div class="breakdown-pill pill-red">K.phép: @Model.TodayUnexcusedCount</div>
             </div>
         </div>
     </div>
@@ -86,13 +123,12 @@
             <div class="stat-kicker">ĐỘI NGŨ SƯ PHẠM</div>
             <div class="stat-title">Cán bộ & Giáo viên</div>
             <div class="stat-main">
-                <div class="stat-number">86</div>
-                <div class="stat-label">Cán bộ, giáo viên và nhân viên</div>
+                <div class="stat-number">@Model.TotalTeachers</div>
+                <div class="stat-label">Giáo viên thuộc biên chế nhà trường</div>
             </div>
             <div class="stat-breakdown-bar">
-                <div class="breakdown-pill pill-green">Đang dạy: 68</div>
-                <div class="breakdown-pill pill-blue">Hành chính: 14</div>
-                <div class="breakdown-pill pill-yellow">Nghỉ: 4</div>
+                <div class="breakdown-pill pill-green">Đang công tác: @Model.ActiveTeachers</div>
+                <div class="breakdown-pill pill-blue">Tài khoản: @Model.TotalTeachers</div>
             </div>
         </div>
     </div>
@@ -103,16 +139,24 @@
             <span class="stat-icon-badge badge-purple">
                 <i class="bi bi-building-check"></i>
             </span>
-            <div class="stat-kicker">LỚP HỌC & PHÒNG HỌC</div>
+            <div class="stat-kicker">LỚP HỌC & CƠ SỞ VẬT CHẤT</div>
             <div class="stat-title">Lớp học đang vận hành</div>
             <div class="stat-main">
-                <div class="stat-number">36 / 36</div>
-                <div class="stat-label">100% phòng học đang sử dụng chuẩn</div>
+                <div class="stat-number">@Model.TotalClasses lớp</div>
+                <div class="stat-label">@Model.TotalRooms phòng học đang hoạt động</div>
             </div>
             <div class="stat-breakdown-bar">
-                <div class="breakdown-pill pill-blue">Khối 10: 12 lớp</div>
-                <div class="breakdown-pill pill-blue">Khối 11: 12 lớp</div>
-                <div class="breakdown-pill pill-blue">Khối 12: 12 lớp</div>
+                @if (Model.ClassesByGrade.Any())
+                {
+                    @foreach (var item in Model.ClassesByGrade)
+                    {
+                        <div class="breakdown-pill pill-blue">@item.Key: @item.Value lớp</div>
+                    }
+                }
+                else
+                {
+                    <div class="breakdown-pill pill-blue">Chưa có lớp học</div>
+                }
             </div>
         </div>
     </div>
@@ -120,13 +164,15 @@
 
 <!-- Section 2: Bảng dữ liệu tác vụ -->
 <!-- Table 1: Tình hình chuyên cần theo khối -->
-<div class="card-table-wrap">
+<div class="card-table-wrap mb-4">
     <div class="card-table-header">
         <div>
             <h2 class="table-card-title">Tình hình chuyên cần theo khối học hôm nay</h2>
-            <p class="table-card-subtitle">Dữ liệu ghi nhận từ hệ thống điểm danh tự động của giáo viên bộ môn và chủ nhiệm.</p>
+            <p class="table-card-subtitle">Thống kê tự động từ dữ liệu điểm danh và danh sách lớp học của các khối.</p>
         </div>
-        <span class="table-counter-badge">Tổng số: 3 Khối (36 Lớp)</span>
+        <a asp-action="AttendanceReports" class="btn btn-secondary btn-sm">
+            <i class="bi bi-calendar-range me-1"></i>Xem báo cáo chi tiết
+        </a>
     </div>
     <div class="table-responsive">
         <table class="table-edu mb-0">
@@ -143,42 +189,34 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td class="text-center">1</td>
-                    <td><strong>Khối 10</strong> (12 Lớp: 10A1 - 10A12)</td>
-                    <td class="text-center">520</td>
-                    <td class="text-center fw-bold text-success">514</td>
-                    <td class="text-center text-warning fw-semibold">5</td>
-                    <td class="text-center text-danger fw-semibold">1</td>
-                    <td class="text-center"><span class="fw-bold">98.8%</span></td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-success">Đạt chuẩn xuất sắc</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center">2</td>
-                    <td><strong>Khối 11</strong> (12 Lớp: 11A1 - 11A12)</td>
-                    <td class="text-center">480</td>
-                    <td class="text-center fw-bold text-success">472</td>
-                    <td class="text-center text-warning fw-semibold">6</td>
-                    <td class="text-center text-danger fw-semibold">2</td>
-                    <td class="text-center"><span class="fw-bold">98.3%</span></td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-success">Đạt chuẩn tốt</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center">3</td>
-                    <td><strong>Khối 12</strong> (12 Lớp: 12A1 - 12A12)</td>
-                    <td class="text-center">450</td>
-                    <td class="text-center fw-bold text-success">441</td>
-                    <td class="text-center text-warning fw-semibold">8</td>
-                    <td class="text-center text-danger fw-semibold">1</td>
-                    <td class="text-center"><span class="fw-bold">98.0%</span></td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-success">Đạt chuẩn tốt</span>
-                    </td>
-                </tr>
+                @if (Model.AttendanceByGrade.Any())
+                {
+                    int idx = 1;
+                    @foreach (var g in Model.AttendanceByGrade)
+                    {
+                        string statusLabel = g.AttendanceRate >= 98m ? "Đạt chuẩn xuất sắc" : g.AttendanceRate >= 95m ? "Đạt chuẩn tốt" : "Cần lưu ý";
+                        string statusCss = g.AttendanceRate >= 98m ? "badge-status-success" : g.AttendanceRate >= 95m ? "badge-status-info" : "badge-status-warning";
+                        <tr>
+                            <td class="text-center">@idx</td>
+                            <td><strong>@g.GradeName</strong></td>
+                            <td class="text-center">@g.TotalStudents</td>
+                            <td class="text-center fw-bold text-success">@g.PresentCount</td>
+                            <td class="text-center text-warning fw-semibold">@g.ExcusedCount</td>
+                            <td class="text-center text-danger fw-semibold">@g.UnexcusedCount</td>
+                            <td class="text-center"><span class="fw-bold">@g.AttendanceRate.ToString("0.0")%</span></td>
+                            <td class="text-center">
+                                <span class="badge-status @statusCss">@statusLabel</span>
+                            </td>
+                        </tr>
+                        idx++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">Chưa có dữ liệu chuyên cần cho ngày hôm nay.</td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
@@ -188,10 +226,12 @@
 <div class="card-table-wrap">
     <div class="card-table-header">
         <div>
-            <h2 class="table-card-title">Báo cáo nề nếp & Sự vụ kỷ luật cần lưu ý trong tuần</h2>
-            <p class="table-card-subtitle">Các trường hợp cần sự can thiệp, giám sát hoặc phê duyệt từ Ban Giám Hiệu.</p>
+            <h2 class="table-card-title">Báo cáo nề nếp & Đánh giá hạnh kiểm mới nhất</h2>
+            <p class="table-card-subtitle">Các ghi nhận và đánh giá từ giáo viên chủ nhiệm toàn trường.</p>
         </div>
-        <span class="table-counter-badge">Ghi nhận: 3 vụ việc</span>
+        <a asp-controller="ConductEvaluation" asp-action="PrincipalSummary" class="btn btn-secondary btn-sm">
+            <i class="bi bi-shield-check me-1"></i>Tổng quan nề nếp toàn trường
+        </a>
     </div>
     <div class="table-responsive">
         <table class="table-edu mb-0">
@@ -199,48 +239,63 @@
                 <tr>
                     <th style="width: 80px;" class="text-center">STT</th>
                     <th>Thời Gian</th>
-                    <th>Học Sinh / Lớp</th>
-                    <th>Nội Dung Sự Việc</th>
-                    <th>Hình Thức Xử Lý Đề Xuất</th>
-                    <th>Cán Bộ Báo Cáo</th>
-                    <th class="text-center">Trạng Thái</th>
+                    <th>Học Sinh</th>
+                    <th>Lớp</th>
+                    <th class="text-center">Xếp Loại</th>
+                    <th>Nhận Xét / Lời Phê</th>
+                    <th>GVCN Đánh Giá</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td class="text-center">1</td>
-                    <td>18/09/2026 - 08:30</td>
-                    <td><strong>Trần Văn Nam</strong> (Lớp 11A3)</td>
-                    <td>Đi học muộn 3 lần trong tuần, không mặc đúng đồng phục quy định</td>
-                    <td>Nhắc nhở trước lớp & thông báo phụ huynh</td>
-                    <td>Thầy Nguyễn Văn Bình (GVCN)</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-warning">Chờ trao đổi PH</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center">2</td>
-                    <td>17/09/2026 - 14:15</td>
-                    <td><strong>Lê Hoàng Long</strong> (Lớp 12A5)</td>
-                    <td>Sử dụng điện thoại chơi game trong giờ học môn Vật Lý</td>
-                    <td>Tạm giữ thiết bị đến hết ngày & viết bản tự kiểm điểm</td>
-                    <td>Cô Trần Thị Mai (GVBM)</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-success">Đã giải quyết</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center">3</td>
-                    <td>16/09/2026 - 09:45</td>
-                    <td><strong>Tập thể Lớp 10A2</strong></td>
-                    <td>Khen thưởng: Đạt giải Nhất phong trào thi đua nề nếp và vệ sinh trường học</td>
-                    <td>Tuyên dương trước toàn trường trong tiết Chào cờ</td>
-                    <td>Đoàn Thanh Niên THPT</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-info">Đã phê duyệt</span>
-                    </td>
-                </tr>
+                @if (Model.RecentConductEvents.Any())
+                {
+                    int idx = 1;
+                    @foreach (var ev in Model.RecentConductEvents)
+                    {
+                        string badgeClass = ev.ConductGrade switch
+                        {
+                            "Tốt" => "badge-status-success",
+                            "Khá" => "badge-status-info",
+                            "Đạt" => "badge-status-warning",
+                            _ => "badge-status-danger"
+                        };
+                        <tr>
+                            <td class="text-center">@idx</td>
+                            <td>@ev.EvaluatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td><strong>@ev.StudentName</strong> <span class="text-muted">(@ev.StudentCode)</span></td>
+                            <td>@ev.ClassName</td>
+                            <td class="text-center">
+                                <span class="badge-status @badgeClass">@ev.ConductGrade</span>
+                            </td>
+                            <td>@(string.IsNullOrWhiteSpace(ev.TeacherComment) ? "Không có ghi chú thêm" : ev.TeacherComment)</td>
+                            <td>@ev.TeacherName</td>
+                        </tr>
+                        idx++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">Chưa có đánh giá hạnh kiểm nào gần đây.</td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function updateLiveClock() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = now.toLocaleTimeString('vi-VN');
+            const dElem = document.getElementById('liveClockDate');
+            const tElem = document.getElementById('liveClockTime');
+            if (dElem) dElem.textContent = dateStr;
+            if (tElem) tElem.textContent = timeStr;
+        }
+        setInterval(updateLiveClock, 1000);
+        updateLiveClock();
+    </script>
+}

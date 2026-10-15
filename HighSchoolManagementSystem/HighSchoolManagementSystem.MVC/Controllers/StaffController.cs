@@ -7,7 +7,7 @@ using HighSchoolManagementSystem.Services.Interfaces;
 
 namespace HighSchoolManagementSystem.MVC.Controllers;
 
-[Authorize(Roles = "Staff")]
+[Authorize(Roles = "Staff,Principal")]
 public class StaffController : Controller
 {
     private readonly IAcademicYearService _academicYearService;
