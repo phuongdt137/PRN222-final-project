@@ -91,3 +91,41 @@ public class AttendanceReportsViewModel
     public List<SelectListItem> SemesterOptions { get; set; } = new();
     public List<SelectListItem> GradeLevelOptions { get; set; } = new();
 }
+
+public class YearEndPromotionViewModel
+{
+    public int SourceAcademicYearId { get; set; }
+    public string SourceAcademicYearCode { get; set; } = string.Empty;
+
+    public int? SourceClassId { get; set; }
+    public string? SourceClassName { get; set; }
+    public int? SourceGradeLevelId { get; set; }
+    public string? SourceGradeLevelName { get; set; }
+
+    public bool IsFinalGrade { get; set; }
+    public int? NextGradeLevelId { get; set; }
+    public string? NextGradeLevelName { get; set; }
+
+    public int? TargetAcademicYearId { get; set; }
+    public string? TargetAcademicYearCode { get; set; }
+
+    public int? PromoteTargetClassId { get; set; }
+    public int? RepeatTargetClassId { get; set; }
+
+    public bool AllSemestersFinalized { get; set; }
+    public List<SemesterFinalizationStatusDto> SourceSemesters { get; set; } = new();
+
+    public int TotalStudents { get; set; }
+    public int SuggestedPromoteOrGraduateCount { get; set; }
+    public int SuggestedRepeatCount { get; set; }
+    public int AlreadyProcessedCount { get; set; }
+
+    public List<StudentYearEndPromotionItemDto> Students { get; set; } = new();
+
+    // Dropdowns
+    public List<SelectListItem> SourceAcademicYearOptions { get; set; } = new();
+    public List<SelectListItem> SourceClassOptions { get; set; } = new();
+    public List<SelectListItem> TargetAcademicYearOptions { get; set; } = new();
+    public List<SelectListItem> PromoteTargetClassOptions { get; set; } = new();
+    public List<SelectListItem> RepeatTargetClassOptions { get; set; } = new();
+}

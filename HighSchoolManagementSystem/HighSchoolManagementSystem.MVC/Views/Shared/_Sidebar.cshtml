@@ -36,6 +36,13 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
+                    <a asp-controller="Principal" asp-action="YearEndPromotion"
+                       class="sidebar-link @(currentController == "Principal" && currentAction == "YearEndPromotion" ? "active" : "")">
+                        <i class="bi bi-arrow-up-right-circle-fill"></i>
+                        <span>Xét lên lớp & Tốt nghiệp</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
                     <a asp-controller="Principal" asp-action="AcademicReports"
                        class="sidebar-link @(currentController == "Principal" && currentAction == "AcademicReports" ? "active" : "")">
                         <i class="bi bi-bar-chart-line-fill"></i>

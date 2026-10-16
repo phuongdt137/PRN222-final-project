@@ -13,4 +13,6 @@ public interface IPrincipalService
     Task<ServiceResult<AttendanceReportDto>> GetAttendanceReportDataAsync(int? semesterId = null, int? gradeLevelId = null, DateTime? fromDate = null, DateTime? toDate = null);
     Task<ServiceResult<byte[]>> ExportAcademicReportCsvAsync(int semesterId, int? gradeLevelId = null);
     Task<ServiceResult<byte[]>> ExportAttendanceReportCsvAsync(int? semesterId = null, int? gradeLevelId = null, DateTime? fromDate = null, DateTime? toDate = null);
+    Task<ServiceResult<YearEndPromotionPageDto>> GetYearEndPromotionDataAsync(int? sourceAcademicYearId = null, int? sourceClassId = null, int? targetAcademicYearId = null);
+    Task<ServiceResult<int>> ExecuteYearEndPromotionAsync(ExecuteYearEndPromotionDto dto, int principalUserId);
 }

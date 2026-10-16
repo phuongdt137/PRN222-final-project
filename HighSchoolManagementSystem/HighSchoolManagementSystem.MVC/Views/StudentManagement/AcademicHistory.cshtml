@@ -14,7 +14,7 @@
         {
             <tr><td>@membership.Class.AcademicYear.YearCode</td><td>@membership.Class.GradeLevel.LevelName / @membership.Class.ClassName</td>
                 <td>@membership.JoinedAt.AddHours(7).ToString("dd/MM/yyyy HH:mm")</td><td>@(membership.LeftAt?.AddHours(7).ToString("dd/MM/yyyy HH:mm") ?? "—")</td>
-                <td>@(membership.Status switch { "Transferred" => "Đã chuyển lớp", "Enrolled" when membership.LeftAt == null => "Đang theo học", "Enrolled" => "Đã kết thúc", _ => membership.Status })</td></tr>
+                <td>@(membership.Status switch { "Transferred" => "Đã chuyển lớp", "Promoted" => "Đã lên lớp", "Repeated" => "Ở lại lớp (Lưu ban)", "Graduated" => "Đã tốt nghiệp", "Enrolled" when membership.LeftAt == null => "Đang theo học", "Enrolled" => "Đã kết thúc", _ => membership.Status })</td></tr>
         }
         </tbody>
     </table></div>

@@ -151,3 +151,76 @@ public class ClassAttendanceStatDto
     public int TotalLate { get; set; }
     public decimal AttendanceRate { get; set; }
 }
+
+public class YearEndPromotionPageDto
+{
+    public int SourceAcademicYearId { get; set; }
+    public string SourceAcademicYearCode { get; set; } = string.Empty;
+
+    public int? SourceClassId { get; set; }
+    public string? SourceClassName { get; set; }
+    public int? SourceGradeLevelId { get; set; }
+    public string? SourceGradeLevelName { get; set; }
+
+    public bool IsFinalGrade { get; set; }
+    public int? NextGradeLevelId { get; set; }
+    public string? NextGradeLevelName { get; set; }
+
+    public int? TargetAcademicYearId { get; set; }
+    public string? TargetAcademicYearCode { get; set; }
+
+    public bool AllSemestersFinalized { get; set; }
+    public List<SemesterFinalizationStatusDto> SourceSemesters { get; set; } = new();
+
+    public int TotalStudents { get; set; }
+    public int SuggestedPromoteOrGraduateCount { get; set; }
+    public int SuggestedRepeatCount { get; set; }
+    public int AlreadyProcessedCount { get; set; }
+
+    public List<StudentYearEndPromotionItemDto> Students { get; set; } = new();
+}
+
+public class SemesterFinalizationStatusDto
+{
+    public int SemesterId { get; set; }
+    public string SemesterName { get; set; } = string.Empty;
+    public bool IsFinalized { get; set; }
+}
+
+public class StudentYearEndPromotionItemDto
+{
+    public int StudentId { get; set; }
+    public int SourceMembershipId { get; set; }
+    public string StudentCode { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+
+    public decimal? Semester1Gpa { get; set; }
+    public decimal? Semester2Gpa { get; set; }
+    public decimal? YearGpa { get; set; }
+    public string YearAcademicRank { get; set; } = string.Empty;
+    public string YearConductGrade { get; set; } = string.Empty;
+
+    public bool IsEligible { get; set; }
+    public string SuggestedOutcome { get; set; } = string.Empty; // "Promote", "Graduate", "Repeat"
+
+    public bool IsAlreadyProcessed { get; set; }
+    public string CurrentSourceStatus { get; set; } = string.Empty; // "Enrolled", "Promoted", "Repeated", "Graduated"
+    public string? TargetAssignedClassName { get; set; }
+}
+
+public class ExecuteYearEndPromotionDto
+{
+    public int SourceAcademicYearId { get; set; }
+    public int SourceClassId { get; set; }
+    public int? TargetAcademicYearId { get; set; }
+    public int? PromoteTargetClassId { get; set; }
+    public int? RepeatTargetClassId { get; set; }
+    public List<StudentPromotionDecisionDto> Decisions { get; set; } = new();
+}
+
+public class StudentPromotionDecisionDto
+{
+    public int StudentId { get; set; }
+    public int SourceMembershipId { get; set; }
+    public string Outcome { get; set; } = string.Empty; // "Promote", "Repeat", "Graduate"
+}

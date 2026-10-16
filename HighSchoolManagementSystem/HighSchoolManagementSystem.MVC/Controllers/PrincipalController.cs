@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using HighSchoolManagementSystem.MVC.Models.ViewModels.Principal;
+using HighSchoolManagementSystem.Services.DTOs;
 using HighSchoolManagementSystem.Services.Interfaces;
 
 namespace HighSchoolManagementSystem.MVC.Controllers;
@@ -11,6 +12,7 @@ namespace HighSchoolManagementSystem.MVC.Controllers;
 public class PrincipalController : Controller
 {
     private readonly IPrincipalService _principalService;
+    private readonly IAcademicYearService _academicYearService;
     private readonly ISemesterService _semesterService;
     private readonly IGradeLevelService _gradeLevelService;
     private readonly IClassService _classService;
@@ -19,6 +21,7 @@ public class PrincipalController : Controller
 
     public PrincipalController(
         IPrincipalService principalService,
+        IAcademicYearService academicYearService,
         ISemesterService semesterService,
         IGradeLevelService gradeLevelService,
         IClassService classService,
@@ -26,6 +29,7 @@ public class PrincipalController : Controller
         ILogger<PrincipalController> logger)
     {
         _principalService = principalService;
+        _academicYearService = academicYearService;
         _semesterService = semesterService;
         _gradeLevelService = gradeLevelService;
         _classService = classService;
@@ -285,6 +289,70 @@ public class PrincipalController : Controller
     }
 
     // =========================================================================
+    // 6. XÉT LÊN LỚP, LƯU BAN & TỐT NGHIỆP CUỐI NĂM
+    // =========================================================================
+    [HttpGet]
+    public async Task<IActionResult> YearEndPromotion(int? sourceAcademicYearId, int? sourceClassId, int? targetAcademicYearId)
+    {
+        var result = await _principalService.GetYearEndPromotionDataAsync(sourceAcademicYearId, sourceClassId, targetAcademicYearId);
+        if (!result.Success || result.Data == null)
+        {
+            TempData["ErrorMessage"] = result.Message ?? "Không thể tải dữ liệu xét lên lớp / tốt nghiệp.";
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        var d = result.Data;
+        var model = new YearEndPromotionViewModel
+        {
+            SourceAcademicYearId = d.SourceAcademicYearId,
+            SourceAcademicYearCode = d.SourceAcademicYearCode,
+            SourceClassId = d.SourceClassId,
+            SourceClassName = d.SourceClassName,
+            SourceGradeLevelId = d.SourceGradeLevelId,
+            SourceGradeLevelName = d.SourceGradeLevelName,
+            IsFinalGrade = d.IsFinalGrade,
+            NextGradeLevelId = d.NextGradeLevelId,
+            NextGradeLevelName = d.NextGradeLevelName,
+            TargetAcademicYearId = d.TargetAcademicYearId,
+            TargetAcademicYearCode = d.TargetAcademicYearCode,
+            AllSemestersFinalized = d.AllSemestersFinalized,
+            SourceSemesters = d.SourceSemesters,
+            TotalStudents = d.TotalStudents,
+            SuggestedPromoteOrGraduateCount = d.SuggestedPromoteOrGraduateCount,
+            SuggestedRepeatCount = d.SuggestedRepeatCount,
+            AlreadyProcessedCount = d.AlreadyProcessedCount,
+            Students = d.Students
+        };
+
+        await PopulateYearEndPromotionDropdownsAsync(model);
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExecuteYearEndPromotion(ExecuteYearEndPromotionDto dto)
+    {
+        int principalUserId = ResolveCurrentUserId();
+        var result = await _principalService.ExecuteYearEndPromotionAsync(dto, principalUserId);
+
+        if (result.Success)
+        {
+            TempData["SuccessMessage"] = result.Message;
+        }
+        else
+        {
+            TempData["ErrorMessage"] = result.Message;
+        }
+
+        return RedirectToAction(nameof(YearEndPromotion), new
+        {
+            sourceAcademicYearId = dto.SourceAcademicYearId,
+            sourceClassId = dto.SourceClassId,
+            targetAcademicYearId = dto.TargetAcademicYearId
+        });
+    }
+
+    // =========================================================================
     // PRIVATE HELPERS
     // =========================================================================
     private int ResolveCurrentUserId()
@@ -327,5 +395,72 @@ public class PrincipalController : Controller
             Selected = c.Id == classId
         }).ToList();
         model.ClassOptions.Insert(0, new SelectListItem { Value = "", Text = "-- Tất cả các lớp --" });
+    }
+
+    private async Task PopulateYearEndPromotionDropdownsAsync(YearEndPromotionViewModel model)
+    {
+        var yearsResult = await _academicYearService.GetAllAsync();
+        var allYears = yearsResult.Data ?? Array.Empty<HighSchoolManagementSystem.Models.Entities.AcademicYear>();
+
+        model.SourceAcademicYearOptions = allYears.Select(y => new SelectListItem
+        {
+            Value = y.Id.ToString(),
+            Text = y.IsCurrent ? $"{y.YearCode} (Hiện hành)" : y.YearCode,
+            Selected = y.Id == model.SourceAcademicYearId
+        }).ToList();
+
+        var sourceClassesResult = await _classService.GetByFiltersAsync(model.SourceAcademicYearId, null);
+        var sourceClasses = sourceClassesResult.Data ?? Array.Empty<HighSchoolManagementSystem.Models.Entities.Class>();
+        model.SourceClassOptions = sourceClasses.Select(c => new SelectListItem
+        {
+            Value = c.Id.ToString(),
+            Text = $"{c.ClassName} ({c.GradeLevel?.LevelName})",
+            Selected = c.Id == model.SourceClassId
+        }).ToList();
+
+        var sourceYear = allYears.FirstOrDefault(y => y.Id == model.SourceAcademicYearId);
+        var futureYears = sourceYear != null
+            ? allYears.Where(y => y.StartDate > sourceYear.StartDate).OrderBy(y => y.StartDate).ToList()
+            : new List<HighSchoolManagementSystem.Models.Entities.AcademicYear>();
+
+        model.TargetAcademicYearOptions = futureYears.Select(y => new SelectListItem
+        {
+            Value = y.Id.ToString(),
+            Text = y.IsCurrent ? $"{y.YearCode} (Hiện hành)" : y.YearCode,
+            Selected = model.TargetAcademicYearId.HasValue && y.Id == model.TargetAcademicYearId.Value
+        }).ToList();
+        if (!model.TargetAcademicYearOptions.Any())
+        {
+            model.TargetAcademicYearOptions.Insert(0, new SelectListItem { Value = "", Text = "-- Chưa có năm học kế tiếp --" });
+        }
+
+        if (model.TargetAcademicYearId.HasValue)
+        {
+            if (!model.IsFinalGrade && model.NextGradeLevelId.HasValue)
+            {
+                var nextGradeClassesResult = await _classService.GetByFiltersAsync(model.TargetAcademicYearId.Value, model.NextGradeLevelId.Value);
+                var nextClasses = nextGradeClassesResult.Data ?? Array.Empty<HighSchoolManagementSystem.Models.Entities.Class>();
+                model.PromoteTargetClassOptions = nextClasses.Select(c => new SelectListItem
+                {
+                    Value = c.Id.ToString(),
+                    Text = $"{c.ClassName} ({c.GradeLevel?.LevelName} — {model.TargetAcademicYearCode})",
+                    Selected = c.Id == model.PromoteTargetClassId
+                }).ToList();
+                model.PromoteTargetClassOptions.Insert(0, new SelectListItem { Value = "", Text = $"-- Chọn lớp lên lớp ({model.NextGradeLevelName}) --" });
+            }
+
+            if (model.SourceGradeLevelId.HasValue)
+            {
+                var sameGradeClassesResult = await _classService.GetByFiltersAsync(model.TargetAcademicYearId.Value, model.SourceGradeLevelId.Value);
+                var sameClasses = sameGradeClassesResult.Data ?? Array.Empty<HighSchoolManagementSystem.Models.Entities.Class>();
+                model.RepeatTargetClassOptions = sameClasses.Select(c => new SelectListItem
+                {
+                    Value = c.Id.ToString(),
+                    Text = $"{c.ClassName} ({c.GradeLevel?.LevelName} — {model.TargetAcademicYearCode})",
+                    Selected = c.Id == model.RepeatTargetClassId
+                }).ToList();
+                model.RepeatTargetClassOptions.Insert(0, new SelectListItem { Value = "", Text = $"-- Chọn lớp học lại ({model.SourceGradeLevelName}) --" });
+            }
+        }
     }
 }
