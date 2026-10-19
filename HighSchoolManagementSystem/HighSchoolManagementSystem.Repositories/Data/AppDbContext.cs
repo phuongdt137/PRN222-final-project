@@ -165,8 +165,8 @@ public class AppDbContext : DbContext
                 .HasForeignKey(lr => lr.RequestBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.HasOne(lr => lr.ReviewedByTeacher)
-                .WithMany(t => t.ReviewedLeaves)
+            entity.HasOne(lr => lr.ReviewedByUser)
+                .WithMany()
                 .HasForeignKey(lr => lr.ReviewedBy)
                 .OnDelete(DeleteBehavior.SetNull);
         });

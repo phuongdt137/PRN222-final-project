@@ -45,6 +45,5 @@ public class Teacher
     public virtual ICollection<TeachingAssignment> TeachingAssignments { get; set; } = new List<TeachingAssignment>();
     public virtual ICollection<ConductEvaluation> ConductEvaluations { get; set; } = new List<ConductEvaluation>();
     public virtual ICollection<AttendanceRecord> RecordedAttendances { get; set; } = new List<AttendanceRecord>();
-    public virtual ICollection<LeaveRequest> ReviewedLeaves { get; set; } = new List<LeaveRequest>();
     public virtual ICollection<TeacherFeedback> TeacherFeedbacks { get; set; } = new List<TeacherFeedback>();
 }

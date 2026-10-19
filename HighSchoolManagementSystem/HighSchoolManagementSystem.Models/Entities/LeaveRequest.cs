@@ -38,7 +38,7 @@ public class LeaveRequest
     [Required]
     [MaxLength(30)]
     [Column("status")]
-    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected
+    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Cancelled
 
     [Column("requested_at")]
     public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
@@ -47,7 +47,7 @@ public class LeaveRequest
     public DateTime? ReviewAt { get; set; }
 
     [Column("reviewed_by")]
-    public int? ReviewedBy { get; set; }
+    public int? ReviewedBy { get; set; } // UserId của Staff hoặc Teacher đã duyệt
 
     // Navigation properties
     [ForeignKey(nameof(StudentId))]
@@ -57,7 +57,7 @@ public class LeaveRequest
     public virtual User RequestedByUser { get; set; } = null!;
 
     [ForeignKey(nameof(ReviewedBy))]
-    public virtual Teacher? ReviewedByTeacher { get; set; }
+    public virtual User? ReviewedByUser { get; set; }
 
     public virtual ICollection<AttendanceRecord> AttendanceRecords { get; set; } = new List<AttendanceRecord>();
 }

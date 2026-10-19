@@ -17,6 +17,7 @@ public class StaffController : Controller
     private readonly ITeacherService _teacherService;
     private readonly IRoomService _roomService;
     private readonly ITimeSlotService _timeSlotService;
+    private readonly ILeaveRequestService _leaveRequestService;
 
     public StaffController(
         IAcademicYearService academicYearService,
@@ -25,7 +26,8 @@ public class StaffController : Controller
         IGradeLevelService gradeLevelService,
         ITeacherService teacherService,
         IRoomService roomService,
-        ITimeSlotService timeSlotService)
+        ITimeSlotService timeSlotService,
+        ILeaveRequestService leaveRequestService)
     {
         _academicYearService = academicYearService;
         _semesterService = semesterService;
@@ -34,11 +36,53 @@ public class StaffController : Controller
         _teacherService = teacherService;
         _roomService = roomService;
         _timeSlotService = timeSlotService;
+        _leaveRequestService = leaveRequestService;
     }
 
-    public IActionResult Dashboard()
+    public async Task<IActionResult> Dashboard()
     {
-        return View();
+        var allLeaves = await _leaveRequestService.GetForStaffAsync(status: null);
+        var rooms = await _roomService.GetByFiltersAsync(status: null, roomType: null);
+
+        var leaveItems = allLeaves.Success && allLeaves.Data != null
+            ? allLeaves.Data
+            : Array.Empty<HighSchoolManagementSystem.Models.Entities.LeaveRequest>();
+
+        var pending = leaveItems
+            .Where(l => l.Status == "Pending")
+            .OrderByDescending(l => l.RequestedAt)
+            .Take(10)
+            .Select(l =>
+            {
+                var currentClass = l.Student.StudentClasses
+                    .FirstOrDefault(sc => sc.Status == "Enrolled" && sc.LeftAt == null);
+                return new StaffDashboardLeaveItemViewModel
+                {
+                    Id = l.Id,
+                    StudentCode = l.Student.StudentCode,
+                    StudentName = l.Student.User.FullName,
+                    ClassName = currentClass?.Class.ClassName,
+                    RequestedByName = l.RequestedByUser.FullName,
+                    StartDate = l.StartDate,
+                    EndDate = l.EndDate,
+                    Reason = l.Reason
+                };
+            })
+            .ToList();
+
+        var roomList = rooms.Success && rooms.Data != null ? rooms.Data : Array.Empty<HighSchoolManagementSystem.Models.Entities.Room>();
+
+        var model = new StaffDashboardViewModel
+        {
+            PendingLeaveCount = leaveItems.Count(l => l.Status == "Pending"),
+            ApprovedLeaveCount = leaveItems.Count(l => l.Status == "Approved"),
+            RejectedLeaveCount = leaveItems.Count(l => l.Status == "Rejected"),
+            TotalRoomCount = roomList.Count,
+            AvailableRoomCount = roomList.Count(r => r.Status == "Available"),
+            PendingLeaves = pending
+        };
+
+        return View(model);
     }
 
     public async Task<IActionResult> AcademicYears()

@@ -1,6 +1,8 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.StaffDashboardViewModel
 @{
     ViewData["Title"] = "Bảng Điều Hành - Giáo Vụ";
     var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Cán bộ Giáo Vụ";
+    var occupiedRooms = Math.Max(0, Model.TotalRoomCount - Model.AvailableRoomCount);
 }
 
 <!-- Greeting Banner kiểu EIMS -->
@@ -46,13 +48,13 @@
             <div class="stat-kicker">HÀNH CHÍNH & ĐƠN TỪ</div>
             <div class="stat-title">Đơn xin nghỉ phép cần duyệt</div>
             <div class="stat-main">
-                <div class="stat-number">5</div>
-                <div class="stat-label">Yêu cầu từ phụ huynh & học sinh gửi hôm nay</div>
+                <div class="stat-number">@Model.PendingLeaveCount</div>
+                <div class="stat-label">Đơn đang chờ Staff / GVCN xét duyệt</div>
             </div>
             <div class="stat-breakdown-bar">
-                <div class="breakdown-pill pill-yellow">Chờ duyệt: 5</div>
-                <div class="breakdown-pill pill-green">Đã duyệt: 22</div>
-                <div class="breakdown-pill pill-red">Từ chối: 1</div>
+                <div class="breakdown-pill pill-yellow">Chờ duyệt: @Model.PendingLeaveCount</div>
+                <div class="breakdown-pill pill-green">Đã duyệt: @Model.ApprovedLeaveCount</div>
+                <div class="breakdown-pill pill-red">Từ chối: @Model.RejectedLeaveCount</div>
             </div>
         </div>
     </div>
@@ -85,12 +87,12 @@
             <div class="stat-kicker">CƠ SỞ VẬT CHẤT</div>
             <div class="stat-title">Tình trạng phòng học</div>
             <div class="stat-main">
-                <div class="stat-number">36 / 40</div>
-                <div class="stat-label">Phòng học tiêu chuẩn đang vận hành</div>
+                <div class="stat-number">@occupiedRooms / @Model.TotalRoomCount</div>
+                <div class="stat-label">Phòng đang sử dụng / tổng số phòng</div>
             </div>
             <div class="stat-breakdown-bar">
-                <div class="breakdown-pill pill-green">Đang dùng: 36</div>
-                <div class="breakdown-pill pill-blue">Phòng trống: 4</div>
+                <div class="breakdown-pill pill-green">Đang dùng: @occupiedRooms</div>
+                <div class="breakdown-pill pill-blue">Sẵn sàng: @Model.AvailableRoomCount</div>
             </div>
         </div>
     </div>
@@ -120,76 +122,103 @@
 <div class="card-table-wrap">
     <div class="card-table-header">
         <div>
-            <h2 class="table-card-title">Đơn xin nghỉ phép gửi đến hôm nay cần xét duyệt</h2>
-            <p class="table-card-subtitle">Vui lòng kiểm tra lý do và xác nhận để cập nhật trạng thái điểm danh cho giáo viên bộ môn.</p>
+            <h2 class="table-card-title">Đơn xin nghỉ phép đang chờ xét duyệt</h2>
+            <p class="table-card-subtitle">Dữ liệu thật từ hệ thống. Bấm Duyệt/Từ chối hoặc mở chi tiết để xử lý.</p>
         </div>
-        <span class="table-counter-badge">Chờ duyệt: 5 đơn</span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="table-counter-badge">Chờ duyệt: @Model.PendingLeaveCount đơn</span>
+            <a asp-controller="LeaveRequest" asp-action="Index" asp-route-status="Pending" class="btn btn-secondary btn-sm">
+                Xem tất cả
+            </a>
+        </div>
     </div>
-    <div class="table-responsive">
-        <table class="table-edu mb-0">
-            <thead>
-                <tr>
-                    <th style="width: 100px;">Mã Đơn</th>
-                    <th>Học Sinh</th>
-                    <th>Lớp</th>
-                    <th>Phụ Huynh Người Gửi</th>
-                    <th>Thời Gian Nghỉ</th>
-                    <th>Lý Do Xin Nghỉ</th>
-                    <th class="text-center" style="width: 170px;">Thao Tác</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><strong>#NP-1048</strong></td>
-                    <td><strong>Nguyễn Anh Tuấn</strong></td>
-                    <td>10A1</td>
-                    <td>Nguyễn Văn Bình (Bố)</td>
-                    <td>19/09/2026 (1 ngày)</td>
-                    <td>Bị sốt phát ban, bác sĩ chỉ định nghỉ ngơi</td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
-                            <i class="bi bi-check-lg me-1"></i>Duyệt
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
-                            <i class="bi bi-x-lg me-1"></i>Từ chối
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>#NP-1049</strong></td>
-                    <td><strong>Trần Thu Trang</strong></td>
-                    <td>11A4</td>
-                    <td>Phạm Thị Hương (Mẹ)</td>
-                    <td>19/09/2026 - 20/09/2026 (2 ngày)</td>
-                    <td>Về quê có việc hiếu cùng gia đình</td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
-                            <i class="bi bi-check-lg me-1"></i>Duyệt
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
-                            <i class="bi bi-x-lg me-1"></i>Từ chối
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>#NP-1050</strong></td>
-                    <td><strong>Lê Hoàng Long</strong></td>
-                    <td>12A2</td>
-                    <td>Lê Đức Anh (Bố)</td>
-                    <td>19/09/2026 (Buổi sáng)</td>
-                    <td>Đi khám sức khỏe răng hàm mặt</td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
-                            <i class="bi bi-check-lg me-1"></i>Duyệt
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
-                            <i class="bi bi-x-lg me-1"></i>Từ chối
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success d-flex align-items-center m-3 mb-0" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <div>@TempData["SuccessMessage"]</div>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger d-flex align-items-center m-3 mb-0" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>@TempData["ErrorMessage"]</div>
+        </div>
+    }
+
+    @if (Model.PendingLeaves.Count == 0)
+    {
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+            <p class="mt-2 mb-0">Hiện không có đơn nào đang chờ duyệt.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table-edu mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 90px;">Mã Đơn</th>
+                        <th>Học Sinh</th>
+                        <th>Lớp</th>
+                        <th>Người gửi</th>
+                        <th>Thời gian nghỉ</th>
+                        <th>Lý do</th>
+                        <th class="text-center" style="width: 220px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.PendingLeaves)
+                    {
+                        var periodText = item.StartDate.Date == item.EndDate.Date
+                            ? item.StartDate.ToString("dd/MM/yyyy")
+                            : $"{item.StartDate:dd/MM/yyyy} - {item.EndDate:dd/MM/yyyy}";
+                        <tr>
+                            <td><strong>#NP-@item.Id</strong></td>
+                            <td>
+                                <strong>@item.StudentName</strong>
+                                <div class="text-muted small">@item.StudentCode</div>
+                            </td>
+                            <td>@(item.ClassName ?? "—")</td>
+                            <td>@item.RequestedByName</td>
+                            <td>@periodText</td>
+                            <td>@(item.Reason.Length > 60 ? item.Reason[..60] + "…" : item.Reason)</td>
+                            <td class="text-center">
+                                <div class="d-inline-flex gap-1 flex-wrap justify-content-center">
+                                    <form asp-controller="LeaveRequest" asp-action="Review" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="Id" value="@item.Id" />
+                                        <input type="hidden" name="Approve" value="true" />
+                                        <input type="hidden" name="returnUrl" value="@Url.Action("Dashboard", "Staff")" />
+                                        <button type="submit" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
+                                            <i class="bi bi-check-lg me-1"></i>Duyệt
+                                        </button>
+                                    </form>
+                                    <form asp-controller="LeaveRequest" asp-action="Review" method="post" class="d-inline"
+                                          onsubmit="return confirm('Từ chối đơn #NP-@item.Id?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="Id" value="@item.Id" />
+                                        <input type="hidden" name="Approve" value="false" />
+                                        <input type="hidden" name="returnUrl" value="@Url.Action("Dashboard", "Staff")" />
+                                        <button type="submit" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                                            <i class="bi bi-x-lg me-1"></i>Từ chối
+                                        </button>
+                                    </form>
+                                    <a asp-controller="LeaveRequest" asp-action="Details" asp-route-id="@item.Id"
+                                       class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                                        Chi tiết
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
 
 <!-- Table 2: Tình trạng phòng học & Sĩ số -->
