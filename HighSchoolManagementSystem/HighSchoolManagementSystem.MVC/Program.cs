@@ -38,6 +38,7 @@ builder.Services.AddScoped<IScoreRepository, ScoreRepository>();
 builder.Services.AddScoped<ITeacherFeedbackRepository, TeacherFeedbackRepository>();
 builder.Services.AddScoped<IConductEvaluationRepository, ConductEvaluationRepository>();
 builder.Services.AddScoped<ITimetableRepository, TimetableRepository>();
+builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
 builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IFileStorageService>(sp =>
@@ -59,6 +60,7 @@ builder.Services.AddScoped<IScoreService, ScoreService>();
 builder.Services.AddScoped<ITeacherFeedbackService, TeacherFeedbackService>();
 builder.Services.AddScoped<IConductEvaluationService, ConductEvaluationService>();
 builder.Services.AddScoped<ITimetableService, TimetableService>();
+builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
 builder.Services.AddScoped<IPrincipalService, PrincipalService>();
 
 // Cookie Authentication (No Identity)

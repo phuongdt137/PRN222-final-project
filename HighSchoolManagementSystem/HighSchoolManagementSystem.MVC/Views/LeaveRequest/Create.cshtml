@@ -1,0 +1,99 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.CreateLeaveRequestViewModel
+@{
+    ViewData["Title"] = "Tạo đơn xin nghỉ";
+}
+
+<div class="greeting-banner">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-circle-fill" style="font-size: 7px;"></i> ĐƠN XIN NGHỈ
+        </span>
+        <h1 class="greeting-title">Tạo đơn xin nghỉ học</h1>
+        <p class="greeting-subtitle">
+            Điền khoảng thời gian nghỉ và lý do. Có thể đính kèm ảnh minh chứng (jpg/png/webp, tối đa 2MB).
+        </p>
+    </div>
+</div>
+
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Thông tin đơn</h2>
+            <p class="table-card-subtitle">Đơn sẽ ở trạng thái chờ duyệt sau khi gửi.</p>
+        </div>
+        <a asp-action="Index" class="btn btn-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+
+    <div class="p-4">
+        @if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty]?.Errors.Count > 0)
+        {
+            <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                <div>
+                    @foreach (var error in ViewData.ModelState[string.Empty]!.Errors)
+                    {
+                        <div>@error.ErrorMessage</div>
+                    }
+                </div>
+            </div>
+        }
+
+        <form asp-action="Create" method="post" enctype="multipart/form-data" novalidate>
+            @Html.AntiForgeryToken()
+
+            <div class="row g-3">
+                @if (Model.ShowStudentPicker)
+                {
+                    <div class="col-12 col-md-6">
+                        <label asp-for="StudentId" class="form-label"></label>
+                        <select asp-for="StudentId" class="form-select" asp-items="Model.Students">
+                            <option value="">-- Chọn học sinh --</option>
+                        </select>
+                        <span asp-validation-for="StudentId" class="text-danger small mt-1 d-block"></span>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" asp-for="StudentId" />
+                }
+
+                <div class="col-12 col-md-3">
+                    <label asp-for="StartDate" class="form-label"></label>
+                    <input asp-for="StartDate" class="form-control" type="date" />
+                    <span asp-validation-for="StartDate" class="text-danger small mt-1 d-block"></span>
+                </div>
+
+                <div class="col-12 col-md-3">
+                    <label asp-for="EndDate" class="form-label"></label>
+                    <input asp-for="EndDate" class="form-control" type="date" />
+                    <span asp-validation-for="EndDate" class="text-danger small mt-1 d-block"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="Reason" class="form-label"></label>
+                    <textarea asp-for="Reason" class="form-control" rows="4" placeholder="Ví dụ: Ốm, đi khám bệnh..."></textarea>
+                    <span asp-validation-for="Reason" class="text-danger small mt-1 d-block"></span>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <label asp-for="AttachmentFile" class="form-label"></label>
+                    <input asp-for="AttachmentFile" class="form-control" type="file" accept=".jpg,.jpeg,.png,.webp" />
+                    <span asp-validation-for="AttachmentFile" class="text-danger small mt-1 d-block"></span>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-send me-1"></i>Gửi đơn
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Hủy</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1314,8 +1314,8 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("HighSchoolManagementSystem.Models.Entities.Teacher", "ReviewedByTeacher")
-                        .WithMany("ReviewedLeaves")
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.User", "ReviewedByUser")
+                        .WithMany()
                         .HasForeignKey("ReviewedBy")
                         .OnDelete(DeleteBehavior.SetNull);
 
@@ -1327,7 +1327,7 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
 
                     b.Navigation("RequestedByUser");
 
-                    b.Navigation("ReviewedByTeacher");
+                    b.Navigation("ReviewedByUser");
 
                     b.Navigation("Student");
                 });
@@ -1704,8 +1704,6 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                     b.Navigation("HomeroomClasses");
 
                     b.Navigation("RecordedAttendances");
-
-                    b.Navigation("ReviewedLeaves");
 
                     b.Navigation("TeacherFeedbacks");
 

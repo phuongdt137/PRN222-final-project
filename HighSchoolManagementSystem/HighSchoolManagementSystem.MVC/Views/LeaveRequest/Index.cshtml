@@ -1,0 +1,167 @@
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.LeaveRequestListPageViewModel
+@{
+    ViewData["Title"] = "Đơn xin nghỉ học";
+    string StatusLabel(string status) => status switch
+    {
+        "Pending" => "Chờ duyệt",
+        "Approved" => "Đã duyệt",
+        "Rejected" => "Từ chối",
+        "Cancelled" => "Đã hủy",
+        _ => status
+    };
+    string StatusClass(string status) => status switch
+    {
+        "Pending" => "badge-status-warning",
+        "Approved" => "badge-status-success",
+        "Rejected" => "badge-status-danger",
+        "Cancelled" => "badge-status-info",
+        _ => "badge-status-warning"
+    };
+}
+
+<div class="greeting-banner">
+    <div class="greeting-text-wrap">
+        <span class="greeting-kicker">
+            <i class="bi bi-circle-fill" style="font-size: 7px;"></i>
+            @(Model.CanReview ? "DUYỆT ĐƠN NGHỈ" : "ĐƠN XIN NGHỈ")
+        </span>
+        <h1 class="greeting-title">Quản lý đơn xin nghỉ học</h1>
+        <p class="greeting-subtitle">
+            @if (Model.ViewerRole == "Staff")
+            {
+                <text>Staff có thể xem và duyệt toàn bộ đơn xin nghỉ của nhà trường.</text>
+            }
+            else if (Model.ViewerRole == "Teacher")
+            {
+                <text>Giáo viên chủ nhiệm duyệt đơn của học sinh thuộc lớp mình phụ trách.</text>
+            }
+            else if (Model.ViewerRole == "Parent")
+            {
+                <text>Gửi và theo dõi đơn xin nghỉ cho con.</text>
+            }
+            else
+            {
+                <text>Gửi và theo dõi đơn xin nghỉ của bạn.</text>
+            }
+        </p>
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <div>@TempData["SuccessMessage"]</div>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>@TempData["ErrorMessage"]</div>
+    </div>
+}
+
+<div class="card-table-wrap mb-3">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Bộ lọc</h2>
+            <p class="table-card-subtitle">Lọc theo trạng thái đơn.</p>
+        </div>
+    </div>
+    <div class="p-4">
+        <form asp-action="Index" method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label" for="status">Trạng thái</label>
+                <select name="status" id="status" class="form-select" asp-items="Model.Statuses">
+                    <option value="">-- Tất cả --</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-funnel me-1"></i>Lọc
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Xóa lọc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card-table-wrap">
+    <div class="card-table-header">
+        <div>
+            <h2 class="table-card-title">Danh sách đơn</h2>
+            <p class="table-card-subtitle">Sắp xếp theo thời gian gửi mới nhất.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="table-counter-badge">Tổng: @Model.Items.Count đơn</span>
+            @if (Model.CanCreate)
+            {
+                <a asp-action="Create" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-lg me-1"></i>Tạo đơn xin nghỉ
+                </a>
+            }
+        </div>
+    </div>
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="p-4 text-center text-muted">
+            <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+            <p class="mt-2 mb-0">Không có đơn xin nghỉ nào khớp bộ lọc.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table-edu mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">#</th>
+                        <th>Học sinh</th>
+                        <th>Lớp</th>
+                        <th>Thời gian nghỉ</th>
+                        <th>Người gửi</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th class="text-center" style="width: 120px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var index = 1;
+                    }
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td>@index</td>
+                            <td>
+                                <strong>@item.StudentCode</strong>
+                                <div class="text-muted small">@item.StudentName</div>
+                            </td>
+                            <td>@(item.ClassName ?? "—")</td>
+                            <td>
+                                @item.StartDate.ToString("dd/MM/yyyy")
+                                @if (item.EndDate.Date != item.StartDate.Date)
+                                {
+                                    <text> → @item.EndDate.ToString("dd/MM/yyyy")</text>
+                                }
+                            </td>
+                            <td>@item.RequestedByName</td>
+                            <td class="text-center">
+                                <span class="badge-status @StatusClass(item.Status)">@StatusLabel(item.Status)</span>
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Details" asp-route-id="@item.Id"
+                                   class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
+                                    <i class="bi bi-eye me-1"></i>Chi tiết
+                                </a>
+                            </td>
+                        </tr>
+                        index++;
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
