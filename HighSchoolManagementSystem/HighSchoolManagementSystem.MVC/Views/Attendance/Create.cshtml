@@ -1,0 +1,56 @@
+@model HighSchoolManagementSystem.Services.DTOs.AttendanceCreateDto
+@using HighSchoolManagementSystem.Models.Entities
+@{
+    ViewData["Title"] = "Tạo bảng điểm danh";
+    var hasSelectableEntries = Model.Entries.Any(e => e.Id == 0 && e.CanWrite && e.StudentCount > 0);
+}
+<h1 class="h3">Tạo bảng điểm danh theo tiết</h1>
+<p class="text-muted">Chọn ngày và lớp, kiểm tra lịch rồi chọn những tiết thực sự có học. Bỏ chọn tiết nghỉ hoặc ngày nghỉ.</p>
+@if (!ViewData.ModelState.IsValid)
+{
+    <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+}
+<form method="get" class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3"><label for="date" class="form-label">Ngày học</label><input id="date" name="date" type="date" required value="@Model.Date.ToString("yyyy-MM-dd")" class="form-control" /></div>
+        <div class="col-md-4"><label for="semester" class="form-label">Học kỳ</label><select id="semester" name="semesterId" class="form-select"><option value="">Chọn học kỳ</option>@foreach(var o in Model.Semesters){<option value="@o.Id" selected="@(Model.SemesterId == o.Id)">@o.Name</option>}</select></div>
+        <div class="col-md-3"><label for="class" class="form-label">Lớp</label><select id="class" name="classId" class="form-select"><option value="">Tất cả lớp</option>@foreach(var o in Model.Classes){<option value="@o.Id" selected="@(Model.ClassId == o.Id)">@o.Name</option>}</select></div>
+        <div class="col-md-2"><button class="btn btn-outline-primary" type="submit">Xem lịch</button></div>
+    </div>
+</form>
+<form asp-action="Create" method="post" id="create-attendance-form">
+    <input type="hidden" name="Date" value="@Model.Date.ToString("yyyy-MM-dd")" />
+    <input type="hidden" name="SemesterId" value="@Model.SemesterId" />
+    <input type="hidden" name="ClassId" value="@Model.ClassId" />
+    <div class="card table-responsive"><table class="table align-middle mb-0">
+        <thead><tr><th>Chọn</th><th>Slot / Giờ</th><th>Lớp / Môn</th><th>Giáo viên / Phòng</th><th>Học sinh</th><th>Tình trạng</th></tr></thead>
+        <tbody>
+        @foreach(var e in Model.Entries)
+        {
+            <tr><td>@if(e.Id == 0 && e.CanWrite && e.StudentCount > 0){<input type="checkbox" class="form-check-input" name="EntryIds" value="@e.TimetableEntryId" checked="@Model.EntryIds.Contains(e.TimetableEntryId)" aria-label="Chọn @e.ClassName @e.Slot @e.SubjectName" />}</td>
+            <td>@e.Slot<div class="text-muted">@e.StartTime.ToString(@"hh\:mm") – @e.EndTime.ToString(@"hh\:mm")</div></td>
+            <td>@e.ClassName<div>@e.SubjectName</div></td><td>@e.TeacherName<div class="text-muted">@e.RoomName</div></td><td>@e.StudentCount</td>
+            <td>@if(e.Id > 0){<a asp-action="Take" asp-route-id="@e.Id">@AttendanceStatuses.Label(e.Status) · Xem bảng</a>}else if(!e.CanWrite){<span class="text-danger">Ngày hoặc phân công không hợp lệ</span>}else if(e.StudentCount == 0){<span class="text-warning">Chưa có học sinh tại giờ bắt đầu tiết</span>}else{<span class="text-success">Có thể tạo</span>}</td></tr>
+        }
+        @if(Model.Entries.Count == 0)
+        {
+            <tr><td colspan="6" class="text-center py-5">
+                <p class="text-muted">@Model.EmptyMessage</p>
+                @if(Model.SemesterId.HasValue)
+                {
+                    <a class="btn btn-outline-primary" asp-controller="Timetable" asp-action="Index" asp-route-semesterId="@Model.SemesterId" asp-route-weekStart="@Model.Date.ToString("yyyy-MM-dd")">Quản lý thời khóa biểu</a>
+                    <p class="text-muted mt-3 mb-0">Nếu chưa có giáo viên để xếp lịch, hãy <a asp-controller="TeacherManagement" asp-action="TeachingAssignments" asp-route-semesterId="@Model.SemesterId">phân công giảng dạy</a> trước.</p>
+                }
+                else
+                {
+                    <a class="btn btn-outline-primary" asp-controller="Staff" asp-action="AcademicYears">Quản lý năm học</a>
+                }
+            </td></tr>
+        }
+        </tbody>
+    </table></div>
+    <div class="d-flex gap-2 mt-3"><button type="submit" class="btn btn-primary" disabled="@(!hasSelectableEntries)">Tạo các bảng đã chọn</button><a class="btn btn-outline-secondary" asp-action="Manage">Quay lại</a></div>
+</form>
+@section Scripts {
+    <script src="~/js/attendance-create.js" asp-append-version="true"></script>
+}

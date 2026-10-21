@@ -56,26 +56,9 @@
         </div>
     </div>
 
-    <!-- Card 2: Lớp chủ nhiệm -->
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="stat-card-eims">
-            <span class="stat-icon-badge badge-green">
-                <i class="bi bi-people-fill"></i>
-            </span>
-            <div class="stat-kicker">LỚP CHỦ NHIỆM (10A1)</div>
-            <div class="stat-title">Chuyên cần hôm nay</div>
-            <div class="stat-main">
-                <div class="stat-number">44 / 45</div>
-                <div class="stat-label">Học sinh có mặt đúng giờ</div>
-            </div>
-            <div class="stat-breakdown-bar">
-                <div class="breakdown-pill pill-green">Có mặt: 44</div>
-                <div class="breakdown-pill pill-yellow">Có phép: 1</div>
-                <div class="breakdown-pill pill-red">K.phép: 0</div>
-            </div>
-        </div>
+        @await Component.InvokeAsync("AttendanceDashboard", new { mode = "card" })
     </div>
-
     <!-- Card 3: Sổ điểm bộ môn -->
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card-eims">
@@ -116,93 +99,7 @@
 </div>
 
 <!-- Section 2: Bảng dữ liệu tác vụ -->
-<!-- Table 1: Lịch dạy hôm nay -->
-<div class="card-table-wrap">
-    <div class="card-table-header">
-        <div>
-            <h2 class="table-card-title">Thời khóa biểu giảng dạy hôm nay</h2>
-            <p class="table-card-subtitle">Chi tiết các tiết lên lớp, phòng học và tiến độ thực hiện điểm danh học sinh.</p>
-        </div>
-        <span class="table-counter-badge">Tổng số: 4 tiết</span>
-    </div>
-    <div class="table-responsive">
-        <table class="table-edu mb-0">
-            <thead>
-                <tr>
-                    <th style="width: 80px;" class="text-center">Tiết</th>
-                    <th>Thời Gian</th>
-                    <th>Lớp Giảng Dạy</th>
-                    <th>Môn Học</th>
-                    <th>Phòng Học</th>
-                    <th class="text-center">Trạng Thái Điểm Danh</th>
-                    <th class="text-center" style="width: 140px;">Thao Tác</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td class="text-center fw-bold">Tiết 1</td>
-                    <td>07:00 - 07:45</td>
-                    <td><strong>Lớp 10A1</strong> (Chủ nhiệm)</td>
-                    <td>Toán Đại Số</td>
-                    <td>Phòng 201</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-success">Đã điểm danh (44/45)</span>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;">
-                            <i class="bi bi-eye me-1"></i>Xem lại
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center fw-bold">Tiết 2</td>
-                    <td>07:50 - 08:35</td>
-                    <td><strong>Lớp 10A1</strong></td>
-                    <td>Toán Hình Học</td>
-                    <td>Phòng 201</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-success">Đang trong tiết</span>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
-                            <i class="bi bi-journal-plus me-1"></i>Ghi sổ đầu bài
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center fw-bold">Tiết 4</td>
-                    <td>09:35 - 10:20</td>
-                    <td><strong>Lớp 10A3</strong></td>
-                    <td>Toán Đại Số</td>
-                    <td>Phòng 203</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-warning">Chưa điểm danh</span>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size: 12px;">
-                            <i class="bi bi-check-square me-1"></i>Điểm danh
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center fw-bold">Tiết 7</td>
-                    <td>14:00 - 14:45</td>
-                    <td><strong>Lớp 11A2</strong></td>
-                    <td>Toán Hình Học</td>
-                    <td>Phòng 302</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-info">Tiết chiều</span>
-                    </td>
-                    <td class="text-center">
-                        <button type="button" class="btn btn-secondary btn-sm px-2 py-1" style="font-size: 12px;" disabled>
-                            <i class="bi bi-clock me-1"></i>Chưa tới giờ
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+@await Component.InvokeAsync("AttendanceDashboard", new { mode = "table" })
 
 <!-- Table 2: Học sinh cần chú ý -->
 <div class="card-table-wrap">

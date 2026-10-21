@@ -14,7 +14,16 @@ public class AttendanceRecord
     public int StudentId { get; set; }
 
     [Column("recorded_by")]
-    public int RecordedBy { get; set; }
+    public int? RecordedBy { get; set; }
+
+    [Column("attendance_session_id")]
+    public int AttendanceSessionId { get; set; }
+
+    [Column("recorded_at")]
+    public DateTime? RecordedAt { get; set; }
+
+    [Column("updated_at")]
+    public DateTime? UpdatedAt { get; set; }
 
     [Column("leave_request_id")]
     public int? LeaveRequestId { get; set; }
@@ -22,13 +31,13 @@ public class AttendanceRecord
     [Column("timetable_entry_id")]
     public int TimetableEntryId { get; set; }
 
-    [Column("attendance_date")]
+    [Column("attendance_date", TypeName = "date")]
     public DateTime AttendanceDate { get; set; }
 
     [Required]
     [MaxLength(30)]
     [Column("status")]
-    public string Status { get; set; } = "Present"; // Present, Absent, Late, Excused
+    public string Status { get; set; } = AttendanceStatuses.NotMarked;
 
     [MaxLength(255)]
     [Column("comment")]
@@ -39,7 +48,9 @@ public class AttendanceRecord
     public virtual Student Student { get; set; } = null!;
 
     [ForeignKey(nameof(RecordedBy))]
-    public virtual Teacher RecordedByTeacher { get; set; } = null!;
+    public virtual Teacher? RecordedByTeacher { get; set; }
+
+    public virtual AttendanceSession AttendanceSession { get; set; } = null!;
 
     [ForeignKey(nameof(LeaveRequestId))]
     public virtual LeaveRequest? LeaveRequest { get; set; }

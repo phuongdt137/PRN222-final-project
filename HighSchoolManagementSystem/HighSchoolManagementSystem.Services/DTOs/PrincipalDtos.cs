@@ -18,7 +18,7 @@ public class PrincipalDashboardDto
     public int TodayPresentCount { get; set; }
     public int TodayExcusedCount { get; set; }
     public int TodayUnexcusedCount { get; set; }
-    public decimal TodayAttendanceRate { get; set; }
+    public decimal? TodayAttendanceRate { get; set; }
     public List<GradeAttendanceKpiDto> AttendanceByGrade { get; set; } = new();
 
     // Disciplinary & Conduct recent
@@ -38,7 +38,7 @@ public class GradeAttendanceKpiDto
     public int PresentCount { get; set; }
     public int ExcusedCount { get; set; }
     public int UnexcusedCount { get; set; }
-    public decimal AttendanceRate { get; set; }
+    public decimal? AttendanceRate { get; set; }
 }
 
 public class RecentConductEventDto
@@ -137,7 +137,7 @@ public class AttendanceReportDto
     public int TotalPresent { get; set; }
     public int TotalExcused { get; set; }
     public int TotalUnexcused { get; set; }
-    public decimal OverallAttendanceRate { get; set; }
+    public decimal? OverallAttendanceRate { get; set; }
     public List<ClassAttendanceStatDto> ClassStats { get; set; } = new();
 }
 
@@ -149,7 +149,7 @@ public class ClassAttendanceStatDto
     public int TotalStudents { get; set; }
     public int TotalAbsents { get; set; }
     public int TotalLate { get; set; }
-    public decimal AttendanceRate { get; set; }
+    public decimal? AttendanceRate { get; set; }
 }
 
 public class YearEndPromotionPageDto

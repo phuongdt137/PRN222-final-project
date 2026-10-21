@@ -6,6 +6,7 @@ namespace HighSchoolManagementSystem.MVC.Models.ViewModels;
 public class TimetableListViewModel
 {
     public IReadOnlyList<TimetableItemViewModel> Entries { get; set; } = [];
+    public IReadOnlyList<TimetableSlotViewModel> Slots { get; set; } = [];
     public IEnumerable<SelectListItem> TeacherOptions { get; set; } = [];
     public IEnumerable<SelectListItem> SemesterOptions { get; set; } = [];
     public int? SelectedTeacherId { get; set; }
@@ -19,6 +20,8 @@ public class TimetableListViewModel
 public class TimetableItemViewModel
 {
     public int Id { get; set; }
+    public int TimeSlotId { get; set; }
+    public int ClassId { get; set; }
     public int DayOfWeek { get; set; }
     public int PeriodNo { get; set; }
     public string TimeRange { get; set; } = "";
@@ -26,6 +29,15 @@ public class TimetableItemViewModel
     public string SubjectName { get; set; } = "";
     public string TeacherName { get; set; } = "";
     public string RoomName { get; set; } = "";
+}
+
+public class TimetableSlotViewModel
+{
+    public int Id { get; set; }
+    public int PeriodNo { get; set; }
+    public string Session { get; set; } = "";
+    public string SlotCode { get; set; } = "";
+    public string TimeRange { get; set; } = "";
 }
 
 public class TimetableEditViewModel

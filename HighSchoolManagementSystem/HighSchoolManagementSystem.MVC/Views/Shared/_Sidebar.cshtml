@@ -122,6 +122,11 @@
                         <span>Cấu hình đánh giá</span>
                     </a>
                 </li>
+                <li class="sidebar-menu-item">
+                    <a asp-controller="Attendance" asp-action="Manage" class="sidebar-link @(currentController == "Attendance" ? "active" : "")">
+                        <i class="bi bi-calendar-check"></i><span>Quản lý điểm danh</span>
+                    </a>
+                </li>
             </ul>
 
             <div class="sidebar-section-title">QUẢN LÝ ĐÀO TẠO</div>
@@ -266,9 +271,9 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="Attendance" asp-action="MyTeachingSessions" class="sidebar-link @(currentController == "Attendance" ? "active" : "")">
                         <i class="bi bi-check2-square"></i>
-                        <span>Điểm danh hàng ngày</span>
+                        <span>Điểm danh theo tiết</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
@@ -351,7 +356,7 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="Attendance" asp-action="MyAttendance" class="sidebar-link @(currentController == "Attendance" ? "active" : "")">
                         <i class="bi bi-check-circle"></i>
                         <span>Chuyên cần & Điểm danh</span>
                     </a>
@@ -408,7 +413,7 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="javascript:void(0)" class="sidebar-link">
+                    <a asp-controller="Attendance" asp-action="ChildAttendance" class="sidebar-link @(currentController == "Attendance" ? "active" : "")">
                         <i class="bi bi-calendar-check"></i>
                         <span>Chuyên cần & Điểm danh</span>
                     </a>

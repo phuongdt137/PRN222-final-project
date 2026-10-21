@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3140" height="865" viewBox="0 0 3140 865">
+<title>Swimlane — Giáo viên điểm danh theo tiết</title>
+<desc>Hai làn ngang Giáo viên và Hệ thống. Đăng nhập, chọn tiết, kiểm tra quyền nhập, ghi nhận, xác nhận, kiểm tra dữ liệu, lưu và xem kết quả.</desc>
+<defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#e9e9e9" stroke-width="0.7"/></pattern><marker id="arrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0 0L9 3.5L0 7Z" fill="#222"/></marker></defs>
+<rect width="100%" height="100%" fill="white"/>
+<rect x="25" y="88" width="3090" height="690" fill="url(#grid)"/>
+<text x="1570.0" y="40.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="#111">GIÁO VIÊN ĐIỂM DANH THEO TIẾT</text>
+<polyline points="25,88 3115,88 3115,778 25,778 25,88" fill="none" stroke="#333" stroke-width="1.6"/>
+<polyline points="61,88 61,778" fill="none" stroke="#333" stroke-width="1.6"/>
+<polyline points="98,88 98,778" fill="none" stroke="#333" stroke-width="1.6"/>
+<polyline points="61,425 3115,425" fill="none" stroke="#333" stroke-width="1.6"/>
+<text transform="translate(43,433) rotate(-90)" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="22">ĐIỂM DANH</text>
+<text transform="translate(80,257) rotate(-90)" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="22">GIÁO VIÊN</text>
+<text transform="translate(80,601) rotate(-90)" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="22">HỆ THỐNG</text>
+<polyline points="164,295 185,295" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="280,340 280,525" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="325" y="442.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Xác thực</text>
+<polyline points="375,570 400,570 400,295 420,295" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="371" y="390.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Đúng</text>
+<polyline points="515,340 515,525" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="598" y="442.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Yêu cầu danh sách</text>
+<polyline points="610,570 637,570 637,295 660,295" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="678" y="382.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Hiển thị</text>
+<polyline points="755,340 755,520" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="803" y="442.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Mở bảng</text>
+<polyline points="850,570 920,570" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1040,570 1060,570 1060,295 1075,295" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1080" y="468.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Có</text>
+<polyline points="980,630 980,671" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1023" y="652.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Không</text>
+<polyline points="1092.5,707 1181,707" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1265,295 1350,295" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1410,235 1410,175 1170,175 1170,250" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1290" y="163.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Chưa</text>
+<polyline points="1470,295 1535,295" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1502" y="279.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Có</text>
+<polyline points="1630,340 1630,525" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1684" y="442.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Gửi kết quả</text>
+<polyline points="1735,570 1835,570" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1895,510 1895,205 1290,205 1290,360 1170,360 1170,340" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1628" y="191.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Không: báo lỗi, kiểm tra / tải lại</text>
+<polyline points="1955,570 2075,570" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="2014" y="554.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Có</text>
+<polyline points="2305,570 2340,570 2340,295 2375,295" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="2565,295 2700,295" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="2760,235 2760,128 755,128 755,250" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="2535" y="114.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Có</text>
+<polyline points="2820,295 2981,295" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="2898" y="279.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Không</text>
+<ellipse cx="135" cy="295" rx="29.0" ry="29.0" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="135" y="295.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="15" font-weight="normal" fill="#111">Bắt đầu</text>
+<rect x="185.0" y="250.0" width="190" height="90" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="280" y="295.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Đăng nhập</text>
+<rect x="420.0" y="250.0" width="190" height="90" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="515" y="281.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Chọn chức năng</text>
+<text x="515" y="308.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Điểm danh theo tiết</text>
+<rect x="660.0" y="250.0" width="190" height="90" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="755" y="281.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Chọn ngày và tiết</text>
+<text x="755" y="308.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">được phân công</text>
+<rect x="1075.0" y="250.0" width="190" height="90" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1170" y="281.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Chọn kết quả từng</text>
+<text x="1170" y="308.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">học sinh và ghi chú</text>
+<polygon points="1410,235.0 1470.0,295 1410,355.0 1350.0,295" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1410" y="281.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Hoàn tất</text>
+<text x="1410" y="308.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">điểm danh?</text>
+<rect x="1535.0" y="250.0" width="190" height="90" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1630" y="281.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Nhấn xác nhận /</text>
+<text x="1630" y="308.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Lưu chỉnh sửa</text>
+<rect x="2375.0" y="250.0" width="190" height="90" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="2470" y="268.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Xem kết quả và</text>
+<text x="2470" y="295.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">thông báo</text>
+<text x="2470" y="322.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">thành công</text>
+<polygon points="2760,235.0 2820.0,295 2760,355.0 2700.0,295" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="2760" y="281.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Điểm danh</text>
+<text x="2760" y="308.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">tiết khác?</text>
+<ellipse cx="3010" cy="295" rx="29.0" ry="29.0" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="3010" y="295.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="15" font-weight="normal" fill="#111">Kết thúc</text>
+<rect x="185.0" y="525.0" width="190" height="90" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="280" y="556.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Xác thực tài khoản</text>
+<text x="280" y="583.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">và vai trò giáo viên</text>
+<rect x="420.0" y="525.0" width="190" height="90" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="515" y="556.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Lấy danh sách tiết</text>
+<text x="515" y="583.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">của giáo viên</text>
+<rect x="660.0" y="520.0" width="190" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="755" y="543.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Tải bảng, danh sách</text>
+<text x="755" y="570.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">học sinh và đơn nghỉ</text>
+<text x="755" y="597.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">đã được duyệt</text>
+<polygon points="980,510.0 1040.0,570 980,630.0 920.0,570" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="980" y="556.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Được phép</text>
+<text x="980" y="583.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">nhập / sửa?</text>
+<rect x="867.5" y="671.0" width="225" height="72" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="980" y="693.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Chỉ xem / Báo lý do</text>
+<text x="980" y="720.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">chưa thể điểm danh</text>
+<ellipse cx="1210" cy="707" rx="29.0" ry="29.0" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1210" y="707.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="15" font-weight="normal" fill="#111">Kết thúc</text>
+<rect x="1525.0" y="525.0" width="210" height="90" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1630" y="556.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Kiểm tra điều kiện</text>
+<text x="1630" y="583.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">và dữ liệu điểm danh</text>
+<polygon points="1895,510.0 1955.0,570 1895,630.0 1835.0,570" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1895" y="570.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Hợp lệ?</text>
+<rect x="2075.0" y="525.0" width="230" height="90" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="2190" y="556.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Lưu kết quả, lịch sử;</text>
+<text x="2190" y="583.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">đặt trạng thái Đã chốt</text>
+<text x="1570.0" y="813.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Kết quả: Có mặt · Đi muộn · Vắng không phép · Vắng có phép.  Bảng điểm danh do Staff tạo trước.</text>
+<text x="1570.0" y="841.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Chỉ nhập / sửa từ giờ bắt đầu tiết đến trước 00:00 ngày kế tiếp (giờ Việt Nam), khi học kỳ mở và bảng chưa hủy. Sửa bảng đã chốt phải có lý do.</text>
+</svg>

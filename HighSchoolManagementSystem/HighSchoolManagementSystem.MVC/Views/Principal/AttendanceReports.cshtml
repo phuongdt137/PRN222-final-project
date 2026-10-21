@@ -63,7 +63,7 @@
     <div class="col-6 col-md-3">
         <div class="p-3 bg-white border rounded shadow-sm">
             <div class="text-muted small">Tỷ lệ chuyên cần chung</div>
-            <div class="fs-4 fw-bold text-success">@Model.OverallAttendanceRate.ToString("0.0")%</div>
+            <div class="fs-4 fw-bold text-success">@(Model.OverallAttendanceRate.HasValue ? Model.OverallAttendanceRate.Value.ToString("0.0") + "%" : "Chưa có dữ liệu")</div>
             <div class="small text-muted">Toàn trường</div>
         </div>
     </div>
@@ -119,7 +119,7 @@
                     int idx = 1;
                     @foreach (var c in Model.ClassStats)
                     {
-                        string evalLabel = c.AttendanceRate >= 98m ? "Xuất sắc" : c.AttendanceRate >= 95m ? "Tốt" : "Cần chấn chỉnh";
+                        string evalLabel = !c.AttendanceRate.HasValue ? "Chưa có dữ liệu" : c.AttendanceRate >= 98m ? "Xuất sắc" : c.AttendanceRate >= 95m ? "Tốt" : "Cần chấn chỉnh";
                         string evalCss = c.AttendanceRate >= 98m ? "badge-status-success" : c.AttendanceRate >= 95m ? "badge-status-info" : "badge-status-warning";
                         <tr>
                             <td class="text-center">@idx</td>
@@ -128,7 +128,7 @@
                             <td class="text-center">@c.TotalStudents học sinh</td>
                             <td class="text-center fw-semibold text-warning">@c.TotalAbsents</td>
                             <td class="text-center fw-semibold text-secondary">@c.TotalLate</td>
-                            <td class="text-center fw-bold fs-6">@c.AttendanceRate.ToString("0.0")%</td>
+                            <td class="text-center fw-bold fs-6">@(c.AttendanceRate.HasValue ? c.AttendanceRate.Value.ToString("0.0") + "%" : "Chưa có dữ liệu")</td>
                             <td class="text-center">
                                 <span class="badge-status @evalCss">@evalLabel</span>
                             </td>

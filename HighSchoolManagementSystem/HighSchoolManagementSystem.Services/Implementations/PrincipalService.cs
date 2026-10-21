@@ -93,44 +93,41 @@ public class PrincipalService : IPrincipalService
             dto.TotalRooms = await _context.Rooms.CountAsync(r => r.Status == "Available" || r.Status == "InUse");
 
             // 5. Chuyên cần hôm nay
-            var today = DateTime.Today;
+            var today = SchoolDate.Today;
             var todayAttendance = await _context.AttendanceRecords
-                .Include(a => a.Student).ThenInclude(s => s.StudentClasses).ThenInclude(sc => sc.Class)
-                .Where(a => a.AttendanceDate.Date == today)
+                .Include(a => a.AttendanceSession).ThenInclude(s => s.Class)
+                .Where(a => a.AttendanceDate == today && a.AttendanceSession.Status == "Submitted")
                 .ToListAsync();
 
             if (todayAttendance.Any())
             {
                 dto.TodayTotalAttendanceRecords = todayAttendance.Count;
-                dto.TodayPresentCount = todayAttendance.Count(a => a.Status == "Present");
+                dto.TodayPresentCount = todayAttendance.Count(a => a.Status == "Present" || a.Status == "Late");
                 dto.TodayExcusedCount = todayAttendance.Count(a => a.Status == "Excused");
                 dto.TodayUnexcusedCount = todayAttendance.Count(a => a.Status == "Absent");
                 dto.TodayAttendanceRate = dto.TodayTotalAttendanceRecords > 0
                     ? Math.Round((decimal)dto.TodayPresentCount / dto.TodayTotalAttendanceRecords * 100m, 1)
-                    : 100m;
+                    : null;
             }
             else
             {
-                dto.TodayTotalAttendanceRecords = dto.TotalStudents;
-                dto.TodayPresentCount = dto.TotalStudents;
+                dto.TodayTotalAttendanceRecords = 0;
+                dto.TodayPresentCount = 0;
                 dto.TodayExcusedCount = 0;
                 dto.TodayUnexcusedCount = 0;
-                dto.TodayAttendanceRate = dto.TotalStudents > 0 ? 100m : 0m;
+                dto.TodayAttendanceRate = null;
             }
 
             // Chuyên cần theo từng khối
             foreach (var grade in gradeLevels)
             {
                 int gradeStudents = dto.StudentsByGrade.GetValueOrDefault(grade.LevelName, 0);
-                var gradeRecords = todayAttendance.Where(a => a.Student.StudentClasses
-                    .Any(sc => sc.Status == "Enrolled" && sc.Class.GradeLevelId == grade.Id)).ToList();
+                var gradeRecords = todayAttendance.Where(a => a.AttendanceSession.Class.GradeLevelId == grade.Id).ToList();
 
-                int present = gradeRecords.Any() ? gradeRecords.Count(a => a.Status == "Present") : gradeStudents;
+                int present = gradeRecords.Count(a => a.Status == "Present" || a.Status == "Late");
                 int excused = gradeRecords.Count(a => a.Status == "Excused");
                 int unexcused = gradeRecords.Count(a => a.Status == "Absent");
-                decimal rate = gradeStudents > 0
-                    ? Math.Round((decimal)present / (present + excused + unexcused > 0 ? (present + excused + unexcused) : gradeStudents) * 100m, 1)
-                    : 100m;
+                decimal? rate = AttendanceRules.Rate(present, 0, gradeRecords.Count);
 
                 dto.AttendanceByGrade.Add(new GradeAttendanceKpiDto
                 {
@@ -690,7 +687,7 @@ public class PrincipalService : IPrincipalService
     {
         try
         {
-            DateTime to = toDate?.Date ?? DateTime.Today;
+            DateTime to = toDate?.Date ?? SchoolDate.Today;
             DateTime from = fromDate?.Date ?? to.AddDays(-30);
 
             var semester = semesterId.HasValue
@@ -706,20 +703,24 @@ public class PrincipalService : IPrincipalService
             };
 
             var recordsQuery = _context.AttendanceRecords
-                .Include(a => a.Student).ThenInclude(s => s.StudentClasses).ThenInclude(sc => sc.Class).ThenInclude(c => c.GradeLevel)
-                .Where(a => a.AttendanceDate.Date >= from.Date && a.AttendanceDate.Date <= to.Date);
+                .Include(a => a.AttendanceSession).ThenInclude(s => s.Class).ThenInclude(c => c.GradeLevel)
+                .Where(a => a.AttendanceSession.Status == "Submitted" &&
+                    a.AttendanceDate >= from.Date && a.AttendanceDate <= to.Date &&
+                    (!gradeLevelId.HasValue || a.AttendanceSession.Class.GradeLevelId == gradeLevelId));
+            if (semester != null) recordsQuery = recordsQuery.Where(a => a.AttendanceSession.SemesterId == semester.Id);
 
             var records = await recordsQuery.ToListAsync();
 
             dto.TotalRecords = records.Count;
-            dto.TotalPresent = records.Count(r => r.Status == "Present");
+            dto.TotalPresent = records.Count(r => r.Status == "Present" || r.Status == "Late");
             dto.TotalExcused = records.Count(r => r.Status == "Excused");
             dto.TotalUnexcused = records.Count(r => r.Status == "Absent");
             dto.OverallAttendanceRate = dto.TotalRecords > 0
                 ? Math.Round((decimal)dto.TotalPresent / dto.TotalRecords * 100m, 1)
-                : 100m;
+                : null;
 
             var classesQuery = _context.Classes.Include(c => c.GradeLevel).AsQueryable();
+            if (semester != null) classesQuery = classesQuery.Where(c => c.AcademicYearId == semester.AcademicYearId);
             if (gradeLevelId.HasValue)
             {
                 classesQuery = classesQuery.Where(c => c.GradeLevelId == gradeLevelId.Value);
@@ -728,21 +729,20 @@ public class PrincipalService : IPrincipalService
 
             foreach (var cls in classes)
             {
-                var classRecords = records.Where(r => r.Student.StudentClasses
-                    .Any(sc => sc.Status == "Enrolled" && sc.ClassId == cls.Id)).ToList();
+                var classRecords = records.Where(r => r.AttendanceSession.ClassId == cls.Id).ToList();
 
                 int totalClassRecords = classRecords.Count;
-                int present = classRecords.Count(r => r.Status == "Present");
+                int present = classRecords.Count(r => r.Status == "Present" || r.Status == "Late");
                 int absents = classRecords.Count(r => r.Status == "Absent" || r.Status == "Excused");
                 int late = classRecords.Count(r => r.Status == "Late");
-                decimal rate = totalClassRecords > 0 ? Math.Round((decimal)present / totalClassRecords * 100m, 1) : 100m;
+                decimal? rate = AttendanceRules.Rate(present, 0, totalClassRecords);
 
                 dto.ClassStats.Add(new ClassAttendanceStatDto
                 {
                     ClassId = cls.Id,
                     ClassName = cls.ClassName,
                     GradeName = cls.GradeLevel?.LevelName ?? string.Empty,
-                    TotalStudents = await _context.StudentClasses.CountAsync(sc => sc.ClassId == cls.Id && sc.Status == "Enrolled" && sc.LeftAt == null),
+                    TotalStudents = classRecords.Select(r => r.StudentId).Distinct().Count(),
                     TotalAbsents = absents,
                     TotalLate = late,
                     AttendanceRate = rate
@@ -831,14 +831,14 @@ public class PrincipalService : IPrincipalService
             sb.AppendLine($"\"Tổng lượt ghi nhận:\",{report.TotalRecords}");
             sb.AppendLine($"\"Tổng lượt có mặt:\",{report.TotalPresent}");
             sb.AppendLine($"\"Có phép:\",{report.TotalExcused},\"Không phép:\",{report.TotalUnexcused}");
-            sb.AppendLine($"\"Tỷ lệ chuyên cần chung:\",{report.OverallAttendanceRate:0.0}%");
+            sb.AppendLine($"\"Tỷ lệ chuyên cần chung:\",{(report.OverallAttendanceRate.HasValue ? report.OverallAttendanceRate.Value.ToString("0.0") + "%" : "Chưa có dữ liệu")}");
             sb.AppendLine();
 
             sb.AppendLine("\"CHI TIẾT CHUYÊN CẦN THEO TỪNG LỚP HỌC\"");
             sb.AppendLine("\"Khối Lớp\",\"Tên Lớp\",\"Sĩ số\",\"Tổng vắng\",\"Đi muộn\",\"Tỷ lệ chuyên cần (%)\"");
             foreach (var c in report.ClassStats)
             {
-                sb.AppendLine($"\"{c.GradeName}\",\"{c.ClassName}\",{c.TotalStudents},{c.TotalAbsents},{c.TotalLate},{c.AttendanceRate:0.0}%");
+                sb.AppendLine($"\"{c.GradeName}\",\"{c.ClassName}\",{c.TotalStudents},{c.TotalAbsents},{c.TotalLate},{(c.AttendanceRate.HasValue ? c.AttendanceRate.Value.ToString("0.0") + "%" : "Chưa có dữ liệu")}");
             }
 
             var preamble = Encoding.UTF8.GetPreamble();

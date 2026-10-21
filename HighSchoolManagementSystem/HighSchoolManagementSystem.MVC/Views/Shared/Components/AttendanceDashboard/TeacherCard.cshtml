@@ -1,0 +1,7 @@
+@model HighSchoolManagementSystem.Services.DTOs.AttendanceListDto
+<div class="stat-card-eims">
+    <div class="stat-kicker">ĐIỂM DANH HÔM NAY</div>
+    <div class="stat-title">Các tiết được giao điểm danh</div>
+    <div class="stat-main"><div class="stat-number">@Model.TotalCount bảng</div></div>
+    <a asp-controller="Attendance" asp-action="MyTeachingSessions" class="btn btn-outline-primary btn-sm mt-2">Xem tiến độ và điểm danh</a>
+</div>

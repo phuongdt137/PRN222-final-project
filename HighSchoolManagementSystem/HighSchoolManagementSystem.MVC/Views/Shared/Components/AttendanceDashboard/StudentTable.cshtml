@@ -1,0 +1,9 @@
+@model HighSchoolManagementSystem.Services.DTOs.AttendanceStudentHistoryDto
+@using HighSchoolManagementSystem.Models.Entities
+<div class="card-table-wrap mb-4">
+    <div class="card-table-header"><div><h2 class="table-card-title">Điểm danh hôm nay · @Model.StudentName</h2><p class="table-card-subtitle">Chỉ hiển thị kết quả đã được giáo viên xác nhận.</p></div><a asp-controller="Attendance" asp-action="@(Model.IsParent ? "ChildAttendance" : "MyAttendance")">Xem lịch sử</a></div>
+    <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Slot</th><th>Môn</th><th>Kết quả</th><th>Ghi chú</th></tr></thead><tbody>
+    @foreach(var row in Model.Items){<tr><td>@row.Session.Slot</td><td>@row.Session.SubjectName</td><td>@AttendanceStatuses.Label(row.Status)</td><td>@row.Comment</td></tr>}
+    @if(Model.Items.Count == 0){<tr><td colspan="4" class="text-muted py-4">Chưa có bảng điểm danh hôm nay.</td></tr>}
+    </tbody></table></div>
+</div>
