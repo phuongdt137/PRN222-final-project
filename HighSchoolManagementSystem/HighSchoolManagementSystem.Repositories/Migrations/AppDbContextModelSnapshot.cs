@@ -146,6 +146,47 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                     b.ToTable("assessment_types");
                 });
 
+            modelBuilder.Entity("HighSchoolManagementSystem.Models.Entities.AttendanceAuditLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasColumnName("action");
+
+                    b.Property<int>("ActorUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<int>("AttendanceSessionId")
+                        .HasColumnType("int")
+                        .HasColumnName("attendance_session_id");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("details");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("occurred_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("AttendanceSessionId", "OccurredAt");
+
+                    b.ToTable("attendance_audit_logs");
+                });
+
             modelBuilder.Entity("HighSchoolManagementSystem.Models.Entities.AttendanceRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -156,8 +197,12 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("AttendanceDate")
-                        .HasColumnType("datetime2")
+                        .HasColumnType("date")
                         .HasColumnName("attendance_date");
+
+                    b.Property<int>("AttendanceSessionId")
+                        .HasColumnType("int")
+                        .HasColumnName("attendance_session_id");
 
                     b.Property<string>("Comment")
                         .HasMaxLength(255)
@@ -168,7 +213,11 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                         .HasColumnType("int")
                         .HasColumnName("leave_request_id");
 
-                    b.Property<int>("RecordedBy")
+                    b.Property<DateTime?>("RecordedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("recorded_at");
+
+                    b.Property<int?>("RecordedBy")
                         .HasColumnType("int")
                         .HasColumnName("recorded_by");
 
@@ -186,17 +235,153 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                         .HasColumnType("int")
                         .HasColumnName("timetable_entry_id");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
                     b.HasKey("Id");
 
                     b.HasIndex("LeaveRequestId");
 
                     b.HasIndex("RecordedBy");
 
-                    b.HasIndex("StudentId");
-
                     b.HasIndex("TimetableEntryId");
 
-                    b.ToTable("attendance_records");
+                    b.HasIndex("AttendanceSessionId", "StudentId")
+                        .IsUnique();
+
+                    b.HasIndex("StudentId", "AttendanceDate");
+
+                    b.HasIndex("AttendanceSessionId", "TimetableEntryId", "AttendanceDate");
+
+                    b.HasIndex("StudentId", "TimetableEntryId", "AttendanceDate")
+                        .IsUnique();
+
+                    b.ToTable("attendance_records", t =>
+                        {
+                            t.HasCheckConstraint("CK_AttendanceRecord_Status", "([status] = 'NotMarked' AND [recorded_by] IS NULL) OR ([status] IN ('Present', 'Absent', 'Late', 'Excused') AND [recorded_by] IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("HighSchoolManagementSystem.Models.Entities.AttendanceSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AssignedTeacherId")
+                        .HasColumnType("int")
+                        .HasColumnName("assigned_teacher_id");
+
+                    b.Property<DateTime>("AttendanceDate")
+                        .HasColumnType("date")
+                        .HasColumnName("attendance_date");
+
+                    b.Property<int>("ClassId")
+                        .HasColumnType("int")
+                        .HasColumnName("class_id");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_at");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time")
+                        .HasColumnName("end_time");
+
+                    b.Property<int>("PeriodNo")
+                        .HasColumnType("int")
+                        .HasColumnName("period_no");
+
+                    b.Property<int>("RoomId")
+                        .HasColumnType("int")
+                        .HasColumnName("room_id");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("SchoolSession")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("school_session");
+
+                    b.Property<int>("SemesterId")
+                        .HasColumnType("int")
+                        .HasColumnName("semester_id");
+
+                    b.Property<string>("SlotCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("slot_code");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time")
+                        .HasColumnName("start_time");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("SubjectId")
+                        .HasColumnType("int")
+                        .HasColumnName("subject_id");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<int>("TimeSlotId")
+                        .HasColumnType("int")
+                        .HasColumnName("time_slot_id");
+
+                    b.Property<int>("TimetableEntryId")
+                        .HasColumnType("int")
+                        .HasColumnName("timetable_entry_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("RoomId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("TimeSlotId");
+
+                    b.HasIndex("AssignedTeacherId", "AttendanceDate");
+
+                    b.HasIndex("SemesterId", "AttendanceDate");
+
+                    b.HasIndex("TimetableEntryId", "AttendanceDate")
+                        .IsUnique();
+
+                    b.HasIndex("ClassId", "AttendanceDate", "TimeSlotId")
+                        .IsUnique()
+                        .HasFilter("[status] <> 'Cancelled'");
+
+                    b.ToTable("attendance_sessions", t =>
+                        {
+                            t.HasCheckConstraint("CK_AttendanceSession_Status", "[status] IN ('Open', 'Submitted', 'Cancelled')");
+                        });
                 });
 
             modelBuilder.Entity("HighSchoolManagementSystem.Models.Entities.Class", b =>
@@ -1219,6 +1404,25 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                     b.Navigation("TeachingAssignment");
                 });
 
+            modelBuilder.Entity("HighSchoolManagementSystem.Models.Entities.AttendanceAuditLog", b =>
+                {
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.AttendanceSession", "AttendanceSession")
+                        .WithMany()
+                        .HasForeignKey("AttendanceSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ActorUser");
+
+                    b.Navigation("AttendanceSession");
+                });
+
             modelBuilder.Entity("HighSchoolManagementSystem.Models.Entities.AttendanceRecord", b =>
                 {
                     b.HasOne("HighSchoolManagementSystem.Models.Entities.LeaveRequest", "LeaveRequest")
@@ -1229,8 +1433,7 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                     b.HasOne("HighSchoolManagementSystem.Models.Entities.Teacher", "RecordedByTeacher")
                         .WithMany("RecordedAttendances")
                         .HasForeignKey("RecordedBy")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("HighSchoolManagementSystem.Models.Entities.Student", "Student")
                         .WithMany("AttendanceRecords")
@@ -1244,11 +1447,85 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.AttendanceSession", "AttendanceSession")
+                        .WithMany("Records")
+                        .HasForeignKey("AttendanceSessionId", "TimetableEntryId", "AttendanceDate")
+                        .HasPrincipalKey("Id", "TimetableEntryId", "AttendanceDate")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AttendanceSession");
+
                     b.Navigation("LeaveRequest");
 
                     b.Navigation("RecordedByTeacher");
 
                     b.Navigation("Student");
+
+                    b.Navigation("TimetableEntry");
+                });
+
+            modelBuilder.Entity("HighSchoolManagementSystem.Models.Entities.AttendanceSession", b =>
+                {
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.Teacher", "AssignedTeacher")
+                        .WithMany()
+                        .HasForeignKey("AssignedTeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.Class", "Class")
+                        .WithMany()
+                        .HasForeignKey("ClassId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId");
+
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.Room", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.Semester", "Semester")
+                        .WithMany()
+                        .HasForeignKey("SemesterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.TimeSlot", "TimeSlot")
+                        .WithMany()
+                        .HasForeignKey("TimeSlotId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HighSchoolManagementSystem.Models.Entities.TimetableEntry", "TimetableEntry")
+                        .WithMany()
+                        .HasForeignKey("TimetableEntryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AssignedTeacher");
+
+                    b.Navigation("Class");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Room");
+
+                    b.Navigation("Semester");
+
+                    b.Navigation("Subject");
+
+                    b.Navigation("TimeSlot");
 
                     b.Navigation("TimetableEntry");
                 });
@@ -1619,6 +1896,11 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
             modelBuilder.Entity("HighSchoolManagementSystem.Models.Entities.AssessmentType", b =>
                 {
                     b.Navigation("Assessments");
+                });
+
+            modelBuilder.Entity("HighSchoolManagementSystem.Models.Entities.AttendanceSession", b =>
+                {
+                    b.Navigation("Records");
                 });
 
             modelBuilder.Entity("HighSchoolManagementSystem.Models.Entities.Class", b =>

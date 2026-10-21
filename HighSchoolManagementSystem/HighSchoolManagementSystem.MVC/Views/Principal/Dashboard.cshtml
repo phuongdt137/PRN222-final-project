@@ -103,7 +103,7 @@
             <div class="stat-kicker">CHUYÊN CẦN HÔM NAY</div>
             <div class="stat-title">Tỷ lệ hiện diện toàn trường</div>
             <div class="stat-main">
-                <div class="stat-number">@Model.TodayAttendanceRate.ToString("0.0")%</div>
+                <div class="stat-number">@(Model.TodayAttendanceRate.HasValue ? Model.TodayAttendanceRate.Value.ToString("0.0") + "%" : "Chưa có dữ liệu")</div>
                 <div class="stat-label">@Model.TodayPresentCount / @Model.TodayTotalAttendanceRecords học sinh có mặt</div>
             </div>
             <div class="stat-breakdown-bar">
@@ -194,7 +194,7 @@
                     int idx = 1;
                     @foreach (var g in Model.AttendanceByGrade)
                     {
-                        string statusLabel = g.AttendanceRate >= 98m ? "Đạt chuẩn xuất sắc" : g.AttendanceRate >= 95m ? "Đạt chuẩn tốt" : "Cần lưu ý";
+                        string statusLabel = !g.AttendanceRate.HasValue ? "Chưa có dữ liệu" : g.AttendanceRate >= 98m ? "Đạt chuẩn xuất sắc" : g.AttendanceRate >= 95m ? "Đạt chuẩn tốt" : "Cần lưu ý";
                         string statusCss = g.AttendanceRate >= 98m ? "badge-status-success" : g.AttendanceRate >= 95m ? "badge-status-info" : "badge-status-warning";
                         <tr>
                             <td class="text-center">@idx</td>
@@ -203,7 +203,7 @@
                             <td class="text-center fw-bold text-success">@g.PresentCount</td>
                             <td class="text-center text-warning fw-semibold">@g.ExcusedCount</td>
                             <td class="text-center text-danger fw-semibold">@g.UnexcusedCount</td>
-                            <td class="text-center"><span class="fw-bold">@g.AttendanceRate.ToString("0.0")%</span></td>
+                            <td class="text-center"><span class="fw-bold">@(g.AttendanceRate.HasValue ? g.AttendanceRate.Value.ToString("0.0") + "%" : "Chưa có dữ liệu")</span></td>
                             <td class="text-center">
                                 <span class="badge-status @statusCss">@statusLabel</span>
                             </td>

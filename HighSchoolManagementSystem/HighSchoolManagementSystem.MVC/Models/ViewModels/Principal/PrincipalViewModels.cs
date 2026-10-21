@@ -20,7 +20,7 @@ public class PrincipalDashboardViewModel
     public int TodayPresentCount { get; set; }
     public int TodayExcusedCount { get; set; }
     public int TodayUnexcusedCount { get; set; }
-    public decimal TodayAttendanceRate { get; set; }
+    public decimal? TodayAttendanceRate { get; set; }
     public List<GradeAttendanceKpiDto> AttendanceByGrade { get; set; } = new();
 
     public List<RecentConductEventDto> RecentConductEvents { get; set; } = new();
@@ -82,7 +82,7 @@ public class AttendanceReportsViewModel
     public int TotalPresent { get; set; }
     public int TotalExcused { get; set; }
     public int TotalUnexcused { get; set; }
-    public decimal OverallAttendanceRate { get; set; }
+    public decimal? OverallAttendanceRate { get; set; }
 
     public List<ClassAttendanceStatDto> ClassStats { get; set; } = new();
 

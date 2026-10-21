@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3500" height="810" viewBox="0 0 3500 810">
+<title>Teacher score entry swimlane diagram</title>
+<desc>Teacher and System lanes. The teacher selects an assigned class, subject and assessment, enters scores for unlocked students, and confirms saving. The system validates only entered scores, permits blanks, saves new scores and locks only saved rows. Previously locked scores remain read-only. Invalid scores return to entry. There is no draft step or whole-class completeness requirement.</desc>
+<defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#e9e9e9" stroke-width="0.7"/></pattern><marker id="arrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0 0L9 3.5L0 7Z" fill="#222"/></marker></defs>
+<rect width="100%" height="100%" fill="white"/>
+<rect x="25" y="88" width="3450" height="640" fill="url(#grid)"/>
+<text x="1750.0" y="40.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="30" font-weight="bold" fill="#111">TEACHER SCORE ENTRY WORKFLOW</text>
+<polyline points="25,88 3475,88 3475,728 25,728 25,88" fill="none" stroke="#333" stroke-width="1.6"/>
+<polyline points="61,88 61,728" fill="none" stroke="#333" stroke-width="1.6"/>
+<polyline points="98,88 98,728" fill="none" stroke="#333" stroke-width="1.6"/>
+<polyline points="61,425 3475,425" fill="none" stroke="#333" stroke-width="1.6"/>
+<text transform="translate(43,408) rotate(-90)" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20">SCORE ENTRY</text>
+<text transform="translate(80,257) rotate(-90)" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20">TEACHER</text>
+<text transform="translate(80,577) rotate(-90)" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20">SYSTEM</text>
+<polyline points="170,300 195,300" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="285,350 285,515" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="349" y="435.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Authenticate</text>
+<polyline points="375,565 400,565 400,300 435,300" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="450" y="390.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Signed in</text>
+<polyline points="540,350 540,515" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="584" y="435.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Fetch list</text>
+<polyline points="645,565 675,565 675,300 710,300" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="730" y="390.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Display list</text>
+<polyline points="815,350 815,515" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="860" y="435.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Fetch list</text>
+<polyline points="920,565 950,565 950,300 985,300" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1005" y="390.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Display list</text>
+<polyline points="1090,350 1090,510" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1150" y="435.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Open sheet</text>
+<polyline points="1200,565 1230,565 1230,300 1260,300" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1340" y="434.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Show editable and</text>
+<text x="1340" y="459.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">read-only rows</text>
+<polyline points="1480,300 1535,300" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1715,300 1780,300" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="1845,235 1845,170 1370,170 1370,245" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1610" y="153.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">No</text>
+<polyline points="1845,365 1845,510" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1876" y="437.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Yes</text>
+<polyline points="1970,565 2070,565" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="2135,500 2135,210 1510,210 1510,382 1370,382 1370,355" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="1900" y="192.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">No: show validation errors</text>
+<polyline points="2200,565 2315,565" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="2256" y="545.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Yes</text>
+<polyline points="2565,565 2595,565 2595,300 2630,300" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="2860,300 3005,300" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<polyline points="3070,235 3070,125 1090,125 1090,250" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="2835" y="108.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Yes</text>
+<polyline points="3135,300 3320,300" fill="none" stroke="#222" stroke-width="1.7" marker-end="url(#arrow)"/>
+<text x="3220" y="280.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">No</text>
+<ellipse cx="140" cy="300" rx="30.0" ry="30.0" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="140" y="300.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="16" font-weight="normal" fill="#111">Start</text>
+<rect x="195.0" y="250.0" width="180" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="285" y="300.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Log in</text>
+<rect x="435.0" y="250.0" width="210" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="540" y="286.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Open Assessment</text>
+<text x="540" y="313.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Management</text>
+<rect x="710.0" y="250.0" width="210" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="815" y="286.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Select Class</text>
+<text x="815" y="313.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">and Subject</text>
+<rect x="985.0" y="250.0" width="210" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1090" y="286.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Select an</text>
+<text x="1090" y="313.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Assessment</text>
+<rect x="1260.0" y="245.0" width="220" height="110" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1370" y="273.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Enter Scores and</text>
+<text x="1370" y="300.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Comments for</text>
+<text x="1370" y="327.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Unlocked Students</text>
+<rect x="1535.0" y="250.0" width="180" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1625" y="300.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Click Save</text>
+<polygon points="1845,235.0 1910.0,300 1845,365.0 1780.0,300" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1845" y="286.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Confirm</text>
+<text x="1845" y="313.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Save?</text>
+<rect x="2630.0" y="250.0" width="230" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="2745" y="286.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">View Results and</text>
+<text x="2745" y="313.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Success Notification</text>
+<polygon points="3070,235.0 3135.0,300 3070,365.0 3005.0,300" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="3070" y="286.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Another</text>
+<text x="3070" y="313.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Assessment?</text>
+<ellipse cx="3350" cy="300" rx="30.0" ry="30.0" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="3350" y="300.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="16" font-weight="normal" fill="#111">End</text>
+<rect x="195.0" y="515.0" width="180" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="285" y="551.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Authenticate</text>
+<text x="285" y="578.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Credentials</text>
+<rect x="435.0" y="515.0" width="210" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="540" y="551.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Fetch Assigned</text>
+<text x="540" y="578.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Classes and Subjects</text>
+<rect x="710.0" y="515.0" width="210" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="815" y="551.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Fetch Assessments</text>
+<text x="815" y="578.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">for the Assignment</text>
+<rect x="980.0" y="510.0" width="220" height="110" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1090" y="538.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Load Grade Sheet</text>
+<text x="1090" y="565.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">and Per-Student</text>
+<text x="1090" y="592.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Lock Status</text>
+<rect x="1720.0" y="510.0" width="250" height="110" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="1845" y="538.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Validate Entered Scores</text>
+<text x="1845" y="565.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">and Recheck Row Locks</text>
+<text x="1845" y="592.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">(Blank Scores Allowed)</text>
+<polygon points="2135,500.0 2200.0,565 2135,630.0 2070.0,565" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="2135" y="551.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Scores</text>
+<text x="2135" y="578.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Valid?</text>
+<rect x="2315.0" y="515.0" width="250" height="100" rx="12" fill="white" stroke="#333" stroke-width="1.6"/>
+<text x="2440" y="551.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Save New Scores and</text>
+<text x="2440" y="578.5" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="20" font-weight="normal" fill="#111">Lock Only Saved Rows</text>
+<text x="1750.0" y="758.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Partial entry is allowed: blank scores are skipped. Only newly saved scores are locked; previously locked scores remain unchanged.</text>
+<text x="1750.0" y="787.0" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="18" font-weight="normal" fill="#111">Locks apply to individual students within the selected assessment. Students without a saved score remain editable. There is no draft step.</text>
+</svg>

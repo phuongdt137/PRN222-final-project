@@ -1,0 +1,44 @@
+@model HighSchoolManagementSystem.Services.DTOs.AttendanceListDto
+@using HighSchoolManagementSystem.Models.Entities
+@{
+    ViewData["Title"] = Model.IsStaff ? "Quản lý điểm danh" : "Điểm danh theo tiết";
+    var action = Model.IsStaff ? "Manage" : "MyTeachingSessions";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div><h1 class="h3">@ViewData["Title"]</h1><p class="text-muted mb-0">Mỗi bảng tương ứng một tiết học vào một ngày. Giáo viên được sửa trước 00:00 ngày kế tiếp (giờ Việt Nam).</p></div>
+    @if (Model.IsStaff) { <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg"></i> Tạo bảng điểm danh</a> }
+</div>
+<partial name="_Messages" />
+<form method="get" class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-2"><label class="form-label" for="from">Từ ngày</label><input id="from" name="FromDate" type="date" value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+        <div class="col-md-2"><label class="form-label" for="to">Đến ngày</label><input id="to" name="ToDate" type="date" value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+        <div class="col-md-3"><label class="form-label" for="semester">Học kỳ</label><select id="semester" name="SemesterId" class="form-select"><option value="">Tất cả</option>@foreach(var o in Model.Semesters){<option value="@o.Id" selected="@(Model.Filter.SemesterId == o.Id)">@o.Name</option>}</select></div>
+        <div class="col-md-2"><label class="form-label" for="class">Lớp</label><select id="class" name="ClassId" class="form-select"><option value="">Tất cả</option>@foreach(var o in Model.Classes){<option value="@o.Id" selected="@(Model.Filter.ClassId == o.Id)">@o.Name</option>}</select></div>
+        <div class="col-md-2"><label class="form-label" for="status">Trạng thái</label><select id="status" name="Status" class="form-select"><option value="">Tất cả</option>@foreach(var s in new[]{"Open","Submitted","Cancelled"}){<option value="@s" selected="@(Model.Filter.Status == s)">@AttendanceStatuses.Label(s)</option>}</select></div>
+        <div class="col-md-1"><button class="btn btn-primary" type="submit">Lọc</button></div>
+    </div>
+</form>
+<div class="card">
+    <div class="card-header bg-white">@Model.TotalCount bảng điểm danh</div>
+    <div class="table-responsive"><table class="table align-middle mb-0">
+        <thead><tr><th>Ngày / Slot</th><th>Lớp / Môn</th><th>Giáo viên / Phòng</th><th>Sĩ số</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody>
+        @foreach(var item in Model.Items)
+        {
+            <tr><td><strong>@item.Date.ToString("dd/MM/yyyy")</strong><div>@item.Slot</div><small>@item.StartTime.ToString(@"hh\:mm") – @item.EndTime.ToString(@"hh\:mm")</small></td>
+            <td>@item.ClassName<div class="text-muted">@item.SubjectName</div></td><td>@item.TeacherName<div class="text-muted">@item.RoomName</div></td>
+            <td>@item.StudentCount</td><td><span class="badge @(item.Status == "Submitted" ? "bg-success" : item.Status == "Cancelled" ? "bg-secondary" : "bg-warning text-dark")">@AttendanceStatuses.Label(item.Status)</span></td>
+            <td><a asp-action="Take" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">@(item.CanWrite ? "Điểm danh / Chỉnh sửa" : "Xem bảng")</a></td></tr>
+        }
+        @if(Model.Items.Count == 0){<tr><td colspan="6" class="text-center text-muted py-5">Chưa có bảng điểm danh trong khoảng thời gian đã chọn.</td></tr>}
+        </tbody>
+    </table></div>
+</div>
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <span>Trang @Model.Filter.Page / @Model.TotalPages</span>
+    <div class="d-flex gap-2">
+    @foreach(var page in new[]{Model.Filter.Page - 1, Model.Filter.Page + 1}.Where(p => p >= 1 && p <= Model.TotalPages))
+    {<a class="btn btn-outline-secondary btn-sm" asp-action="@action" asp-route-page="@(page)" asp-route-fromDate="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" asp-route-semesterId="@Model.Filter.SemesterId" asp-route-classId="@Model.Filter.ClassId" asp-route-status="@Model.Filter.Status">@(page < Model.Filter.Page ? "Trang trước" : "Trang sau")</a>}
+    </div>
+</div>

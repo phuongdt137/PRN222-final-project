@@ -1,0 +1,8 @@
+@model HighSchoolManagementSystem.Services.DTOs.AttendanceStudentHistoryDto
+<div class="stat-card-eims">
+    <div class="stat-kicker">CHUYÊN CẦN THÁNG NÀY</div>
+    <div class="stat-title">@Model.StudentName</div>
+    <div class="stat-main"><div class="stat-number" style="font-size:24px">@(Model.Rate.HasValue ? Model.Rate.Value.ToString("0.0") + "%" : "Chưa có dữ liệu")</div></div>
+    <div class="stat-label">@(Model.Present + Model.Late) / @Model.Recorded tiết đã ghi nhận · @Model.Pending tiết chờ</div>
+    <a asp-controller="Attendance" asp-action="@(Model.IsParent ? "ChildAttendance" : "MyAttendance")" class="btn btn-sm btn-outline-primary mt-2">@(Model.IsParent ? "Xem điểm danh / Chọn con" : "Xem chi tiết")</a>
+</div>

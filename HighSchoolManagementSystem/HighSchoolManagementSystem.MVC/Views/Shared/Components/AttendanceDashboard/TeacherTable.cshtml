@@ -1,0 +1,9 @@
+@model HighSchoolManagementSystem.Services.DTOs.AttendanceListDto
+@using HighSchoolManagementSystem.Models.Entities
+<div class="card-table-wrap mb-4">
+    <div class="card-table-header"><div><h2 class="table-card-title">Điểm danh các tiết hôm nay</h2><p class="table-card-subtitle">Kết quả được chỉnh sửa đến trước 00:00 ngày kế tiếp.</p></div><a asp-controller="Attendance" asp-action="MyTeachingSessions">Xem tất cả</a></div>
+    <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Slot</th><th>Lớp / Môn</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+    @foreach(var s in Model.Items){<tr><td>@s.Slot</td><td>@s.ClassName · @s.SubjectName</td><td>@AttendanceStatuses.Label(s.Status)</td><td><a asp-controller="Attendance" asp-action="Take" asp-route-id="@s.Id" class="btn btn-sm btn-outline-primary">@(s.CanWrite ? "Điểm danh / Chỉnh sửa" : "Xem bảng")</a></td></tr>}
+    @if(Model.Items.Count == 0){<tr><td colspan="4" class="text-muted py-4">Staff chưa tạo bảng điểm danh cho các tiết hôm nay của bạn.</td></tr>}
+    </tbody></table></div>
+</div>

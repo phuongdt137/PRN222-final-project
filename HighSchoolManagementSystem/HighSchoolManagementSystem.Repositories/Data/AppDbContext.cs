@@ -29,6 +29,8 @@ public class AppDbContext : DbContext
     public virtual DbSet<TimeSlot> TimeSlots => Set<TimeSlot>();
     public virtual DbSet<TimetableEntry> TimetableEntries => Set<TimetableEntry>();
     public virtual DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
+    public virtual DbSet<AttendanceSession> AttendanceSessions => Set<AttendanceSession>();
+    public virtual DbSet<AttendanceAuditLog> AttendanceAuditLogs => Set<AttendanceAuditLog>();
     public virtual DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
     public virtual DbSet<ConductEvaluation> ConductEvaluations => Set<ConductEvaluation>();
     public virtual DbSet<Notification> Notifications => Set<Notification>();
@@ -172,8 +174,33 @@ public class AppDbContext : DbContext
         });
 
         // AttendanceRecord
+        modelBuilder.Entity<AttendanceSession>(entity =>
+        {
+            entity.HasIndex(s => new { s.TimetableEntryId, s.AttendanceDate }).IsUnique();
+            entity.HasIndex(s => new { s.ClassId, s.AttendanceDate, s.TimeSlotId })
+                .IsUnique().HasFilter("[status] <> 'Cancelled'");
+            entity.HasIndex(s => new { s.AssignedTeacherId, s.AttendanceDate });
+            entity.HasIndex(s => new { s.SemesterId, s.AttendanceDate });
+            entity.HasAlternateKey(s => new { s.Id, s.TimetableEntryId, s.AttendanceDate });
+            entity.HasOne(s => s.AssignedTeacher).WithMany().HasForeignKey(s => s.AssignedTeacherId);
+            entity.HasOne(s => s.CreatedByUser).WithMany().HasForeignKey(s => s.CreatedByUserId);
+            entity.ToTable(t => t.HasCheckConstraint("CK_AttendanceSession_Status",
+                "[status] IN ('Open', 'Submitted', 'Cancelled')"));
+        });
+        modelBuilder.Entity<AttendanceAuditLog>()
+            .HasIndex(a => new { a.AttendanceSessionId, a.OccurredAt });
         modelBuilder.Entity<AttendanceRecord>(entity =>
         {
+            entity.HasIndex(a => new { a.AttendanceSessionId, a.StudentId }).IsUnique();
+            entity.HasIndex(a => new { a.StudentId, a.TimetableEntryId, a.AttendanceDate }).IsUnique();
+            entity.HasIndex(a => new { a.StudentId, a.AttendanceDate });
+            entity.HasOne(a => a.AttendanceSession).WithMany(s => s.Records)
+                .HasForeignKey(a => new { a.AttendanceSessionId, a.TimetableEntryId, a.AttendanceDate })
+                .HasPrincipalKey(s => new { s.Id, s.TimetableEntryId, s.AttendanceDate })
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(t => t.HasCheckConstraint("CK_AttendanceRecord_Status",
+                "([status] = 'NotMarked' AND [recorded_by] IS NULL) OR " +
+                "([status] IN ('Present', 'Absent', 'Late', 'Excused') AND [recorded_by] IS NOT NULL)"));
             entity.HasOne(ar => ar.Student)
                 .WithMany(s => s.AttendanceRecords)
                 .HasForeignKey(ar => ar.StudentId)

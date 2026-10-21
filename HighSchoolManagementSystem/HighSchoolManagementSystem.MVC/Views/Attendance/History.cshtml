@@ -1,0 +1,39 @@
+@model HighSchoolManagementSystem.Services.DTOs.AttendanceStudentHistoryDto
+@using HighSchoolManagementSystem.Models.Entities
+@{
+    ViewData["Title"] = "Chuyên cần & Điểm danh";
+    var action = Model.IsParent ? "ChildAttendance" : "MyAttendance";
+}
+<h1 class="h3">Chuyên cần & Điểm danh</h1>
+<p class="text-muted">@(string.IsNullOrEmpty(Model.StudentName) ? "Theo dõi kết quả điểm danh theo từng tiết học." : "Học sinh: " + Model.StudentName)</p>
+@if(Model.IsParent && Model.Children.Count == 0){<div class="alert alert-info">Tài khoản chưa được liên kết với học sinh. Vui lòng liên hệ nhà trường.</div>}
+<form method="get" class="card card-body mb-3">
+    <div class="row g-3 align-items-end">
+        @if(Model.IsParent){<div class="col-md-4"><label for="child" class="form-label">Học sinh</label><select id="child" name="StudentId" class="form-select">@foreach(var o in Model.Children){<option value="@o.Id" selected="@(Model.Filter.StudentId == o.Id)">@o.Name</option>}</select></div>}
+        <div class="col-md-3"><label for="semester" class="form-label">Học kỳ</label><select id="semester" name="SemesterId" class="form-select"><option value="">Tất cả</option>@foreach(var o in Model.Semesters){<option value="@o.Id" selected="@(Model.Filter.SemesterId == o.Id)">@o.Name</option>}</select></div>
+        <div class="col-md-3"><label for="subject" class="form-label">Môn học</label><select id="subject" name="SubjectId" class="form-select"><option value="">Tất cả</option>@foreach(var o in Model.Subjects){<option value="@o.Id" selected="@(Model.Filter.SubjectId == o.Id)">@o.Name</option>}</select></div>
+        <div class="col-md-2"><label for="from" class="form-label">Từ ngày</label><input id="from" name="FromDate" type="date" value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+        <div class="col-md-2"><label for="to" class="form-label">Đến ngày</label><input id="to" name="ToDate" type="date" value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+        <div class="col-md-3"><label for="status" class="form-label">Kết quả</label><select id="status" name="Status" class="form-select"><option value="">Tất cả</option>@foreach(var s in new[]{"NotMarked","Present","Absent","Late","Excused"}){<option value="@s" selected="@(Model.Filter.Status == s)">@AttendanceStatuses.Label(s)</option>}</select></div>
+        <div class="col-md-2"><button class="btn btn-primary" type="submit">Xem kết quả</button></div>
+    </div>
+</form>
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card card-body"><span class="text-muted">Hiện diện / tiết đã ghi nhận</span><strong class="fs-4">@(Model.Rate.HasValue ? Model.Rate.Value.ToString("0.0") + "%" : "Chưa có dữ liệu")</strong><small>@(Model.Present + Model.Late) / @Model.Recorded tiết</small></div></div>
+    <div class="col-md-3"><div class="card card-body"><span class="text-muted">Có mặt / Đi muộn</span><strong class="fs-4">@Model.Present / @Model.Late</strong></div></div>
+    <div class="col-md-3"><div class="card card-body"><span class="text-muted">Vắng không phép / Có phép</span><strong class="fs-4">@Model.Absent / @Model.Excused</strong></div></div>
+    <div class="col-md-3"><div class="card card-body"><span class="text-muted">Chưa có kết quả</span><strong class="fs-4">@Model.Pending tiết</strong></div></div>
+</div>
+<p class="small text-muted">Thống kê theo bộ lọc hiện tại. Tỷ lệ hiện diện tính cả đi muộn; chỉ dùng các tiết đã được giáo viên xác nhận.</p>
+<div class="card table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Ngày / Slot</th><th>Lớp / Môn</th><th>Kết quả</th><th>Giáo viên ghi nhận</th><th>Ghi chú</th></tr></thead>
+    <tbody>@foreach(var row in Model.Items){
+        <tr><td>@row.Session.Date.ToString("dd/MM/yyyy")<div>@row.Session.Slot</div><small>@row.Session.StartTime.ToString(@"hh\:mm") – @row.Session.EndTime.ToString(@"hh\:mm")</small></td><td>@row.Session.ClassName<div>@row.Session.SubjectName</div></td>
+        <td><span class="badge @(row.Status == "Present" ? "bg-success" : row.Status == "Absent" ? "bg-danger" : row.Status == "NotMarked" ? "bg-secondary" : "bg-warning text-dark")">@AttendanceStatuses.Label(row.Status)</span></td><td>@(row.RecordedBy ?? "—")</td><td>@row.Comment</td></tr>
+    }
+    @if(Model.Items.Count == 0){<tr><td colspan="5" class="py-5 text-center text-muted">Chưa có dữ liệu điểm danh phù hợp.</td></tr>}</tbody>
+</table></div>
+<div class="d-flex justify-content-between mt-3"><span>Trang @Model.Filter.Page / @Model.TotalPages · @Model.TotalCount tiết</span><div class="d-flex gap-2">
+@foreach(var page in new[]{Model.Filter.Page - 1, Model.Filter.Page + 1}.Where(p => p >= 1 && p <= Model.TotalPages)){
+    <a asp-action="@action" asp-route-page="@(page)" asp-route-studentId="@Model.Filter.StudentId" asp-route-semesterId="@Model.Filter.SemesterId" asp-route-subjectId="@Model.Filter.SubjectId" asp-route-fromDate="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" asp-route-status="@Model.Filter.Status" class="btn btn-sm btn-outline-secondary">@(page < Model.Filter.Page ? "Trang trước" : "Trang sau")</a>
+}</div></div>

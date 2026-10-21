@@ -135,13 +135,14 @@ public class TimetableController(ITimetableService timetableService, ISemesterSe
 
     internal static TimetableListViewModel MapList(IReadOnlyList<HighSchoolManagementSystem.Models.Entities.TimetableEntry>? entries, DateTime? weekStart, IReadOnlyList<HighSchoolManagementSystem.Models.Entities.TimeSlot>? slots)
     {
-        var date = (weekStart ?? DateTime.Today).Date;
+        var date = (weekStart ?? HighSchoolManagementSystem.Services.Common.SchoolDate.Today).Date;
         var mondayOffset = ((int)date.DayOfWeek + 6) % 7;
         date = date.AddDays(-mondayOffset);
         return new TimetableListViewModel
         {
             WeekStart = date,
-            Entries = entries?.Select(e => new TimetableItemViewModel { Id = e.Id, DayOfWeek = e.DayOfWeek, PeriodNo = e.TimeSlot.PeriodNo, TimeRange = $"{e.TimeSlot.StartTime:hh\\:mm} - {e.TimeSlot.EndTime:hh\\:mm}", ClassName = e.TeachingAssignment.Class.ClassName, SubjectName = e.TeachingAssignment.Subject.SubjectName, TeacherName = e.TeachingAssignment.Teacher.User.FullName, RoomName = e.Room.RoomName }).ToList() ?? [],
+            Slots = slots?.OrderBy(s => s.StartTime).Select(s => new TimetableSlotViewModel { Id = s.Id, PeriodNo = s.PeriodNo, Session = s.Session, SlotCode = s.SlotCode, TimeRange = s.StartTime.ToString(@"hh\:mm") + " - " + s.EndTime.ToString(@"hh\:mm") }).ToList() ?? [],
+            Entries = entries?.Select(e => new TimetableItemViewModel { Id = e.Id, TimeSlotId = e.TimeSlotId, ClassId = e.TeachingAssignment.ClassId, DayOfWeek = e.DayOfWeek, PeriodNo = e.TimeSlot.PeriodNo, TimeRange = $"{e.TimeSlot.StartTime:hh\\:mm} - {e.TimeSlot.EndTime:hh\\:mm}", ClassName = e.TeachingAssignment.Class.ClassName, SubjectName = e.TeachingAssignment.Subject.SubjectName, TeacherName = e.TeachingAssignment.Teacher.User.FullName, RoomName = e.Room.RoomName }).ToList() ?? [],
             PeriodTimes = slots?.GroupBy(s => s.PeriodNo).ToDictionary(g => g.Key, g => $"{g.First().StartTime:hh\\:mm} - {g.First().EndTime:hh\\:mm}") ?? new Dictionary<int, string>()
             ,PeriodSlotIds = slots?.GroupBy(s => s.PeriodNo).ToDictionary(g => g.Key, g => g.First().Id) ?? new Dictionary<int, int>()
         };

@@ -38,7 +38,9 @@ public class TimetableRepository(AppDbContext context) : ITimetableRepository
     public Task<bool> AssignmentExistsAsync(int id) => context.TeachingAssignments.AnyAsync(a => a.Id == id);
     public Task<bool> RoomIsUsableAsync(int id) => context.Rooms.AnyAsync(r => r.Id == id && r.Status != "Maintenance");
     public Task<bool> TimeSlotExistsAsync(int id) => context.TimeSlots.AnyAsync(t => t.Id == id);
-    public Task<bool> HasAttendanceAsync(int id) => context.AttendanceRecords.AnyAsync(a => a.TimetableEntryId == id);
+    public async Task<bool> HasAttendanceAsync(int id) =>
+        await context.AttendanceSessions.AnyAsync(a => a.TimetableEntryId == id) ||
+        await context.AttendanceRecords.AnyAsync(a => a.TimetableEntryId == id);
     public Task<int?> GetActiveSemesterIdAsync() => context.Semesters.Where(s => s.IsActive).Select(s => (int?)s.Id).FirstOrDefaultAsync();
 
     public async Task<bool> HasConflictAsync(int assignmentId, int roomId, int timeSlotId, int dayOfWeek, int? excludedId = null)

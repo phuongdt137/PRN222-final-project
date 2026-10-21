@@ -70,8 +70,8 @@ public class ConductEvaluationRepository : IConductEvaluationRepository
         {
             var records = await _context.AttendanceRecords
                 .AsNoTracking()
-                .Where(a => a.AttendanceDate >= startDate && a.AttendanceDate <= endDate &&
-                            a.Student.StudentClasses.Any(sc => sc.ClassId == classId && sc.Status == "Enrolled" && sc.LeftAt == null))
+                .Where(a => a.AttendanceDate >= startDate.Date && a.AttendanceDate <= endDate.Date &&
+                            a.AttendanceSession.Status == "Submitted" && a.AttendanceSession.ClassId == classId)
                 .Select(a => new { a.StudentId, a.Status })
                 .ToListAsync();
 

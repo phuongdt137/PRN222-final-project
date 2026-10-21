@@ -77,26 +77,9 @@
         </div>
     </div>
 
-    <!-- Card 3: Chuyên cần cá nhân -->
     <div class="col-12 col-sm-6 col-xl-3">
-        <div class="stat-card-eims">
-            <span class="stat-icon-badge badge-orange">
-                <i class="bi bi-calendar2-check-fill"></i>
-            </span>
-            <div class="stat-kicker">CHUYÊN CẦN CÁ NHÂN</div>
-            <div class="stat-title">Tỷ lệ hiện diện tháng</div>
-            <div class="stat-main">
-                <div class="stat-number">98.0%</div>
-                <div class="stat-label">21 / 22 buổi học đã tham gia</div>
-            </div>
-            <div class="stat-breakdown-bar">
-                <div class="breakdown-pill pill-green">Có mặt: 21</div>
-                <div class="breakdown-pill pill-yellow">Có phép: 1</div>
-                <div class="breakdown-pill pill-red">K.phép: 0</div>
-            </div>
-        </div>
+        @await Component.InvokeAsync("AttendanceDashboard", new { mode = "card" })
     </div>
-
     <!-- Card 4: Rèn luyện & Hạnh kiểm -->
     <div class="col-12 col-sm-6 col-xl-3">
         <div class="stat-card-eims">
@@ -118,82 +101,7 @@
 </div>
 
 <!-- Section 2: Bảng dữ liệu tác vụ -->
-<!-- Table 1: Thời khóa biểu hôm nay -->
-<div class="card-table-wrap">
-    <div class="card-table-header">
-        <div>
-            <h2 class="table-card-title">Thời khóa biểu các tiết học hôm nay</h2>
-            <p class="table-card-subtitle">Phòng học 201 • Buổi sáng bắt đầu từ 07:00 đến 11:15.</p>
-        </div>
-        <span class="table-counter-badge">5 tiết học</span>
-    </div>
-    <div class="table-responsive">
-        <table class="table-edu mb-0">
-            <thead>
-                <tr>
-                    <th style="width: 80px;" class="text-center">Tiết</th>
-                    <th>Thời Gian</th>
-                    <th>Môn Học</th>
-                    <th>Giáo Viên Giảng Dạy</th>
-                    <th>Phòng Học</th>
-                    <th class="text-center">Trạng Thái</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td class="text-center fw-bold">Tiết 1</td>
-                    <td>07:00 - 07:45</td>
-                    <td><strong>Toán Đại Số</strong></td>
-                    <td>Thầy Nguyễn Văn Nam (GVCN)</td>
-                    <td>Phòng 201</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-success"><i class="bi bi-check-circle me-1"></i>Đã hoàn thành</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center fw-bold">Tiết 2</td>
-                    <td>07:50 - 08:35</td>
-                    <td><strong>Toán Hình Học</strong></td>
-                    <td>Thầy Nguyễn Văn Nam</td>
-                    <td>Phòng 201</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-success"><i class="bi bi-play-circle me-1"></i>Đang học</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center fw-bold">Tiết 3</td>
-                    <td>08:45 - 09:30</td>
-                    <td><strong>Ngữ Văn</strong></td>
-                    <td>Cô Lê Thị Hồng</td>
-                    <td>Phòng 201</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-warning"><i class="bi bi-hourglass me-1"></i>Sắp diễn ra</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center fw-bold">Tiết 4</td>
-                    <td>09:35 - 10:20</td>
-                    <td><strong>Tiếng Anh</strong></td>
-                    <td>Cô Nguyễn Thị Mai</td>
-                    <td>Phòng Lab-2</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-info"><i class="bi bi-clock me-1"></i>Chưa bắt đầu</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="text-center fw-bold">Tiết 5</td>
-                    <td>10:30 - 11:15</td>
-                    <td><strong>Vật Lý</strong></td>
-                    <td>Thầy Trần Quốc Huy</td>
-                    <td>Phòng 201</td>
-                    <td class="text-center">
-                        <span class="badge-status badge-status-info"><i class="bi bi-clock me-1"></i>Chưa bắt đầu</span>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+@await Component.InvokeAsync("AttendanceDashboard", new { mode = "table" })
 
 <!-- Table 2: Điểm số gần đây -->
 <div class="card-table-wrap">
