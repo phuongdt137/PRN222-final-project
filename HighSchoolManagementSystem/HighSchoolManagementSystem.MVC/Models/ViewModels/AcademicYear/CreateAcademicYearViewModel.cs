@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace HighSchoolManagementSystem.MVC.Models.ViewModels;
+namespace HighSchoolManagementSystem.MVC.Models.ViewModels.AcademicYear;
 
 public class CreateAcademicYearViewModel
 {

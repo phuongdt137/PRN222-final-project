@@ -284,6 +284,121 @@
     </div>
 </div>
 
+<!-- Bảng Nhật ký điều chỉnh điểm số sau khóa (Giám sát của Hiệu trưởng) -->
+<div class="table-card mb-4">
+    <div class="table-card-header">
+        <div>
+            <h3 class="table-card-title d-flex align-items-center gap-2">
+                <i class="bi bi-shield-exclamation text-danger"></i>
+                Nhật Ký Điều Chỉnh Điểm Số Sau Khóa (Audit Log)
+            </h3>
+            <p class="table-card-subtitle">Giám sát các lần can thiệp, phúc khảo hoặc điều chỉnh điểm số của Giáo vụ sau khi bài kiểm tra đã tự động khóa.</p>
+        </div>
+        <a asp-controller="Principal" asp-action="AcademicReview" class="btn btn-secondary btn-sm">
+            <i class="bi bi-patch-check me-1"></i>Rà soát điểm toàn trường
+        </a>
+    </div>
+    <div class="table-responsive">
+        <table class="table-edu mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 60px;" class="text-center">STT</th>
+                    <th>Thời Gian</th>
+                    <th>Học Sinh</th>
+                    <th>Lớp</th>
+                    <th>Môn & Bài Thi</th>
+                    <th class="text-center">Biến Động Điểm</th>
+                    <th>Người Thực Hiện</th>
+                    <th>Lý Do Điều Chỉnh</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.RecentScoreModifications.Any())
+                {
+                    int sIdx = 1;
+                    @foreach (var sc in Model.RecentScoreModifications)
+                    {
+                        decimal diff = (sc.NewScore ?? 0) - (sc.OldScore ?? 0);
+                        bool isSignificant = Math.Abs(diff) >= 2.0m;
+                        <tr>
+                            <td class="text-center">@sIdx</td>
+                            <td>@sc.ModifiedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td><strong>@sc.StudentName</strong> <span class="text-muted small">(@sc.StudentCode)</span></td>
+                            <td><span class="badge bg-light text-dark border">@sc.ClassName</span></td>
+                            <td>
+                                <div><strong>@sc.SubjectName</strong></div>
+                                <div class="text-muted small">@sc.AssessmentName</div>
+                            </td>
+                            <td class="text-center font-monospace">
+                                <span class="text-muted">@(sc.OldScore?.ToString("0.0") ?? "--")</span>
+                                <i class="bi bi-arrow-right text-secondary mx-1"></i>
+                                <span class="fw-bold @(isSignificant ? "text-danger" : "text-primary")">@(sc.NewScore?.ToString("0.0") ?? "--")</span>
+                                @if (isSignificant)
+                                {
+                                    <span class="badge bg-danger-subtle text-danger ms-1" title="Biến động lớn (>= 2 điểm)">
+                                        @(diff > 0 ? $"+{diff:0.0}" : $"{diff:0.0}")
+                                    </span>
+                                }
+                            </td>
+                            <td><span class="badge bg-light text-primary border">@sc.ModifiedByName</span></td>
+                            <td class="small">
+                                <i class="bi bi-chat-quote text-secondary me-1"></i>
+                                @(string.IsNullOrWhiteSpace(sc.Reason) ? "Không ghi rõ lý do" : sc.Reason)
+                            </td>
+                        </tr>
+                        sIdx++;
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-shield-check text-success fs-3 d-block mb-1"></i>
+                            Không có trường hợp nào điều chỉnh điểm số sau khóa gần đây. Hệ thống bảo mật toàn vẹn số liệu.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Thông báo điều hành gửi đến Hiệu trưởng -->
+@if (Model.RecentNotifications.Any())
+{
+    <div class="table-card mb-4">
+        <div class="table-card-header">
+            <div>
+                <h3 class="table-card-title d-flex align-items-center gap-2">
+                    <i class="bi bi-bell-fill text-warning"></i>
+                    Thông Báo Cảnh Báo Điều Hành Gần Đây
+                </h3>
+                <p class="table-card-subtitle">Thông báo tự động từ hệ thống và giáo vụ khi có biến động điểm số hoặc quy chế.</p>
+            </div>
+        </div>
+        <div class="p-3">
+            <div class="list-group list-group-flush">
+                @foreach (var notif in Model.RecentNotifications)
+                {
+                    <div class="list-group-item d-flex align-items-start gap-3 py-3 border-bottom">
+                        <div class="rounded-circle bg-warning bg-opacity-10 p-2 text-warning flex-shrink-0">
+                            <i class="bi bi-bell fs-5"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <h6 class="fw-bold mb-0 text-dark">@notif.Title</h6>
+                                <span class="text-muted small">@notif.SentAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                            </div>
+                            <p class="mb-0 text-secondary small">@notif.Content</p>
+                            <span class="text-muted" style="font-size: 0.75rem;">Gửi bởi: @notif.SenderName</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
 @section Scripts {
     <script>
         function updateLiveClock() {

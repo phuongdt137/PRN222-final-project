@@ -69,7 +69,9 @@ public class PrincipalController : Controller
             ConductDistribution = d.ConductDistribution,
             CurrentYearCode = d.CurrentYearCode,
             CurrentSemesterName = d.CurrentSemesterName,
-            CurrentSemesterId = d.CurrentSemesterId
+            CurrentSemesterId = d.CurrentSemesterId,
+            RecentScoreModifications = d.RecentScoreModifications,
+            RecentNotifications = d.RecentNotifications
         };
 
         return View(model);

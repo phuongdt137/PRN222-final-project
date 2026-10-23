@@ -1,4 +1,4 @@
-@model HighSchoolManagementSystem.MVC.Models.ViewModels.SemesterListPageViewModel
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Semester.SemesterListPageViewModel
 @{
     ViewData["Title"] = $"Học kỳ - {Model.AcademicYearCode}";
     var activeSemester = Model.Semesters.FirstOrDefault(s => s.IsActive);

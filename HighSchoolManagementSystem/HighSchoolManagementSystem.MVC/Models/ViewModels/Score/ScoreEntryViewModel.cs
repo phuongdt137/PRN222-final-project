@@ -16,8 +16,12 @@ public class ScoreEntryViewModel
     public int AssignmentId { get; set; }
     public bool IsAssessmentLocked { get; set; }
     public bool IsStaff { get; set; }
+    public bool IsPrincipal { get; set; }
+    public bool IsSemesterFinalized { get; set; }
     public bool CanEdit { get; set; }
     public DateTime? ConductedAt { get; set; }
+    public DateTime? LockDeadline => ConductedAt?.AddDays(7);
+    public bool IsDeadlinePassed => LockDeadline.HasValue && DateTime.UtcNow >= LockDeadline.Value;
     
     public List<StudentScoreItemRowViewModel> Students { get; set; } = new();
 
@@ -48,6 +52,7 @@ public class BulkScoreFormModel
     public bool LockAfterSave { get; set; }
     public bool IsDraft { get; set; }
     public bool IsStaffOverride { get; set; }
+    public bool IsPrincipalOverride { get; set; }
     public List<StudentScoreInputItem> Scores { get; set; } = new();
 }
 
@@ -80,4 +85,5 @@ public class SingleScoreFormModel : StudentScoreInputItem
 {
     public int AssessmentId { get; set; }
     public string? Reason { get; set; }
+    public bool IsPrincipalOverride { get; set; }
 }

@@ -176,6 +176,62 @@ public class PrincipalService : IPrincipalService
                 dto.ConductDistribution[item.Grade] = item.Count;
             }
 
+            // 7. Nhat ky dieu chinh diem so sau khoa (Giam sat cua Hieu truong)
+            var recentAudits = await _context.ScoreAuditLogs
+                .AsNoTracking()
+                .Include(l => l.ModifiedByUser)
+                .Include(l => l.StudentScore).ThenInclude(ss => ss.Student).ThenInclude(st => st.User)
+                .Include(l => l.StudentScore).ThenInclude(ss => ss.Student).ThenInclude(st => st.StudentClasses).ThenInclude(sc => sc.Class)
+                .Include(l => l.StudentScore).ThenInclude(ss => ss.Assessment).ThenInclude(a => a.TeachingAssignment).ThenInclude(ta => ta.Class)
+                .Include(l => l.StudentScore).ThenInclude(ss => ss.Assessment).ThenInclude(a => a.TeachingAssignment).ThenInclude(ta => ta.Subject)
+                .OrderByDescending(l => l.ModifiedAt)
+                .Take(10)
+                .ToListAsync();
+
+            foreach (var log in recentAudits)
+            {
+                var assessment = log.StudentScore?.Assessment;
+                var ta = assessment?.TeachingAssignment;
+                var cls = ta?.Class?.ClassName ?? log.StudentScore?.Student?.StudentClasses.FirstOrDefault(sc => sc.Status == "Enrolled" && sc.LeftAt == null)?.Class?.ClassName ?? "N/A";
+
+                dto.RecentScoreModifications.Add(new RecentScoreAuditDto
+                {
+                    Id = log.Id,
+                    StudentName = log.StudentScore?.Student?.User?.FullName ?? "N/A",
+                    StudentCode = log.StudentScore?.Student?.StudentCode ?? "N/A",
+                    ClassName = cls,
+                    SubjectName = ta?.Subject?.SubjectName ?? "N/A",
+                    AssessmentName = assessment?.AssessmentName ?? "N/A",
+                    OldScore = log.OldScore,
+                    NewScore = log.NewScore,
+                    ModifiedByName = log.ModifiedByUser?.FullName ?? "Hệ thống",
+                    ModifiedAt = log.ModifiedAt,
+                    Reason = log.Reason
+                });
+            }
+
+            // 8. Thong bao gui den Hieu truong gan day
+            var principalNotifications = await _context.Notifications
+                .AsNoTracking()
+                .Include(n => n.Sender)
+                .Where(n => n.Recipient.Role.RoleName == "Principal")
+                .OrderByDescending(n => n.SentAt)
+                .Take(10)
+                .ToListAsync();
+
+            foreach (var notif in principalNotifications)
+            {
+                dto.RecentNotifications.Add(new NotificationItemDto
+                {
+                    Id = notif.Id,
+                    Title = notif.Title,
+                    Content = notif.Content,
+                    SentAt = notif.SentAt,
+                    IsRead = notif.IsRead,
+                    SenderName = notif.Sender?.FullName ?? "Hệ thống"
+                });
+            }
+
             return ServiceResult<PrincipalDashboardDto>.Ok(dto);
         }
         catch (Exception ex)

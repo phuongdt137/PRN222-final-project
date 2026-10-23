@@ -20,6 +20,7 @@ public class ScoreController : Controller
     private readonly IClassRepository _classRepository;
     private readonly IAcademicYearRepository _academicYearRepository;
     private readonly ISemesterRepository _semesterRepository;
+    private readonly IScoreRepository _scoreRepository;
     private readonly ILogger<ScoreController> _logger;
 
     public ScoreController(
@@ -30,6 +31,7 @@ public class ScoreController : Controller
         IClassRepository classRepository,
         IAcademicYearRepository academicYearRepository,
         ISemesterRepository semesterRepository,
+        IScoreRepository scoreRepository,
         ILogger<ScoreController> logger)
     {
         _scoreService = scoreService;
@@ -39,6 +41,7 @@ public class ScoreController : Controller
         _classRepository = classRepository;
         _academicYearRepository = academicYearRepository;
         _semesterRepository = semesterRepository;
+        _scoreRepository = scoreRepository;
         _logger = logger;
     }
 
@@ -47,13 +50,14 @@ public class ScoreController : Controller
     // =========================================================================
 
     [HttpGet]
-    [Authorize(Roles = "Teacher,Staff")]
+    [Authorize(Roles = "Teacher,Staff,Principal")]
     public async Task<IActionResult> Entry(int assessmentId)
     {
         bool isStaff = User.IsInRole("Staff");
+        bool isPrincipal = User.IsInRole("Principal");
         int? teacherId = null;
 
-        if (!isStaff)
+        if (!isStaff && !isPrincipal)
         {
             var teacher = await ResolveCurrentTeacherAsync();
             if (teacher == null)
@@ -68,31 +72,41 @@ public class ScoreController : Controller
         if (!assessmentResult.Success || assessmentResult.Data == null)
         {
             TempData["ErrorMessage"] = assessmentResult.Message ?? "Không tìm thấy thông tin bài kiểm tra.";
-            if (isStaff)
-            {
-                return RedirectToAction(nameof(HomeroomScores));
-            }
+            if (isPrincipal) return RedirectToAction("AcademicReview", "Principal");
+            if (isStaff) return RedirectToAction(nameof(HomeroomScores));
             return RedirectToAction("Index", "Assessment");
         }
 
         var assessment = assessmentResult.Data;
-
         var scoresResult = await _scoreService.GetScoresForAssessmentAsync(assessmentId, teacherId);
         if (!scoresResult.Success)
         {
             TempData["ErrorMessage"] = scoresResult.Message ?? "Không thể lấy danh sách học sinh để nhập điểm.";
-            if (isStaff)
-            {
-                return RedirectToAction(nameof(HomeroomScores));
-            }
+            if (isPrincipal) return RedirectToAction("AcademicReview", "Principal");
+            if (isStaff) return RedirectToAction(nameof(HomeroomScores));
             return RedirectToAction("Index", "Assessment", new { assignmentId = assessment.TeachingAssignmentId });
         }
 
         var studentScores = scoresResult.Data?.ToList() ?? new();
 
-        // Giáo viên chỉ được sửa khi chưa có điểm bị khóa (chưa chốt nộp). Giáo vụ luôn có quyền điều chỉnh.
-        bool isLocked = assessment.HasLockedScores || studentScores.Any(s => s.IsLocked);
-        bool canEdit = isStaff || !isLocked;
+        bool isLocked = assessment.IsDeadlinePassed || assessment.HasLockedScores || studentScores.Any(s => s.IsLocked);
+        bool isSemesterFinalized = await _scoreRepository.IsSemesterFinalizedAsync(assessment.SemesterId);
+
+        // Quyền sửa:
+        // - Nếu học kỳ đã chốt sổ: CHỈ DUY NHẤT HIỆU TRƯỞNG được sửa
+        // - Nếu chưa chốt:
+        //   + Giáo viên: chỉ được sửa khi chưa hết hạn (chưa locked)
+        //   + Giáo vụ: được sửa khi đã locked (để xử lý phúc khảo, nhầm lẫn)
+        //   + Hiệu trưởng: luôn có quyền sửa
+        bool canEdit;
+        if (isSemesterFinalized)
+        {
+            canEdit = isPrincipal;
+        }
+        else
+        {
+            canEdit = isPrincipal || isStaff || (!isLocked && !isStaff && !isPrincipal);
+        }
 
         var model = new ScoreEntryViewModel
         {
@@ -108,6 +122,8 @@ public class ScoreController : Controller
             AssignmentId = assessment.TeachingAssignmentId,
             IsAssessmentLocked = isLocked,
             IsStaff = isStaff,
+            IsPrincipal = isPrincipal,
+            IsSemesterFinalized = isSemesterFinalized,
             CanEdit = canEdit,
             ConductedAt = assessment.ConductedAt,
             Students = studentScores.Select(s => new StudentScoreItemRowViewModel
@@ -127,13 +143,14 @@ public class ScoreController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Teacher,Staff")]
+    [Authorize(Roles = "Teacher,Staff,Principal")]
     public async Task<IActionResult> SaveBulk(BulkScoreFormModel model)
     {
         bool isStaff = User.IsInRole("Staff");
+        bool isPrincipal = User.IsInRole("Principal");
         int? teacherId = null;
 
-        if (!isStaff)
+        if (!isStaff && !isPrincipal)
         {
             var teacher = await ResolveCurrentTeacherAsync();
             if (teacher == null)
@@ -152,7 +169,7 @@ public class ScoreController : Controller
 
         if (!ModelState.IsValid || model.Scores.Any(s => !s.TryGetDecimalScore(out _)))
         {
-            TempData["ErrorMessage"] = "Dữ liệu điểm không hợp lệ. Điểm phải là số từ 0 đến 10 hoặc để trống khi lưu nháp.";
+            TempData["ErrorMessage"] = "Dữ liệu điểm không hợp lệ. Điểm phải là số từ 0 đến 10 hoặc để trống.";
             return await RedisplayEntryAsync(model);
         }
 
@@ -163,19 +180,21 @@ public class ScoreController : Controller
         {
             AssessmentId = model.AssessmentId,
             GlobalReason = model.Reason,
-            LockAfterSave = !model.IsDraft,
-            IsDraft = model.IsDraft,
+            LockAfterSave = isStaff || isPrincipal,
+            IsDraft = false,
             IsStaffOverride = isStaff,
+            IsPrincipalOverride = isPrincipal,
             Scores = model.Scores.Select(s => new SaveStudentScoreDto
             {
                 StudentId = s.StudentId,
                 Score = s.GetDecimalScore(),
                 Comment = s.Comment,
-                Reason = model.Reason
+                Reason = model.Reason,
+                IsPrincipalOverride = isPrincipal
             }).ToList()
         };
 
-        var result = await _scoreService.SaveBulkScoresAsync(dto, userId, teacherId);
+        var result = await _scoreService.SaveBulkScoresAsync(dto, userId, teacherId, isPrincipal);
         if (result.Success)
         {
             TempData["SuccessMessage"] = result.Message ?? "Đã lưu bảng điểm thành công.";
@@ -199,7 +218,7 @@ public class ScoreController : Controller
     public async Task<IActionResult> AuditLogs(int scoreId)
     {
         var teacher = await ResolveCurrentTeacherAsync();
-        if (!User.IsInRole("Staff") && teacher == null) return Forbid();
+        if (!User.IsInRole("Staff") && !User.IsInRole("Principal") && teacher == null) return Forbid();
         var result = await _scoreService.GetScoreAuditLogsAsync(scoreId, teacher?.Id);
         if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
         return Json(result);
@@ -207,20 +226,26 @@ public class ScoreController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Teacher,Staff,Principal")]
     public async Task<IActionResult> SaveSingle(SingleScoreFormModel model)
     {
         bool isStaff = User.IsInRole("Staff");
-        var teacher = isStaff ? null : await ResolveCurrentTeacherAsync();
-        if (!isStaff && teacher == null) return Forbid();
+        bool isPrincipal = User.IsInRole("Principal");
+        var teacher = (!isStaff && !isPrincipal) ? await ResolveCurrentTeacherAsync() : null;
+        if (!isStaff && !isPrincipal && teacher == null) return Forbid();
         if (!ModelState.IsValid || !model.TryGetDecimalScore(out var score))
             return BadRequest(new { success = false, message = "Điểm không đúng định dạng số." });
         if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Forbid();
 
         var result = await _scoreService.SaveSingleScoreAsync(new SaveStudentScoreDto
         {
-            AssessmentId = model.AssessmentId, StudentId = model.StudentId,
-            Score = score, Comment = model.Comment, Reason = model.Reason
-        }, userId, teacher?.Id);
+            AssessmentId = model.AssessmentId,
+            StudentId = model.StudentId,
+            Score = score,
+            Comment = model.Comment,
+            Reason = model.Reason,
+            IsPrincipalOverride = isPrincipal
+        }, userId, teacher?.Id, isPrincipal);
         if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
         return Json(result);
     }
@@ -230,10 +255,10 @@ public class ScoreController : Controller
     // =========================================================================
 
     [HttpGet]
-    [Authorize(Roles = "Teacher,Staff")]
+    [Authorize(Roles = "Teacher,Staff,Principal")]
     public async Task<IActionResult> SubjectMatrix(int? assignmentId, int? classId = null, int? semesterId = null)
     {
-        bool isStaff = User.IsInRole("Staff");
+        bool isStaff = User.IsInRole("Staff") || User.IsInRole("Principal");
         var teacher = isStaff ? null : await ResolveCurrentTeacherAsync();
         if (!isStaff && teacher == null)
         {
@@ -456,7 +481,7 @@ public class ScoreController : Controller
     }
 
     // =========================================================================
-    // 5. THÊM NHẬN XÉT CỦA GIÁO VIÊN (TEACHER FEEDBACK)
+    // 6. THÊM NHẬN XÉT CỦA GIÁO VIÊN (TEACHER FEEDBACK)
     // =========================================================================
 
     [HttpPost]

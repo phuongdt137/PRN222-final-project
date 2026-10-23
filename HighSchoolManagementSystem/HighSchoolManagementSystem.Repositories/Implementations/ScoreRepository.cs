@@ -290,4 +290,48 @@ public class ScoreRepository : IScoreRepository
     }
 
     public Task<IDbContextTransaction> BeginTransactionAsync() => _context.Database.BeginTransactionAsync();
+
+    public async Task<bool> IsSemesterFinalizedAsync(int semesterId)
+    {
+        return await _context.SemesterReports.AnyAsync(sr => sr.SemesterId == semesterId);
+    }
+
+    public async Task<List<User>> GetUsersByRoleAsync(string roleName)
+    {
+        return await _context.Users
+            .Include(u => u.Role)
+            .Where(u => u.Role.RoleName == roleName && u.IsActive)
+            .ToListAsync();
+    }
+
+    public async Task<User?> GetUserByIdAsync(int userId)
+    {
+        return await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+    }
+
+    public async Task AddNotificationAsync(Notification notification)
+    {
+        await _context.Notifications.AddAsync(notification);
+    }
+
+    public async Task<IEnumerable<ScoreAuditLog>> GetRecentScoreAuditLogsAsync(int count = 10)
+    {
+        return await _context.ScoreAuditLogs
+            .AsNoTracking()
+            .Include(l => l.ModifiedByUser)
+            .Include(l => l.StudentScore)
+                .ThenInclude(ss => ss.Student)
+                    .ThenInclude(st => st.User)
+            .Include(l => l.StudentScore)
+                .ThenInclude(ss => ss.Assessment)
+                    .ThenInclude(a => a.TeachingAssignment)
+                        .ThenInclude(ta => ta.Class)
+            .Include(l => l.StudentScore)
+                .ThenInclude(ss => ss.Assessment)
+                    .ThenInclude(a => a.TeachingAssignment)
+                        .ThenInclude(ta => ta.Subject)
+            .OrderByDescending(l => l.ModifiedAt)
+            .Take(count)
+            .ToListAsync();
+    }
 }

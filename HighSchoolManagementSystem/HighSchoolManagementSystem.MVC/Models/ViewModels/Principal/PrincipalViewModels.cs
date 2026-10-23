@@ -29,6 +29,10 @@ public class PrincipalDashboardViewModel
     public string? CurrentYearCode { get; set; }
     public string? CurrentSemesterName { get; set; }
     public int? CurrentSemesterId { get; set; }
+
+    // Nhật ký biến động điểm sau khóa & Thông báo
+    public List<RecentScoreAuditDto> RecentScoreModifications { get; set; } = new();
+    public List<NotificationItemDto> RecentNotifications { get; set; } = new();
 }
 
 public class AcademicReviewViewModel

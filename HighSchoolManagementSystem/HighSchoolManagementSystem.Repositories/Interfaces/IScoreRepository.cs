@@ -28,9 +28,15 @@ public interface IScoreRepository
     Task UpdateScoreAsync(StudentScore score);
     Task AddScoreAuditLogAsync(ScoreAuditLog log);
     Task<IEnumerable<ScoreAuditLog>> GetScoreAuditLogsByScoreIdAsync(int scoreId);
+    Task<IEnumerable<ScoreAuditLog>> GetRecentScoreAuditLogsAsync(int count = 10);
     
     Task AddOrUpdateSemesterSubjectResultAsync(SemesterSubjectResult result);
     Task AddOrUpdateSemesterReportAsync(SemesterReport report);
     Task<IDbContextTransaction> BeginTransactionAsync();
     Task SaveChangesAsync();
+
+    Task<bool> IsSemesterFinalizedAsync(int semesterId);
+    Task<List<User>> GetUsersByRoleAsync(string roleName);
+    Task<User?> GetUserByIdAsync(int userId);
+    Task AddNotificationAsync(Notification notification);
 }
