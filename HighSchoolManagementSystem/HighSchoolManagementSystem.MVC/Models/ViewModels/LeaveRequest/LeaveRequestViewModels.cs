@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace HighSchoolManagementSystem.MVC.Models.ViewModels;
+namespace HighSchoolManagementSystem.MVC.Models.ViewModels.LeaveRequest;
 
 public class LeaveRequestListItemViewModel
 {

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace HighSchoolManagementSystem.Services.Implementations;
 
 public class StudentService(IStudentRepository students, IUserRepository users, IPasswordHasher passwordHasher,
-    ILogger<StudentService> logger) : IStudentService
+    IAcademicYearRepository academicYears, IScoreService scoreService, ILogger<StudentService> logger) : IStudentService
 {
     public const string NotFound = "STUDENT_NOT_FOUND";
     public const string DuplicateCode = "STUDENT_CODE_DUPLICATE";
@@ -130,6 +130,64 @@ public class StudentService(IStudentRepository students, IUserRepository users, 
             return ServiceResult.Fail(ErrorCodes.DatabaseError, "Không thể chuyển lớp. Vui lòng tải lại trang và thử lại.");
         }
     }
+
+    public Task<ServiceResult<StudentScoresResultDto>> GetStudentScoresAsync(StudentScoresQueryDto dto) =>
+        ExecuteAsync(async () =>
+        {
+            var student = await students.GetByUserIdAsync(dto.UserId);
+            if (student == null)
+            {
+                return ServiceResult<StudentScoresResultDto>.Fail(
+                    ErrorCodes.StudentNotFound,
+                    "Không tìm thấy hồ sơ học sinh của tài khoản này.");
+            }
+
+            var allYears = await academicYears.GetAllAsync();
+            var semestersList = new List<SemesterLookupItemDto>();
+            foreach (var yr in allYears)
+            {
+                foreach (var sem in yr.Semesters)
+                {
+                    semestersList.Add(new SemesterLookupItemDto
+                    {
+                        Id = sem.Id,
+                        SemesterName = sem.SemesterName,
+                        AcademicYearCode = yr.YearCode,
+                        IsActive = sem.IsActive
+                    });
+                }
+            }
+
+            int targetSemesterId = dto.SemesterId ?? (semestersList.FirstOrDefault(s => s.IsActive)?.Id ?? (semestersList.FirstOrDefault()?.Id ?? 0));
+
+            var resultDto = new StudentScoresResultDto
+            {
+                StudentId = student.Id,
+                SelectedSemesterId = targetSemesterId,
+                SelectedSubjectId = dto.SubjectId,
+                AvailableSemesters = semestersList
+            };
+
+            if (targetSemesterId > 0)
+            {
+                var transcriptResult = await scoreService.GetStudentTranscriptAsync(student.Id, targetSemesterId, dto.UserId);
+                if (transcriptResult.Success)
+                {
+                    resultDto.Transcript = transcriptResult.Data;
+                    if (dto.SubjectId.HasValue &&
+                        !(resultDto.Transcript?.Subjects.Any(s => s.SubjectId == dto.SubjectId.Value) ?? false))
+                    {
+                        resultDto.SelectedSubjectId = null;
+                    }
+                }
+                else
+                {
+                    return ServiceResult<StudentScoresResultDto>.Fail(transcriptResult.ErrorCode ?? ErrorCodes.SystemError, transcriptResult.Message ?? "Không thể tải bảng điểm.");
+                }
+            }
+
+            return ServiceResult<StudentScoresResultDto>.Ok(resultDto);
+        });
 
     private async Task<ServiceResult<T>> ExecuteAsync<T>(Func<Task<ServiceResult<T>>> action)
     {

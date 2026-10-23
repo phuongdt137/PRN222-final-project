@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using HighSchoolManagementSystem.MVC.Models.ViewModels;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.Timetable;
 using HighSchoolManagementSystem.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

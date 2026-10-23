@@ -1,4 +1,4 @@
-@model HighSchoolManagementSystem.MVC.Models.ViewModels.StaffDashboardViewModel
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Staff.StaffDashboardViewModel
 @{
     ViewData["Title"] = "Bảng Điều Hành - Giáo Vụ";
     var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Cán bộ Giáo Vụ";

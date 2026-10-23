@@ -74,3 +74,27 @@ public class TransferStudentClassDto : AssignStudentClassDto
     [Range(1, int.MaxValue, ErrorMessage = "Phân lớp hiện tại không hợp lệ. Vui lòng tải lại trang.")]
     public int MembershipId { get; set; }
 }
+
+public class StudentScoresQueryDto
+{
+    public int UserId { get; set; }
+    public int? SemesterId { get; set; }
+    public int? SubjectId { get; set; }
+}
+
+public class SemesterLookupItemDto
+{
+    public int Id { get; set; }
+    public string SemesterName { get; set; } = string.Empty;
+    public string AcademicYearCode { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+}
+
+public class StudentScoresResultDto
+{
+    public int StudentId { get; set; }
+    public int? SelectedSemesterId { get; set; }
+    public int? SelectedSubjectId { get; set; }
+    public List<SemesterLookupItemDto> AvailableSemesters { get; set; } = new();
+    public StudentTranscriptDto? Transcript { get; set; }
+}

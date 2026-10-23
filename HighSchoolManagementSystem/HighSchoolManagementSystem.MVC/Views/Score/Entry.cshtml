@@ -14,23 +14,36 @@
             Lớp: <span class="fw-bold text-white">@Model.ClassName</span> • 
             Môn học: <span class="fw-bold text-white">@Model.SubjectName</span> • 
             @Model.SemesterName • 
-            Loại: <span class="badge bg-light text-dark">@Model.AssessmentTypeName (x@Model.Weight)</span>
+            Loại: <span class="badge bg-light text-dark">@Model.AssessmentTypeName (x@(Model.Weight))</span> •
+            Ngày làm bài: <span class="fw-bold text-white">@(Model.ConductedAt?.ToString("dd/MM/yyyy") ?? "Chưa đặt")</span>
         </p>
     </div>
     <div class="d-flex align-items-center gap-2">
-        @if (!Model.IsStaff)
+        @if (Model.IsPrincipal)
+        {
+            <a asp-controller="Principal" asp-action="AcademicReview" class="btn btn-light px-3 py-2">
+                <i class="bi bi-arrow-left me-1"></i> Rà Soát Học Kỳ
+            </a>
+            <a asp-action="SubjectMatrix" asp-route-assignmentId="@Model.AssignmentId" class="btn btn-outline-light px-3 py-2">
+                <i class="bi bi-grid-3x3 me-1"></i> Sổ Điểm Lưới
+            </a>
+        }
+        else if (Model.IsStaff)
+        {
+            <a asp-action="HomeroomScores" class="btn btn-light px-3 py-2">
+                <i class="bi bi-arrow-left me-1"></i> Quay Lại Sổ Điểm
+            </a>
+            <a asp-action="SubjectMatrix" asp-route-assignmentId="@Model.AssignmentId" class="btn btn-outline-light px-3 py-2">
+                <i class="bi bi-grid-3x3 me-1"></i> Sổ Điểm Lưới
+            </a>
+        }
+        else
         {
             <a asp-action="SubjectMatrix" asp-route-assignmentId="@Model.AssignmentId" class="btn btn-outline-light px-3 py-2">
                 <i class="bi bi-grid-3x3 me-1"></i> Sổ Điểm Lưới
             </a>
             <a asp-controller="Assessment" asp-action="Index" asp-route-assignmentId="@Model.AssignmentId" class="btn btn-light px-3 py-2">
                 <i class="bi bi-arrow-left me-1"></i> DS Bài Kiểm Tra
-            </a>
-        }
-        else
-        {
-            <a asp-action="HomeroomScores" class="btn btn-light px-3 py-2">
-                <i class="bi bi-arrow-left me-1"></i> Quay Lại Sổ Điểm
             </a>
         }
     </div>
@@ -55,39 +68,82 @@
 }
 
 <!-- Banner thông báo quy chế nhập điểm & trạng thái khóa -->
-@if (Model.IsAssessmentLocked && !Model.IsStaff)
+@if (Model.IsSemesterFinalized)
 {
-    <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
-        <i class="bi bi-lock-fill fs-2 text-warning flex-shrink-0"></i>
-        <div>
-            <h6 class="fw-bold mb-1 text-dark">Bảng điểm đã chốt nộp và được khóa chính thức theo quy chế</h6>
-            <p class="mb-0 small text-secondary">
-                Giáo viên chỉ có quyền xem dữ liệu bảng điểm. Nếu cần điều chỉnh điểm số hoặc phúc khảo sau khi nộp, vui lòng gửi yêu cầu đến phòng <strong>Giáo vụ (Staff)</strong> để được xử lý.
-            </p>
+    @if (Model.IsPrincipal)
+    {
+        <div class="alert alert-dark border-0 shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
+            <i class="bi bi-shield-lock-fill fs-2 text-danger flex-shrink-0"></i>
+            <div>
+                <h6 class="fw-bold mb-1 text-danger">Học kỳ này đã được chốt sổ chính thức</h6>
+                <p class="mb-0 small text-secondary">
+                    Bạn đang đăng nhập với tư cách <strong>Hiệu trưởng</strong>. Bạn có toàn quyền điều chỉnh điểm số. Khi lưu, hệ thống sẽ tự động cập nhật lại ĐTB môn và học bạ của học sinh.
+                </p>
+            </div>
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
+            <i class="bi bi-lock-fill fs-2 text-danger flex-shrink-0"></i>
+            <div>
+                <h6 class="fw-bold mb-1 text-danger">Bảng điểm đã bị khóa cứng (Học kỳ đã chốt sổ)</h6>
+                <p class="mb-0 small text-secondary">
+                    Học kỳ này đã được Hiệu trưởng chốt sổ chính thức. Giáo viên và Giáo vụ <strong>không thể điều chỉnh điểm</strong>. Chỉ có Hiệu trưởng mới có thẩm quyền điều chỉnh hoặc mở khóa học kỳ.
+                </p>
+            </div>
+        </div>
+    }
 }
-else if (Model.IsStaff)
+else if (Model.IsAssessmentLocked)
 {
-    <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
-        <i class="bi bi-shield-check fs-2 text-primary flex-shrink-0"></i>
-        <div>
-            <h6 class="fw-bold mb-1 text-primary">Chế độ điều chỉnh điểm dành cho Giáo vụ (Staff Override)</h6>
-            <p class="mb-0 small text-secondary">
-                Bạn đang sử dụng quyền Giáo vụ để xem và điều chỉnh điểm. Mọi thay đổi bắt buộc phải nhập <strong>Lý do điều chỉnh</strong> và sẽ được ghi nhận vào lịch sử kiểm toán (Score Audit Log).
-            </p>
+    @if (Model.IsPrincipal)
+    {
+        <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
+            <i class="bi bi-shield-check fs-2 text-primary flex-shrink-0"></i>
+            <div>
+                <h6 class="fw-bold mb-1 text-primary">Chế độ quản trị của Hiệu trưởng</h6>
+                <p class="mb-0 small text-secondary">
+                    Bài kiểm tra đã qua hạn 7 ngày và được khóa tự động. Hiệu trưởng có toàn quyền điều chỉnh và giám sát dữ liệu.
+                </p>
+            </div>
         </div>
-    </div>
+    }
+    else if (Model.IsStaff)
+    {
+        <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
+            <i class="bi bi-shield-exclamation fs-2 text-warning flex-shrink-0"></i>
+            <div>
+                <h6 class="fw-bold mb-1 text-dark">Chế độ điều chỉnh điểm sau khóa dành cho Giáo vụ (Staff Override)</h6>
+                <p class="mb-0 small text-secondary">
+                    Bài kiểm tra đã quá hạn nhập điểm và được hệ thống tự động khóa. Bạn đang sử dụng quyền Giáo vụ để điều chỉnh điểm (phúc khảo, sửa sai sót). Mọi thay đổi bắt buộc phải nhập <strong>Lý do điều chỉnh</strong> và sẽ được <strong>gửi thông báo trực tiếp đến Hiệu trưởng</strong>.
+                </p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
+            <i class="bi bi-lock-fill fs-2 text-warning flex-shrink-0"></i>
+            <div>
+                <h6 class="fw-bold mb-1 text-dark">Bảng điểm đã được hệ thống tự động khóa theo quy chế</h6>
+                <p class="mb-0 small text-secondary">
+                    Đã hết hạn nhập điểm (7 ngày kể từ ngày làm bài: @(Model.ConductedAt?.ToString("dd/MM/yyyy") ?? "N/A")). Những học sinh chưa có điểm đã được tự động ghi nhận điểm 0. Giáo viên chỉ có quyền xem dữ liệu. Nếu cần điều chỉnh điểm phúc khảo hoặc kiểm tra bù, vui lòng liên hệ phòng <strong>Giáo vụ (Staff)</strong> để được xử lý.
+                </p>
+            </div>
+        </div>
+    }
 }
 else
 {
     <div class="alert alert-light border shadow-sm d-flex align-items-center gap-3 mb-4" role="alert">
         <i class="bi bi-info-circle-fill fs-2 text-primary flex-shrink-0"></i>
         <div class="small">
-            <span class="fw-bold text-dark">Quy định nộp điểm:</span> 
-            Giáo viên có thể bấm <strong class="text-primary">"Lưu Nháp"</strong> để bảo lưu tiến độ bất kỳ lúc nào. 
-            Khi bấm <strong class="text-success">"Chốt & Nộp Bảng Điểm"</strong>, bắt buộc phải nhập điểm cho <strong>100% học sinh</strong> và <strong>tất cả học sinh đều phải có nhận xét</strong>. 
-            Học sinh vắng thi: cho điểm <strong>0</strong> và ghi rõ lý do vắng thi ở cột nhận xét. Sau khi nộp, bảng điểm sẽ được khóa hoàn toàn.
+            <span class="fw-bold text-dark">Quy chế tự động khóa:</span> 
+            Hạn chót nhập/sửa điểm: <strong class="text-primary">@(Model.LockDeadline?.ToString("dd/MM/yyyy HH:mm") ?? "N/A")</strong> 
+            @(Model.LockDeadline.HasValue ? $"(Còn {Math.Max(0, (int)(Model.LockDeadline.Value - DateTime.UtcNow).TotalDays)} ngày)" : ""). 
+            Giáo viên có thể nhập điểm dần và bấm <strong>"Lưu Bảng Điểm"</strong> bất cứ lúc nào. 
+            Khi chạm hạn chót, hệ thống sẽ <strong>tự động khóa</strong> và <strong>tự động ghi nhận điểm 0</strong> cho tất cả học sinh chưa có điểm.
         </div>
     </div>
 }
@@ -119,41 +175,45 @@ else
     <div class="col-6 col-lg-3">
         <div class="edu-card p-3 d-flex align-items-center justify-content-between">
             <div>
-                <span class="text-muted small fw-medium">Đã có nhận xét</span>
-                <h4 class="fw-bold text-info mb-0 mt-1" id="kpiCommentedCount">@Model.CommentedCount / @Model.TotalStudents</h4>
+                <span class="text-muted small fw-medium">ĐTB Bài thi</span>
+                <h4 class="fw-bold text-primary mb-0 mt-1">@(Model.AverageScore?.ToString("0.0") ?? "--")</h4>
             </div>
             <div class="rounded-circle bg-info bg-opacity-10 p-2 text-info">
-                <i class="bi bi-chat-left-text fs-4"></i>
+                <i class="bi bi-bar-chart-line fs-4"></i>
             </div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
         <div class="edu-card p-3 d-flex align-items-center justify-content-between">
             <div>
-                <span class="text-muted small fw-medium">Trạng thái</span>
+                <span class="text-muted small fw-medium">Hạn nhập điểm</span>
                 <div class="mt-1">
-                    @if (Model.IsAssessmentLocked)
+                    @if (Model.IsSemesterFinalized)
                     {
-                        <span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>Đã khóa điểm</span>
+                        <span class="badge bg-dark"><i class="bi bi-lock-fill me-1"></i>Học kỳ đã chốt</span>
+                    }
+                    else if (Model.IsAssessmentLocked)
+                    {
+                        <span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>Đã tự động khóa</span>
                     }
                     else
                     {
-                        <span class="badge bg-success"><i class="bi bi-unlock-fill me-1"></i>Đang mở nhập</span>
+                        <span class="badge bg-success" title="Hạn chót: @(Model.LockDeadline?.ToString("dd/MM/yyyy HH:mm"))">
+                            <i class="bi bi-unlock-fill me-1"></i>Đang mở (Hạn: @(Model.LockDeadline?.ToString("dd/MM") ?? "--"))
+                        </span>
                     }
                 </div>
             </div>
             <div class="rounded-circle bg-secondary bg-opacity-10 p-2 text-secondary">
-                <i class="bi bi-shield-lock fs-4"></i>
+                <i class="bi bi-clock-history fs-4"></i>
             </div>
         </div>
     </div>
 </div>
 
-<div id="singleSaveMessage" class="alert d-none" role="alert"></div>
 <form asp-action="SaveBulk" method="post" id="scoreEntryForm">
     @Html.AntiForgeryToken()
     <input type="hidden" name="AssessmentId" value="@Model.AssessmentId" />
-    <input type="hidden" name="IsDraft" id="isDraftInput" value="false" />
 
     <div class="edu-card p-4 mb-4">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-3 border-bottom">
@@ -164,33 +224,48 @@ else
 
             <!-- Các nút hành động chính -->
             <div class="d-flex align-items-center gap-2">
-                @if (Model.CanEdit && !Model.IsStaff)
+                @if (Model.CanEdit)
                 {
-                    <button type="button" class="btn btn-outline-primary px-3 py-2" id="btnSaveDraft">
-                        <i class="bi bi-floppy me-1"></i> Lưu Nháp
-                    </button>
-                    <button type="button" class="btn btn-success px-4 py-2 shadow-sm" id="btnOpenSubmitModal">
-                        <i class="bi bi-check2-circle me-1"></i> Chốt & Nộp Bảng Điểm
-                    </button>
-                }
-                else if (Model.IsStaff)
-                {
-                    <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm" id="btnStaffSave">
-                        <i class="bi bi-shield-check me-1"></i> Lưu Điều Chỉnh Điểm (Giáo vụ)
-                    </button>
+                    @if (!Model.IsStaff && !Model.IsPrincipal)
+                    {
+                        <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm" id="btnSaveScores">
+                            <i class="bi bi-floppy me-1"></i> Lưu Bảng Điểm
+                        </button>
+                    }
+                    else if (Model.IsStaff)
+                    {
+                        <button type="submit" class="btn btn-warning px-4 py-2 shadow-sm" id="btnStaffSave">
+                            <i class="bi bi-shield-check me-1"></i> Lưu Điều Chỉnh Điểm (Giáo vụ)
+                        </button>
+                    }
+                    else if (Model.IsPrincipal)
+                    {
+                        <button type="submit" class="btn btn-danger px-4 py-2 shadow-sm" id="btnPrincipalSave">
+                            <i class="bi bi-shield-lock-fill me-1"></i> Lưu Thay Đổi Điểm (Hiệu trưởng)
+                        </button>
+                    }
                 }
             </div>
         </div>
 
-        @if (Model.IsStaff)
+        @if ((Model.IsStaff || Model.IsPrincipal) && Model.CanEdit)
         {
             <div class="mb-4 bg-light p-3 rounded-3 border" id="staffReasonBox">
                 <label for="modifyReason" class="form-label fw-bold text-danger mb-1">
-                    <i class="bi bi-exclamation-circle-fill me-1"></i> Lý do điều chỉnh điểm (Bắt buộc đối với Giáo vụ):
+                    <i class="bi bi-exclamation-circle-fill me-1"></i> Lý do điều chỉnh điểm (Bắt buộc ghi nhận kiểm toán & báo cáo BGH):
                 </label>
-                <input type="text" class="form-control" id="modifyReason" name="Reason" maxlength="255"
-                       placeholder="Ví dụ: Cập nhật điểm sau phúc khảo theo quyết định HĐCM, sửa nhầm điểm kiểm tra 15 phút..." required />
-                <span class="text-muted small">Lý do này sẽ được ghi vào ScoreAuditLog phục vụ thanh tra và đối soát kết quả học tập.</span>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="modifyReason" name="Reason" maxlength="255" list="reasonOptions"
+                           placeholder="Chọn hoặc nhập lý do điều chỉnh: Phúc khảo bài kiểm tra, sửa nhầm điểm..." required />
+                    <datalist id="reasonOptions">
+                        <option value="Phúc khảo bài kiểm tra"></option>
+                        <option value="Giáo viên báo sai sót nhập liệu / cộng nhầm điểm"></option>
+                        <option value="Học sinh kiểm tra bù có phép"></option>
+                        <option value="Chỉ đạo điều chỉnh từ Ban Giám Hiệu"></option>
+                        <option value="Hiệu trưởng điều chỉnh điểm học kỳ đã chốt"></option>
+                    </datalist>
+                </div>
+                <span class="text-muted small">Lý do này sẽ được ghi vào ScoreAuditLog phục vụ thanh tra và tự động gửi thông báo trực tiếp đến Hiệu trưởng.</span>
             </div>
         }
 
@@ -211,9 +286,8 @@ else
                     <button type="button" class="btn btn-sm btn-white border quick-comment-btn" data-text="Làm bài tốt, nắm chắc kiến thức">Làm bài tốt</button>
                     <button type="button" class="btn btn-sm btn-white border quick-comment-btn" data-text="Đạt yêu cầu">Đạt yêu cầu</button>
                     <button type="button" class="btn btn-sm btn-white border quick-comment-btn" data-text="Cần cố gắng rèn luyện thêm">Cần cố gắng</button>
-                    <button type="button" class="btn btn-sm btn-white border border-danger-subtle text-danger quick-comment-btn" data-text="Vắng thi có phép (điểm 0)" data-score="0">Vắng thi có phép (Điểm 0)</button>
-                    <button type="button" class="btn btn-sm btn-white border border-danger-subtle text-danger quick-comment-btn" data-text="Vắng thi không phép (điểm 0)" data-score="0">Vắng thi không phép (Điểm 0)</button>
-                    <span class="text-muted ms-auto fst-italic">(Bấm vào ô nhận xét của học sinh rồi chọn nút gợi ý)</span>
+                    <button type="button" class="btn btn-sm btn-white border border-danger-subtle text-danger quick-comment-btn" data-text="Vắng kiểm tra (Điểm 0)" data-score="0">Vắng thi (Điểm 0)</button>
+                    <span class="text-muted ms-auto fst-italic">(Nhận xét là tùy chọn, không bắt buộc)</span>
                 </div>
             }
 
@@ -225,13 +299,9 @@ else
                             <th style="width: 130px;">Mã Học Sinh</th>
                             <th style="min-width: 190px;">Họ Và Tên</th>
                             <th class="text-center" style="width: 140px;">Điểm (@Model.MinScore.ToString("0.##") - @Model.MaxScore.ToString("0.##"))</th>
-                            <th>Nhận Xét / Lý Do Vắng Thi</th>
+                            <th>Nhận Xét (Tùy chọn)</th>
                             <th class="text-center" style="width: 120px;">Trạng Thái</th>
                             <th class="text-center" style="width: 80px;">Lịch Sử</th>
-                            @if (Model.CanEdit)
-                            {
-                                <th class="text-center">Lưu từng HS</th>
-                            }
                         </tr>
                     </thead>
                     <tbody>
@@ -252,9 +322,9 @@ else
                                 </td>
                                 <td>
                                     <input type="number" 
-                                           min="@Model.MinScore" max="@Model.MaxScore" step="0.1"
-                                           min="0" 
-                                           max="10" 
+                                           min="@Model.MinScore.ToString(System.Globalization.CultureInfo.InvariantCulture)" 
+                                           max="@Model.MaxScore.ToString(System.Globalization.CultureInfo.InvariantCulture)" 
+                                           step="0.1"
                                            class="form-control text-center fw-bold score-input @(s.Score.HasValue && s.Score < 5 ? "text-danger" : (s.Score >= 8 ? "text-primary" : "text-dark"))" 
                                            name="Scores[@i].Score" 
                                            value="@scoreVal"
@@ -271,47 +341,50 @@ else
                                                name="Scores[@i].Comment" 
                                                value="@s.Comment" 
                                                data-student-index="@i"
-                                               placeholder="Ghi chú kết quả hoặc lý do vắng thi..."
+                                               placeholder="Ghi chú kết quả..."
                                                @(isRowReadOnly ? "readonly disabled" : "") />
                                         @if (Model.CanEdit)
                                         {
                                             <button class="btn btn-outline-secondary dropdown-toggle btn-quick-dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Chọn nhanh nhận xét">
                                                 <i class="bi bi-chat-quote"></i>
                                             </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm small">
-                                                <li><a class="dropdown-item row-quick-pick" href="javascript:void(0)" data-text="Làm bài tốt, hoàn thành xuất sắc">Làm bài tốt</a></li>
-                                                <li><a class="dropdown-item row-quick-pick" href="javascript:void(0)" data-text="Đạt yêu cầu">Đạt yêu cầu</a></li>
-                                                <li><a class="dropdown-item row-quick-pick" href="javascript:void(0)" data-text="Cần cố gắng rèn luyện thêm">Cần cố gắng</a></li>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                <li><h6 class="dropdown-header">Mẫu nhận xét nhanh</h6></li>
+                                                <li><a class="dropdown-item item-comment-pick" href="javascript:void(0)" data-text="Làm bài tốt, nắm chắc kiến thức">Làm bài tốt, nắm chắc kiến thức</a></li>
+                                                <li><a class="dropdown-item item-comment-pick" href="javascript:void(0)" data-text="Đạt yêu cầu">Đạt yêu cầu</a></li>
+                                                <li><a class="dropdown-item item-comment-pick" href="javascript:void(0)" data-text="Cần rèn luyện thêm kỹ năng làm bài">Cần rèn luyện thêm</a></li>
                                                 <li><hr class="dropdown-divider"></li>
-                                                <li><a class="dropdown-item row-quick-pick text-danger" href="javascript:void(0)" data-text="Vắng thi có phép" data-setscore="0">Vắng thi có phép (Điểm 0)</a></li>
-                                                <li><a class="dropdown-item row-quick-pick text-danger" href="javascript:void(0)" data-text="Vắng thi không phép" data-setscore="0">Vắng thi không phép (Điểm 0)</a></li>
-                                                <li><a class="dropdown-item row-quick-pick text-danger" href="javascript:void(0)" data-text="Nghỉ ốm vắng thi" data-setscore="0">Nghỉ ốm vắng thi (Điểm 0)</a></li>
+                                                <li><a class="dropdown-item text-danger item-comment-pick" href="javascript:void(0)" data-text="Vắng thi có phép (điểm 0)" data-score="0">Vắng thi có phép (Điểm 0)</a></li>
+                                                <li><a class="dropdown-item text-danger item-comment-pick" href="javascript:void(0)" data-text="Vắng thi không phép (điểm 0)" data-score="0">Vắng thi không phép (Điểm 0)</a></li>
                                             </ul>
                                         }
                                     </div>
                                 </td>
                                 <td class="text-center status-col">
-                                    @if (s.IsLocked)
+                                    @if (Model.IsSemesterFinalized)
                                     {
-                                        <span class="badge bg-secondary"><i class="bi bi-lock-fill me-1"></i>Đã khóa</span>
+                                        <span class="badge bg-dark"><i class="bi bi-lock-fill me-1"></i>Đã chốt sổ</span>
+                                    }
+                                    else if (s.IsLocked || Model.IsAssessmentLocked)
+                                    {
+                                        <span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>Đã khóa</span>
                                     }
                                     else if (s.Score.HasValue)
                                     {
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Đã nhập</span>
+                                        <span class="badge bg-success"><i class="bi bi-check me-1"></i>Đã nhập</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Chưa có</span>
+                                        <span class="badge bg-secondary">Chưa có</span>
                                     }
                                 </td>
                                 <td class="text-center">
-                                    @if (s.ScoreId.HasValue && s.ScoreId > 0)
+                                    @if (s.ScoreId.HasValue)
                                     {
-                                        <button type="button" 
-                                                class="btn btn-sm btn-outline-info px-2 py-1 btn-audit-log" 
-                                                data-scoreid="@s.ScoreId" 
+                                        <button type="button" class="btn btn-sm btn-outline-secondary btn-audit-log" 
+                                                data-scoreid="@s.ScoreId.Value" 
                                                 data-studentname="@s.FullName"
-                                                title="Xem lịch sử chỉnh sửa điểm">
+                                                title="Xem lịch sử điều chỉnh điểm">
                                             <i class="bi bi-clock-history"></i>
                                         </button>
                                     }
@@ -320,97 +393,29 @@ else
                                         <span class="text-muted small">--</span>
                                     }
                                 </td>
-                                @if (Model.CanEdit)
-                                {
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-primary btn-save-single" data-studentid="@s.StudentId">
-                                            <i class="bi bi-floppy me-1"></i>Lưu
-                                        </button>
-                                    </td>
-                                }
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
 
-            @if (Model.CanEdit && !Model.IsStaff)
-            {
-                <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 pt-3 border-top gap-3">
-                    <span class="text-muted small">
-                        <i class="bi bi-info-circle me-1"></i> Lưu ý: Khi nộp chính thức, điểm số sẽ khóa vĩnh viễn đối với giáo viên.
-                    </span>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-outline-primary px-3 py-2" id="btnSaveDraftBottom">
-                            <i class="bi bi-floppy me-1"></i> Lưu Nháp
-                        </button>
-                        <button type="button" class="btn btn-success px-4 py-2 shadow-sm" id="btnOpenSubmitModalBottom">
-                            <i class="bi bi-check2-circle me-1"></i> Chốt & Nộp Bảng Điểm
-                        </button>
-                    </div>
-                </div>
-            }
+            <!-- Footer Toolbar -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-3 mt-3 border-top">
+                <span class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i> Sau khi lưu, điểm số sẽ tự động được đồng bộ vào ĐTB môn học kỳ của học sinh.
+                </span>
+            </div>
         }
     </div>
 </form>
 
-<!-- Modal Xác Nhận Chốt & Nộp Bảng Điểm Chính Thức -->
-<div class="modal fade" id="submitConfirmModal" tabindex="-1" aria-labelledby="submitConfirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow border-0">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title fw-bold" id="submitConfirmModalLabel">
-                    <i class="bi bi-shield-lock-fill me-2"></i>Xác Nhận Chốt & Nộp Bảng Điểm
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="text-center mb-3">
-                    <div class="rounded-circle bg-success bg-opacity-10 text-success d-inline-flex p-3 mb-2">
-                        <i class="bi bi-check-circle-fill fs-1"></i>
-                    </div>
-                    <h5 class="fw-bold text-dark">Nộp Chính Thức Bài Kiểm Tra</h5>
-                    <p class="text-muted small">@Model.AssessmentName - Lớp @Model.ClassName (@Model.SubjectName)</p>
-                </div>
-
-                <div class="bg-light p-3 rounded-3 mb-3 border small">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted">Tổng sĩ số:</span>
-                        <strong class="text-dark" id="modalTotal">@Model.TotalStudents học sinh</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted">Đã có điểm:</span>
-                        <strong class="text-success" id="modalGraded">--</strong>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="text-muted">Đã có nhận xét:</span>
-                        <strong class="text-primary" id="modalCommented">--</strong>
-                    </div>
-                </div>
-
-                <div class="alert alert-warning border-0 small mb-0">
-                    <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
-                    <strong>CẢNH BÁO QUAN TRỌNG:</strong> Sau khi xác nhận nộp, bảng điểm sẽ được <strong>khóa vĩnh viễn</strong>. 
-                    Giáo viên sẽ không thể chỉnh sửa điểm hay nhận xét được nữa. Mọi thay đổi sau này bắt buộc phải thông qua phòng Giáo vụ.
-                </div>
-            </div>
-            <div class="modal-footer bg-light border-0">
-                <button type="button" class="btn btn-outline-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
-                <button type="button" class="btn btn-success px-4" id="btnConfirmFinalSubmit">
-                    <i class="bi bi-check2-circle me-1"></i> Đồng Ý Chốt & Nộp
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Xem Lịch Sử Thay Đổi Điểm (Audit Log) -->
+<!-- Modal xem lịch sử điều chỉnh điểm (Audit Log) -->
 <div class="modal fade" id="auditLogModal" tabindex="-1" aria-labelledby="auditLogModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content shadow border-0">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow">
             <div class="modal-header bg-light">
                 <h5 class="modal-title fw-bold" id="auditLogModalLabel">
-                    <i class="bi bi-clock-history text-info me-2"></i>Lịch Sử Điều Chỉnh Điểm: <span id="auditStudentName" class="text-primary"></span>
+                    <i class="bi bi-clock-history text-primary me-2"></i>Lịch Sử Điều Chỉnh Điểm: <span id="auditStudentName" class="text-primary"></span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -419,14 +424,14 @@ else
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Đang tải...</span>
                     </div>
-                    <p class="text-muted small mt-2">Đang tải dữ liệu kiểm toán...</p>
+                    <p class="text-muted mt-2 small">Đang tải nhật ký kiểm toán...</p>
                 </div>
                 <div id="auditEmpty" class="text-center py-4" style="display: none;">
-                    <i class="bi bi-journal-x fs-1 text-muted d-block mb-2"></i>
-                    <p class="text-muted mb-0">Điểm số này chưa từng có lịch sử điều chỉnh.</p>
+                    <i class="bi bi-file-earmark-check fs-1 text-muted d-block mb-2"></i>
+                    <p class="text-muted mb-0">Chưa có lượt điều chỉnh nào được ghi nhận cho cột điểm này.</p>
                 </div>
-                <div id="auditTableWrap" class="table-responsive" style="display: none;">
-                    <table class="table table-bordered table-hover align-middle mb-0">
+                <div class="table-responsive" id="auditTableWrap" style="display: none;">
+                    <table class="table table-hover align-middle mb-0">
                         <thead class="table-light small text-uppercase">
                             <tr>
                                 <th>Thời Gian</th>
@@ -436,12 +441,11 @@ else
                                 <th>Lý Do Điều Chỉnh</th>
                             </tr>
                         </thead>
-                        <tbody id="auditTableBody">
-                        </tbody>
+                        <tbody id="auditTableBody"></tbody>
                     </table>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
+            <div class="modal-footer bg-light py-2">
                 <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Đóng</button>
             </div>
         </div>
@@ -452,51 +456,22 @@ else
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const form = document.getElementById("scoreEntryForm");
-        const isDraftInput = document.getElementById("isDraftInput");
         const scoreInputs = document.querySelectorAll(".score-input");
         const commentInputs = document.querySelectorAll(".comment-input");
         const totalStudents = @Model.TotalStudents;
 
-        let activeCommentInput = null;
-
-        // Lưu lại input comment đang active để áp dụng nút gợi ý nhanh
-        commentInputs.forEach(input => {
-            input.addEventListener("focus", function () {
-                activeCommentInput = this;
-            });
-        });
-
-        // Nút gợi ý nhận xét chung
+        // Xử lý nút gợi ý nhận xét mẫu nhanh
         document.querySelectorAll(".quick-comment-btn").forEach(btn => {
             btn.addEventListener("click", function () {
                 const text = this.getAttribute("data-text");
-                const scoreToSet = this.getAttribute("data-score");
+                const setScore = this.getAttribute("data-score");
+                const activeInput = document.activeElement;
+                let tr = activeInput ? activeInput.closest("tr") : null;
+                if (!tr) tr = document.querySelector("#tableScores tbody tr");
+                if (!tr) return;
 
-                if (activeCommentInput) {
-                    activeCommentInput.value = text;
-                    const idx = activeCommentInput.getAttribute("data-student-index");
-                    if (scoreToSet !== null && scoreToSet !== undefined) {
-                        const scoreInput = document.querySelector(`.score-input[data-student-index="${idx}"]`);
-                        if (scoreInput) {
-                            scoreInput.value = scoreToSet;
-                            scoreInput.dispatchEvent(new Event("input"));
-                        }
-                    }
-                    updateKpis();
-                } else {
-                    alert("Vui lòng nhấp chuột vào ô nhận xét của học sinh cần điền trước!");
-                }
-            });
-        });
-
-        // Dropdown gợi ý nhận xét tại từng dòng
-        document.querySelectorAll(".row-quick-pick").forEach(item => {
-            item.addEventListener("click", function () {
-                const tr = this.closest("tr");
                 const commentInput = tr.querySelector(".comment-input");
                 const scoreInput = tr.querySelector(".score-input");
-                const text = this.getAttribute("data-text");
-                const setScore = this.getAttribute("data-setscore");
 
                 if (commentInput) {
                     commentInput.value = text;
@@ -509,11 +484,52 @@ else
             });
         });
 
-        // Hàm cập nhật KPI số lượng học sinh có điểm và nhận xét
+        // Xử lý nút dropdown nhận xét riêng lẻ từng dòng
+        document.querySelectorAll(".item-comment-pick").forEach(item => {
+            item.addEventListener("click", function (e) {
+                e.preventDefault();
+                const text = this.getAttribute("data-text");
+                const setScore = this.getAttribute("data-score");
+                const tr = this.closest("tr");
+                if (!tr) return;
+
+                const commentInput = tr.querySelector(".comment-input");
+                const scoreInput = tr.querySelector(".score-input");
+
+                if (commentInput) {
+                    commentInput.value = text;
+                }
+                if (setScore !== null && setScore !== undefined && scoreInput) {
+                    scoreInput.value = setScore;
+                    scoreInput.dispatchEvent(new Event("input"));
+                }
+                updateKpis();
+            });
+        });
+
+
+                let filledCount = 0;
+                document.querySelectorAll("#tableScores tbody tr").forEach(tr => {
+                    const sInput = tr.querySelector(".score-input");
+                    const cInput = tr.querySelector(".comment-input");
+                    if (sInput && (sInput.value.trim() === "" || isNaN(parseFloat(sInput.value)))) {
+                        sInput.value = "0";
+                        sInput.dispatchEvent(new Event("input"));
+                        if (cInput && cInput.value.trim() === "") {
+                            cInput.value = "Vắng kiểm tra (Điểm 0)";
+                        }
+                        filledCount++;
+                    }
+                });
+
+                updateKpis();
+                alert(`Đã điền điểm 0 cho ${filledCount} học sinh chưa có điểm. Vui lòng bấm 'Lưu Bảng Điểm' để hoàn tất.`);
+            });
+        }
+
+        // Cập nhật KPI số lượng học sinh có điểm
         function updateKpis() {
             let gradedCount = 0;
-            let commentedCount = 0;
-
             scoreInputs.forEach(input => {
                 const val = input.value.trim();
                 if (val !== "" && !isNaN(parseFloat(val))) {
@@ -521,17 +537,8 @@ else
                 }
             });
 
-            commentInputs.forEach(input => {
-                if (input.value.trim() !== "") {
-                    commentedCount++;
-                }
-            });
-
             const kpiGraded = document.getElementById("kpiGradedCount");
-            const kpiCommented = document.getElementById("kpiCommentedCount");
-
             if (kpiGraded) kpiGraded.innerText = `${gradedCount} / ${totalStudents}`;
-            if (kpiCommented) kpiCommented.innerText = `${commentedCount} / ${totalStudents}`;
         }
 
         // Định dạng màu sắc điểm và giới hạn theo cấu hình loại đánh giá
@@ -540,8 +547,8 @@ else
                 const val = parseFloat(this.value);
                 if (!isNaN(val)) {
                     if (val < 0) this.value = 0;
-                    if (val < @Model.MinScore) this.value = @Model.MinScore.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                    if (val > @Model.MaxScore) this.value = @Model.MaxScore.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    if (val < @Model.MinScore.ToString(System.Globalization.CultureInfo.InvariantCulture)) this.value = @Model.MinScore.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    if (val > @Model.MaxScore.ToString(System.Globalization.CultureInfo.InvariantCulture)) this.value = @Model.MaxScore.ToString(System.Globalization.CultureInfo.InvariantCulture);
                     
                     this.classList.remove("text-danger", "text-primary", "text-dark");
                     if (val < 5) {
@@ -551,20 +558,11 @@ else
                     } else {
                         this.classList.add("text-dark");
                     }
-
-                    // Nếu điểm bằng 0 và nhận xét đang trống, gợi ý điền lý do vắng thi
-                    if (val === 0) {
-                        const tr = this.closest("tr");
-                        const cInput = tr.querySelector(".comment-input");
-                        if (cInput && cInput.value.trim() === "") {
-                            cInput.placeholder = "Bắt buộc: Nhập lý do vắng thi (có phép/không phép)...";
-                        }
-                    }
                 }
                 updateKpis();
             });
 
-            // Hỗ trợ phím Enter để nhảy xuống dòng tiếp theo
+            // Enter nhảy xuống ô tiếp theo
             input.addEventListener("keydown", function (e) {
                 if (e.key === "Enter") {
                     e.preventDefault();
@@ -576,10 +574,6 @@ else
             });
         });
 
-        commentInputs.forEach(input => {
-            input.addEventListener("input", updateKpis);
-        });
-
         // Chuẩn hóa dấu phân cách thập phân trước khi submit
         function normalizeScoreInputs() {
             scoreInputs.forEach(input => {
@@ -589,109 +583,22 @@ else
             });
         }
 
-        // Xử lý nút LƯU NHÁP (Draft Mode)
-        function handleSaveDraft() {
-            normalizeScoreInputs();
-            if (isDraftInput) {
-                isDraftInput.value = "true";
-            }
-            form.submit();
-        }
-
-        const btnSaveDraft = document.getElementById("btnSaveDraft");
-        const btnSaveDraftBottom = document.getElementById("btnSaveDraftBottom");
-        if (btnSaveDraft) btnSaveDraft.addEventListener("click", handleSaveDraft);
-        if (btnSaveDraftBottom) btnSaveDraftBottom.addEventListener("click", handleSaveDraft);
-
-        // Modal Chốt Nộp Chính Thức
-        const submitModalEl = document.getElementById("submitConfirmModal");
-        let submitModal = null;
-        if (submitModalEl) {
-            submitModal = new bootstrap.Modal(submitModalEl);
-        }
-
-        function validateAndOpenSubmitModal() {
-            normalizeScoreInputs();
-            let missingScoreList = [];
-            let missingCommentList = [];
-
-            const rows = document.querySelectorAll("#tableScores tbody tr");
-            rows.forEach((tr, idx) => {
-                const name = tr.querySelector(".student-name") ? tr.querySelector(".student-name").innerText.trim() : `Học sinh ${idx + 1}`;
-                const sInput = tr.querySelector(".score-input");
-                const cInput = tr.querySelector(".comment-input");
-
-                const scoreVal = sInput ? sInput.value.trim() : "";
-                const commentVal = cInput ? cInput.value.trim() : "";
-
-                if (scoreVal === "" || isNaN(parseFloat(scoreVal))) {
-                    missingScoreList.push(name);
-                }
-
-                if (commentVal === "") {
-                    missingCommentList.push(name);
-                }
-            });
-
-            // 1. Kiểm tra 100% học sinh phải có điểm
-            if (missingScoreList.length > 0) {
-                const sample = missingScoreList.slice(0, 3).join(", ");
-                const extra = missingScoreList.length > 3 ? ` và ${missingScoreList.length - 3} học sinh khác` : "";
-                alert(`Để chốt nộp bảng điểm, bắt buộc phải nhập điểm cho toàn bộ 100% học sinh (${totalStudents} em).\n\nHiện còn thiếu điểm của: ${sample}${extra}.\n\nTrường hợp học sinh vắng thi, vui lòng cho điểm 0 kèm lý do ở phần nhận xét.`);
-                
-                // Focus vào học sinh đầu tiên thiếu điểm
-                const firstEmptyScore = Array.from(scoreInputs).find(i => i.value.trim() === "");
-                if (firstEmptyScore) firstEmptyScore.focus();
-                return false;
-            }
-
-            // 2. Kiểm tra 100% học sinh phải có nhận xét
-            if (missingCommentList.length > 0) {
-                const sample = missingCommentList.slice(0, 3).join(", ");
-                const extra = missingCommentList.length > 3 ? ` và ${missingCommentList.length - 3} học sinh khác` : "";
-                alert(`Tất cả học sinh đều phải có nhận xét/ghi chú trước khi chốt nộp bảng điểm!\n\nHiện còn thiếu nhận xét của: ${sample}${extra}.\n\nĐối với học sinh vắng thi (điểm 0), bắt buộc ghi rõ lý do vắng thi.`);
-                
-                // Focus vào học sinh đầu tiên thiếu comment
-                const firstEmptyComment = Array.from(commentInputs).find(i => i.value.trim() === "");
-                if (firstEmptyComment) firstEmptyComment.focus();
-                return false;
-            }
-
-            // Nếu đủ điều kiện, cập nhật thông số vào modal và hiển thị
-            document.getElementById("modalGraded").innerText = `${totalStudents} / ${totalStudents} (100%)`;
-            document.getElementById("modalCommented").innerText = `${totalStudents} / ${totalStudents} (100%)`;
-            submitModal.show();
-        }
-
-        const btnOpenSubmitModal = document.getElementById("btnOpenSubmitModal");
-        const btnOpenSubmitModalBottom = document.getElementById("btnOpenSubmitModalBottom");
-        if (btnOpenSubmitModal) btnOpenSubmitModal.addEventListener("click", validateAndOpenSubmitModal);
-        if (btnOpenSubmitModalBottom) btnOpenSubmitModalBottom.addEventListener("click", validateAndOpenSubmitModal);
-
-        const btnConfirmFinalSubmit = document.getElementById("btnConfirmFinalSubmit");
-        if (btnConfirmFinalSubmit) {
-            btnConfirmFinalSubmit.addEventListener("click", function () {
+        if (form) {
+            form.addEventListener("submit", function (e) {
                 normalizeScoreInputs();
-                if (isDraftInput) {
-                    isDraftInput.value = "false";
+                const reasonBox = document.getElementById("modifyReason");
+                if (reasonBox && reasonBox.required && !reasonBox.value.trim()) {
+                    e.preventDefault();
+                    alert("Vui lòng nhập lý do điều chỉnh điểm trước khi lưu!");
+                    reasonBox.focus();
+                    return false;
                 }
-                form.submit();
             });
         }
 
-        const btnStaffSave = document.getElementById("btnStaffSave");
-        if (btnStaffSave) {
-            btnStaffSave.addEventListener("click", function () {
-                normalizeScoreInputs();
-            });
-        }
-
-        // Xử lý Modal Audit Log
+        // Modal Audit Log
         const auditModalEl = document.getElementById("auditLogModal");
-        let auditModal = null;
-        if (auditModalEl) {
-            auditModal = new bootstrap.Modal(auditModalEl);
-        }
+        let auditModal = auditModalEl ? new bootstrap.Modal(auditModalEl) : null;
 
         document.querySelectorAll(".btn-audit-log").forEach(btn => {
             btn.addEventListener("click", function () {
@@ -704,7 +611,7 @@ else
                 document.getElementById("auditTableWrap").style.display = "none";
                 document.getElementById("auditTableBody").innerHTML = "";
 
-                auditModal.show();
+                if (auditModal) auditModal.show();
 
                 fetch(`/Score/AuditLogs?scoreId=${scoreId}`)
                     .then(res => res.json())
@@ -718,7 +625,7 @@ else
                                 const oldScore = item.oldScore !== null && item.oldScore !== undefined ? item.oldScore.toFixed(1) : "--";
                                 const newScore = item.newScore !== null && item.newScore !== undefined ? item.newScore.toFixed(1) : "--";
 
-                                const values = [modifiedDate, item.modifiedByName || "Giáo viên", oldScore, newScore, item.reason || "Không ghi rõ"];
+                                const values = [modifiedDate, item.modifiedByName || "Hệ thống", oldScore, newScore, item.reason || "Không ghi rõ"];
                                 values.forEach(value => {
                                     const cell = document.createElement("td");
                                     cell.className = "small";
@@ -737,35 +644,6 @@ else
                         document.getElementById("auditEmpty").style.display = "block";
                         document.getElementById("auditEmpty").innerHTML = `<p class="text-danger">Lỗi khi tải lịch sử kiểm toán.</p>`;
                     });
-            });
-        });
-
-        document.querySelectorAll(".btn-save-single").forEach(button => {
-            button.addEventListener("click", async () => {
-                const row = button.closest("tr");
-                const data = new FormData();
-                data.set("__RequestVerificationToken", form.querySelector('[name="__RequestVerificationToken"]').value);
-                data.set("AssessmentId", form.querySelector('[name="AssessmentId"]').value);
-                data.set("StudentId", button.dataset.studentid);
-                data.set("Score", row.querySelector(".score-input").value);
-                data.set("Comment", row.querySelector(".comment-input").value);
-                data.set("Reason", document.getElementById("modifyReason")?.value || "");
-                const message = document.getElementById("singleSaveMessage");
-                button.disabled = true;
-                try {
-                    const response = await fetch('@Url.Action("SaveSingle", "Score")', { method: "POST", body: data });
-                    if (response.status === 403) throw new Error("Bạn không có quyền lưu điểm học sinh này.");
-                    const result = await response.json();
-                    if (!result.success) throw new Error(result.message || "Không thể lưu điểm.");
-                    message.className = "alert alert-success";
-                    message.textContent = "Đã lưu điểm của " + row.querySelector(".student-name").textContent.trim() + ". Các hàng khác chưa được lưu.";
-                    row.querySelector(".status-col").textContent = result.data.isLocked ? "Đã khóa" : "Đã lưu nháp";
-                } catch (error) {
-                    message.className = "alert alert-danger";
-                    message.textContent = error.message || "Không thể lưu điểm.";
-                } finally {
-                    button.disabled = false;
-                }
             });
         });
     });

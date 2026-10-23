@@ -29,6 +29,10 @@ public class PrincipalDashboardDto
     public string? CurrentYearCode { get; set; }
     public string? CurrentSemesterName { get; set; }
     public int? CurrentSemesterId { get; set; }
+
+    // Recent Score Modifications (Audit) & Notifications
+    public List<RecentScoreAuditDto> RecentScoreModifications { get; set; } = new();
+    public List<NotificationItemDto> RecentNotifications { get; set; } = new();
 }
 
 public class GradeAttendanceKpiDto
@@ -50,6 +54,31 @@ public class RecentConductEventDto
     public string ConductGrade { get; set; } = string.Empty;
     public string? TeacherComment { get; set; }
     public string TeacherName { get; set; } = string.Empty;
+}
+
+public class RecentScoreAuditDto
+{
+    public int Id { get; set; }
+    public string StudentName { get; set; } = string.Empty;
+    public string StudentCode { get; set; } = string.Empty;
+    public string ClassName { get; set; } = string.Empty;
+    public string SubjectName { get; set; } = string.Empty;
+    public string AssessmentName { get; set; } = string.Empty;
+    public decimal? OldScore { get; set; }
+    public decimal? NewScore { get; set; }
+    public string ModifiedByName { get; set; } = string.Empty;
+    public DateTime ModifiedAt { get; set; }
+    public string? Reason { get; set; }
+}
+
+public class NotificationItemDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+    public DateTime SentAt { get; set; }
+    public bool IsRead { get; set; }
+    public string SenderName { get; set; } = string.Empty;
 }
 
 public class AcademicReviewPageDto

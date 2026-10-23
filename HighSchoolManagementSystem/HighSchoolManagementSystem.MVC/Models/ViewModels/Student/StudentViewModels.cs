@@ -77,3 +77,9 @@ public class StudentSemesterHistoryViewModel
     public List<HighSchoolManagementSystem.Models.Entities.SemesterSubjectResult> Subjects { get; set; } = new();
     public List<HighSchoolManagementSystem.Models.Entities.StudentScore> Scores { get; set; } = new();
 }
+
+public class StudentScoresFilterViewModel
+{
+    public int? SemesterId { get; set; }
+    public int? SubjectId { get; set; }
+}

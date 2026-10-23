@@ -2,6 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using HighSchoolManagementSystem.MVC.Models.ViewModels;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.AcademicYear;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.Class;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.Room;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.Semester;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.Staff;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.TimeSlot;
 using HighSchoolManagementSystem.Services.Common;
 using HighSchoolManagementSystem.Services.Interfaces;
 

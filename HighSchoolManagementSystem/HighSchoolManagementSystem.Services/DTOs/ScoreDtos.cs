@@ -20,6 +20,7 @@ public class SaveStudentScoreDto
     public decimal? Score { get; set; }
     public string? Comment { get; set; }
     public string? Reason { get; set; }
+    public bool IsPrincipalOverride { get; set; }
 }
 
 public class BulkSaveScoreDto
@@ -30,6 +31,7 @@ public class BulkSaveScoreDto
     public string? GlobalReason { get; set; }
     public bool IsDraft { get; set; }
     public bool IsStaffOverride { get; set; }
+    public bool IsPrincipalOverride { get; set; }
 }
 
 public class ScoreAuditLogDto
@@ -50,6 +52,9 @@ public class AssessmentHeaderDto
     public string TypeCode { get; set; } = string.Empty;
     public string TypeName { get; set; } = string.Empty;
     public decimal Weight { get; set; }
+    public bool IsLocked { get; set; }
+    public DateTime? ConductedAt { get; set; }
+    public DateTime? Deadline => ConductedAt?.AddDays(7);
 }
 
 public class StudentSubjectRowDto

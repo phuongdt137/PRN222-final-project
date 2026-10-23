@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using HighSchoolManagementSystem.Models.Entities;
 using HighSchoolManagementSystem.MVC.Models.ViewModels;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.LeaveRequest;
 using HighSchoolManagementSystem.Repositories.Interfaces;
 using HighSchoolManagementSystem.Services.Common;
 using HighSchoolManagementSystem.Services.Interfaces;

@@ -62,6 +62,7 @@ builder.Services.AddScoped<IConductEvaluationService, ConductEvaluationService>(
 builder.Services.AddScoped<ITimetableService, TimetableService>();
 builder.Services.AddScoped<ILeaveRequestService, LeaveRequestService>();
 builder.Services.AddScoped<IPrincipalService, PrincipalService>();
+builder.Services.AddHostedService<HighSchoolManagementSystem.MVC.Services.Background.ScoreAutoLockBackgroundService>();
 
 // Cookie Authentication (No Identity)
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

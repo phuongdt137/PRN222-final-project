@@ -1,4 +1,6 @@
-namespace HighSchoolManagementSystem.MVC.Models.ViewModels;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.Timetable;
+
+namespace HighSchoolManagementSystem.MVC.Models.ViewModels.Class;
 
 public class ClassTeacherItemViewModel
 {

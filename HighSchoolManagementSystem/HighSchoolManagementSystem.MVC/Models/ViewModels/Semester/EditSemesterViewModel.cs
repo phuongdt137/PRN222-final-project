@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace HighSchoolManagementSystem.MVC.Models.ViewModels;
+namespace HighSchoolManagementSystem.MVC.Models.ViewModels.Semester;
 
-public class CreateSemesterViewModel
+public class EditSemesterViewModel
 {
+    public int Id { get; set; }
+
     public int AcademicYearId { get; set; }
 
     public string AcademicYearCode { get; set; } = string.Empty;

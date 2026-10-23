@@ -16,4 +16,5 @@ public interface IStudentService
     Task<ServiceResult<AcademicYear?>> GetCurrentYearAsync();
     Task<ServiceResult> AssignClassAsync(int studentId, int classId);
     Task<ServiceResult> TransferClassAsync(int studentId, TransferStudentClassDto dto);
+    Task<ServiceResult<StudentScoresResultDto>> GetStudentScoresAsync(StudentScoresQueryDto dto);
 }

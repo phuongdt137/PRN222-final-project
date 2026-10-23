@@ -1,4 +1,4 @@
-@model HighSchoolManagementSystem.MVC.Models.ViewModels.AssessmentConfigurationEditViewModel
+@model HighSchoolManagementSystem.MVC.Models.ViewModels.Assessment.AssessmentConfigurationEditViewModel
 @{ ViewData["Title"] = Model.Id.HasValue ? "Cập nhật loại đánh giá" : "Thêm loại đánh giá"; }
 <div class="greeting-banner mb-4"><div class="greeting-text-wrap"><span class="greeting-kicker">QUẢN LÝ ĐÀO TẠO</span><h1 class="greeting-title">@ViewData["Title"]</h1></div></div>
 <div class="edu-card p-4"><form asp-action="Edit" method="post"><input asp-for="Id" type="hidden" /><div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div><div class="row g-3">

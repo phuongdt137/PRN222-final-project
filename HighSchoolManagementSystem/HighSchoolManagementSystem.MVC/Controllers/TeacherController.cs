@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using HighSchoolManagementSystem.Models.Entities;
 using HighSchoolManagementSystem.MVC.Models.ViewModels;
 using HighSchoolManagementSystem.MVC.Models.ViewModels.Teacher;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.Class;
 using HighSchoolManagementSystem.Repositories.Interfaces;
 using HighSchoolManagementSystem.Services.Common;
 using HighSchoolManagementSystem.Services.Interfaces;

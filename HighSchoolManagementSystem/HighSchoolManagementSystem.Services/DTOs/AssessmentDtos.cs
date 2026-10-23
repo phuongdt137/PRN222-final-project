@@ -14,6 +14,8 @@ public class AssessmentDto
     public decimal MaxScore { get; set; }
     public string AssessmentName { get; set; } = string.Empty;
     public DateTime? ConductedAt { get; set; }
+    public DateTime? Deadline => ConductedAt?.AddDays(7);
+    public bool IsDeadlinePassed => Deadline.HasValue && DateTime.UtcNow >= Deadline.Value;
 
     // Thông tin phân công giảng dạy liên quan
     public int ClassId { get; set; }
@@ -33,7 +35,8 @@ public class AssessmentDto
     public int GradedStudentsCount { get; set; }
     public int LockedScoresCount { get; set; }
     public bool HasScores => GradedStudentsCount > 0;
-    public bool HasLockedScores => LockedScoresCount > 0;
+    public bool HasLockedScores => LockedScoresCount > 0 || IsDeadlinePassed;
+    public bool IsLocked => HasLockedScores;
 }
 
 public class AssessmentTypeDto

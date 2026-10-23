@@ -1,4 +1,4 @@
-namespace HighSchoolManagementSystem.MVC.Models.ViewModels;
+namespace HighSchoolManagementSystem.MVC.Models.ViewModels.Semester;
 
 public class SemesterListItemViewModel
 {

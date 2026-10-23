@@ -56,6 +56,70 @@ public class ScoreService : IScoreService
 
             var existingScores = assessment.StudentScores.ToDictionary(s => s.StudentId);
 
+            // Kiểm tra tự động khóa theo hạn 7 ngày kể từ ngày làm bài (ConductedAt)
+            DateTime? deadline = assessment.ConductedAt?.AddDays(7);
+            bool isAutoLocked = deadline.HasValue && DateTime.UtcNow >= deadline.Value;
+
+            // Nếu đã quá hạn: hệ thống tự động ghi nhận điểm 0 cho những học sinh chưa có điểm
+            if (isAutoLocked && enrolledStudents.Any())
+            {
+                bool hasAutoFilled = false;
+                var autoFilledStudentIds = new List<int>();
+
+                foreach (var st in enrolledStudents)
+                {
+                    if (!existingScores.TryGetValue(st.Id, out var scoreEntity) || !scoreEntity.Score.HasValue)
+                    {
+                        if (scoreEntity == null)
+                        {
+                            scoreEntity = new StudentScore
+                            {
+                                StudentId = st.Id,
+                                AssessmentId = assessmentId,
+                                Score = 0.0m,
+                                Comment = "Quá hạn nhập điểm - Hệ thống tự động ghi nhận điểm 0",
+                                IsLocked = true
+                            };
+                            await _scoreRepository.AddScoreAsync(scoreEntity);
+                            existingScores[st.Id] = scoreEntity;
+                        }
+                        else
+                        {
+                            scoreEntity.Score = 0.0m;
+                            if (string.IsNullOrWhiteSpace(scoreEntity.Comment))
+                            {
+                                scoreEntity.Comment = "Quá hạn nhập điểm - Hệ thống tự động ghi nhận điểm 0";
+                            }
+                            scoreEntity.IsLocked = true;
+                            await _scoreRepository.UpdateScoreAsync(scoreEntity);
+                        }
+                        hasAutoFilled = true;
+                        autoFilledStudentIds.Add(st.Id);
+                    }
+                    else if (!scoreEntity.IsLocked)
+                    {
+                        scoreEntity.IsLocked = true;
+                        await _scoreRepository.UpdateScoreAsync(scoreEntity);
+                        hasAutoFilled = true;
+                    }
+                }
+
+                if (hasAutoFilled)
+                {
+                    await _scoreRepository.SaveChangesAsync();
+                    if (assessment.TeachingAssignment != null)
+                    {
+                        foreach (var sId in autoFilledStudentIds)
+                        {
+                            await RecalculateStudentSubjectAverageAsync(
+                                sId,
+                                assessment.TeachingAssignment.SubjectId,
+                                assessment.TeachingAssignment.SemesterId);
+                        }
+                    }
+                }
+            }
+
             var resultList = new List<StudentScoreItemDto>();
             foreach (var st in enrolledStudents)
             {
@@ -70,7 +134,7 @@ public class ScoreService : IScoreService
                     ScoreId = scoreEntity?.Id,
                     Score = scoreEntity?.Score,
                     Comment = scoreEntity?.Comment,
-                    IsLocked = scoreEntity?.IsLocked ?? false,
+                    IsLocked = isAutoLocked || (scoreEntity?.IsLocked ?? false),
                     HasAuditLogs = scoreEntity?.ScoreAuditLogs.Any() ?? false
                 });
             }
@@ -86,7 +150,7 @@ public class ScoreService : IScoreService
         }
     }
 
-    public async Task<ServiceResult<StudentScoreItemDto>> SaveSingleScoreAsync(SaveStudentScoreDto dto, int modifierUserId, int? teacherId = null)
+    public async Task<ServiceResult<StudentScoreItemDto>> SaveSingleScoreAsync(SaveStudentScoreDto dto, int modifierUserId, int? teacherId = null, bool isPrincipal = false)
     {
         try
         {
@@ -101,11 +165,36 @@ public class ScoreService : IScoreService
                     "Không tìm thấy bài kiểm tra.");
             }
 
-            if (teacherId.HasValue && assessment.TeachingAssignment?.TeacherId != teacherId.Value)
+            bool isTeacher = teacherId.HasValue;
+            bool isStaff = !isTeacher && !isPrincipal;
+
+            if (isTeacher && assessment.TeachingAssignment?.TeacherId != teacherId!.Value)
             {
                 return ServiceResult<StudentScoreItemDto>.Fail(
                     ErrorCodes.AuthForbidden,
                     "Bạn không có quyền nhập điểm cho bài kiểm tra này.");
+            }
+
+            // 1. Kiểm tra trạng thái học kỳ: nếu Hiệu trưởng đã chốt sổ, chỉ Hiệu trưởng mới được sửa
+            int semesterId = assessment.TeachingAssignment?.SemesterId ?? 0;
+            bool isSemesterFinalized = semesterId > 0 && await _scoreRepository.IsSemesterFinalizedAsync(semesterId);
+            if (isSemesterFinalized && !isPrincipal)
+            {
+                return ServiceResult<StudentScoreItemDto>.Fail(
+                    ErrorCodes.ScoreLocked,
+                    "Học kỳ này đã được Hiệu trưởng chốt sổ chính thức. Chỉ Hiệu trưởng mới có quyền điều chỉnh điểm.");
+            }
+
+            // 2. Kiểm tra hạn tự khóa 7 ngày đối với Giáo viên
+            DateTime? deadline = assessment.ConductedAt?.AddDays(7);
+            bool isAutoLocked = deadline.HasValue && DateTime.UtcNow >= deadline.Value;
+            bool isLocked = isAutoLocked || assessment.StudentScores.Any(s => s.IsLocked);
+
+            if (isTeacher && isLocked)
+            {
+                return ServiceResult<StudentScoreItemDto>.Fail(
+                    ErrorCodes.ScoreLocked,
+                    "Bài kiểm tra đã quá hạn nhập điểm (7 ngày kể từ ngày làm bài) và đã được hệ thống tự động khóa. Vui lòng liên hệ Giáo vụ (Staff) nếu cần điều chỉnh.");
             }
 
             var minScore = assessment.AssessmentType?.MinScore ?? 0;
@@ -129,22 +218,18 @@ public class ScoreService : IScoreService
 
             var existingScore = await _scoreRepository.GetScoreByStudentAndAssessmentAsync(dto.StudentId, dto.AssessmentId);
 
-            if (teacherId.HasValue && assessment.StudentScores.Any(s => s.IsLocked))
-                return ServiceResult<StudentScoreItemDto>.Fail(ErrorCodes.ScoreLocked, "Bảng điểm đã chốt nộp. Giáo viên không thể điều chỉnh.");
-
-            if (!teacherId.HasValue && existingScore != null && existingScore.Score != dto.Score && string.IsNullOrWhiteSpace(dto.Reason))
-                return ServiceResult<StudentScoreItemDto>.Fail(ErrorCodes.ScoreReasonRequired, "Giáo vụ phải nhập lý do điều chỉnh điểm.");
+            // Nếu là Staff sửa điểm đã khóa thì bắt buộc phải có lý do
+            if (isStaff && existingScore != null && existingScore.Score != dto.Score && string.IsNullOrWhiteSpace(dto.Reason))
+            {
+                return ServiceResult<StudentScoreItemDto>.Fail(ErrorCodes.ScoreReasonRequired, "Giáo vụ bắt buộc phải nhập lý do điều chỉnh điểm.");
+            }
 
             await using var transaction = await _scoreRepository.BeginTransactionAsync();
+            decimal? oldScoreVal = existingScore?.Score;
+            bool scoreChanged = existingScore == null || existingScore.Score != dto.Score;
+
             if (existingScore != null)
             {
-                if (existingScore.IsLocked && teacherId.HasValue)
-                {
-                    return ServiceResult<StudentScoreItemDto>.Fail(
-                        ErrorCodes.ScoreLocked,
-                        "Cột điểm của học sinh này đã bị khóa. Vui lòng liên hệ quản lý để mở khóa nếu cần sửa.");
-                }
-
                 if (existingScore.Score != dto.Score)
                 {
                     var auditLog = new ScoreAuditLog
@@ -154,13 +239,19 @@ public class ScoreService : IScoreService
                         NewScore = dto.Score,
                         ModifiedBy = modifierUserId,
                         ModifiedAt = DateTime.UtcNow,
-                        Reason = string.IsNullOrWhiteSpace(dto.Reason) ? "Điều chỉnh điểm số" : dto.Reason.Trim()
+                        Reason = string.IsNullOrWhiteSpace(dto.Reason)
+                            ? (isPrincipal ? "Hiệu trưởng điều chỉnh điểm" : (isTeacher ? "Giáo viên cập nhật điểm" : "Giáo vụ điều chỉnh điểm"))
+                            : dto.Reason.Trim()
                     };
                     await _scoreRepository.AddScoreAuditLogAsync(auditLog);
                 }
 
                 existingScore.Score = dto.Score;
                 existingScore.Comment = dto.Comment?.Trim();
+                if (isStaff || isPrincipal)
+                {
+                    existingScore.IsLocked = true;
+                }
                 await _scoreRepository.UpdateScoreAsync(existingScore);
             }
             else
@@ -171,12 +262,24 @@ public class ScoreService : IScoreService
                     AssessmentId = dto.AssessmentId,
                     Score = dto.Score,
                     Comment = dto.Comment?.Trim(),
-                    IsLocked = !teacherId.HasValue && assessment.StudentScores.Any(s => s.IsLocked)
+                    IsLocked = isStaff || isPrincipal || isLocked
                 };
                 await _scoreRepository.AddScoreAsync(existingScore);
             }
 
             await _scoreRepository.SaveChangesAsync();
+
+            // Nếu Staff sửa điểm -> Gửi thông báo đến Hiệu trưởng
+            if (isStaff && scoreChanged)
+            {
+                await NotifyPrincipalsAboutScoreChangeAsync(
+                    modifierUserId,
+                    assessment,
+                    dto.StudentId,
+                    oldScoreVal,
+                    dto.Score,
+                    dto.Reason ?? "Giáo vụ điều chỉnh điểm theo quy chế");
+            }
 
             // Tự động tính toán lại ĐTB môn học kỳ
             if (assessment.TeachingAssignment != null)
@@ -212,7 +315,7 @@ public class ScoreService : IScoreService
         }
     }
 
-    public async Task<ServiceResult<int>> SaveBulkScoresAsync(BulkSaveScoreDto dto, int modifierUserId, int? teacherId = null)
+    public async Task<ServiceResult<int>> SaveBulkScoresAsync(BulkSaveScoreDto dto, int modifierUserId, int? teacherId = null, bool isPrincipal = false)
     {
         try
         {
@@ -231,7 +334,22 @@ public class ScoreService : IScoreService
             }
 
             bool isTeacher = teacherId.HasValue;
-            bool isStaff = !isTeacher;
+            bool isStaff = !isTeacher && !isPrincipal;
+
+            // 1. Kiểm tra trạng thái học kỳ: nếu Hiệu trưởng đã chốt sổ, chỉ Hiệu trưởng mới được sửa
+            int semesterId = assessment.TeachingAssignment?.SemesterId ?? 0;
+            bool isSemesterFinalized = semesterId > 0 && await _scoreRepository.IsSemesterFinalizedAsync(semesterId);
+            if (isSemesterFinalized && !isPrincipal)
+            {
+                return ServiceResult<int>.Fail(
+                    ErrorCodes.ScoreLocked,
+                    "Học kỳ này đã được Hiệu trưởng chốt sổ chính thức. Chỉ Hiệu trưởng mới có quyền điều chỉnh điểm.");
+            }
+
+            // 2. Kiểm tra hạn tự khóa 7 ngày
+            DateTime? deadline = assessment.ConductedAt?.AddDays(7);
+            bool isAutoLocked = deadline.HasValue && DateTime.UtcNow >= deadline.Value;
+            bool isLocked = isAutoLocked || assessment.StudentScores.Any(s => s.IsLocked);
 
             if (isTeacher)
             {
@@ -242,13 +360,11 @@ public class ScoreService : IScoreService
                         "Bạn không có quyền nhập điểm cho bài kiểm tra này.");
                 }
 
-                // Kiểm tra nếu bài kiểm tra đã bị khóa điểm (đã nộp chính thức trước đó)
-                bool isAlreadyLocked = assessment.StudentScores.Any(s => s.IsLocked);
-                if (isAlreadyLocked)
+                if (isLocked)
                 {
                     return ServiceResult<int>.Fail(
                         ErrorCodes.AssessmentAlreadyLockedForTeacher,
-                        "Bài kiểm tra này đã được chốt nộp và khóa điểm. Giáo viên không thể chỉnh sửa điểm số. Vui lòng liên hệ phòng Giáo vụ (Staff) nếu cần điều chỉnh.");
+                        "Bài kiểm tra này đã quá hạn nhập điểm (7 ngày kể từ ngày làm bài) và đã được hệ thống tự động khóa. Giáo viên không thể chỉnh sửa điểm số. Vui lòng liên hệ phòng Giáo vụ (Staff) nếu cần điều chỉnh.");
                 }
             }
 
@@ -258,7 +374,7 @@ public class ScoreService : IScoreService
                 .Select(sc => sc.Student)
                 .ToList() ?? new List<Student>();
 
-            // Validate điểm hợp lệ từ 0.0 đến 10.0
+            // Validate điểm hợp lệ từ MinScore đến MaxScore
             var enrolledIds = enrolledStudents.Select(s => s.Id).ToHashSet();
             if (dto.Scores.Any(s => !enrolledIds.Contains(s.StudentId)))
                 return ServiceResult<int>.Fail(ErrorCodes.ScoreStudentNotInClass, "Danh sách gửi lên có học sinh không thuộc lớp của bài kiểm tra.");
@@ -275,76 +391,25 @@ public class ScoreService : IScoreService
                 }
             }
 
-            // Nếu là Teacher và nộp chính thức (!dto.IsDraft)
-            if (isTeacher && !dto.IsDraft)
+            // 3. Nếu là Staff sửa điểm: bắt buộc phải có lý do chung hoặc riêng cho mỗi điểm thay đổi
+            if (isStaff)
             {
-                // 1. Kiểm tra phải nhập đủ 100% học sinh trong lớp (vắng thi thì điểm 0)
-                var submittedScoreMap = dto.Scores
-                    .Where(s => s.Score.HasValue)
-                    .ToDictionary(s => s.StudentId);
-
-                var missingScoreStudents = enrolledStudents
-                    .Where(s => !submittedScoreMap.ContainsKey(s.Id))
-                    .ToList();
-
-                if (missingScoreStudents.Any())
-                {
-                    var names = string.Join(", ", missingScoreStudents.Take(3).Select(s => s.User.FullName));
-                    var extra = missingScoreStudents.Count > 3 ? $" và {missingScoreStudents.Count - 3} học sinh khác" : "";
-                    return ServiceResult<int>.Fail(
-                        ErrorCodes.AssessmentSubmissionIncomplete,
-                        $"Để chốt nộp bảng điểm, bạn bắt buộc phải nhập điểm cho toàn bộ {enrolledStudents.Count} học sinh trong lớp. Hiện còn thiếu điểm của: {names}{extra}. Trường hợp học sinh vắng thi, vui lòng cho điểm 0 kèm lý do ở phần nhận xét.");
-                }
-
-                // 2. Kiểm tra tất cả học sinh đều phải có nhận xét
-                var missingCommentStudents = enrolledStudents
-                    .Where(s =>
-                    {
-                        var row = dto.Scores.FirstOrDefault(x => x.StudentId == s.Id);
-                        return row == null || string.IsNullOrWhiteSpace(row.Comment);
-                    })
-                    .ToList();
-
-                if (missingCommentStudents.Any())
-                {
-                    var names = string.Join(", ", missingCommentStudents.Take(3).Select(s => s.User.FullName));
-                    var extra = missingCommentStudents.Count > 3 ? $" và {missingCommentStudents.Count - 3} học sinh khác" : "";
-                    return ServiceResult<int>.Fail(
-                        ErrorCodes.ScoreCommentRequired,
-                        $"Tất cả học sinh đều phải có nhận xét trước khi chốt nộp. Hiện còn thiếu nhận xét của: {names}{extra}. Đối với học sinh vắng thi (điểm 0), bắt buộc ghi rõ lý do vắng thi.");
-                }
-
-                // Nộp chính thức sẽ khóa điểm vĩnh viễn đối với giáo viên
-                dto.LockAfterSave = true;
-            }
-            else if (isTeacher && dto.IsDraft)
-            {
-                // Lưu nháp: không khóa điểm
-                dto.LockAfterSave = false;
-            }
-            else if (isStaff)
-            {
-                // Giáo vụ chỉnh sửa điểm đã khóa
                 var globalReason = !string.IsNullOrWhiteSpace(dto.GlobalReason) ? dto.GlobalReason.Trim() : null;
-
                 foreach (var item in dto.Scores)
                 {
                     var existingScore = await _scoreRepository.GetScoreByStudentAndAssessmentAsync(item.StudentId, dto.AssessmentId);
                     if (existingScore != null && existingScore.Score != item.Score &&
                         string.IsNullOrWhiteSpace(globalReason) && string.IsNullOrWhiteSpace(item.Reason))
                     {
-                        return ServiceResult<int>.Fail(ErrorCodes.ScoreReasonRequired, "Mỗi điểm điều chỉnh phải có lý do riêng hoặc lý do chung.");
+                        return ServiceResult<int>.Fail(ErrorCodes.ScoreReasonRequired, "Giáo vụ bắt buộc phải nhập lý do điều chỉnh điểm.");
                     }
                 }
-
-                // Khi giáo vụ sửa xong, điểm vẫn tiếp tục ở trạng thái khóa
-                dto.LockAfterSave = true;
-                dto.IsDraft = false;
             }
 
             await using var transaction = await _scoreRepository.BeginTransactionAsync();
             int savedCount = 0;
             var affectedStudentIds = new HashSet<int>();
+            int scoreModificationsCount = 0;
 
             foreach (var item in dto.Scores)
             {
@@ -352,7 +417,7 @@ public class ScoreService : IScoreService
 
                 if (existingScore != null)
                 {
-                    // Nếu là Giáo viên và bản ghi điểm này đã bị khóa riêng lẻ
+                    // Nếu là Teacher và điểm này đã bị khóa trước đó thì bỏ qua
                     if (isTeacher && existingScore.IsLocked && existingScore.Score != item.Score)
                     {
                         continue;
@@ -361,9 +426,11 @@ public class ScoreService : IScoreService
                     // Ghi vết kiểm toán (Audit Log) nếu điểm số bị thay đổi
                     if (existingScore.Score != item.Score)
                     {
-                        var reason = !string.IsNullOrWhiteSpace(item.Reason) 
-                            ? item.Reason.Trim() 
-                            : (!string.IsNullOrWhiteSpace(dto.GlobalReason) ? dto.GlobalReason.Trim() : (dto.IsDraft ? "Lưu nháp điểm" : "Nhập điểm chính thức"));
+                        var reason = !string.IsNullOrWhiteSpace(item.Reason)
+                            ? item.Reason.Trim()
+                            : (!string.IsNullOrWhiteSpace(dto.GlobalReason)
+                                ? dto.GlobalReason.Trim()
+                                : (isPrincipal ? "Hiệu trưởng điều chỉnh điểm" : (isTeacher ? "Giáo viên cập nhật điểm" : "Giáo vụ điều chỉnh điểm")));
 
                         var auditLog = new ScoreAuditLog
                         {
@@ -375,15 +442,18 @@ public class ScoreService : IScoreService
                             Reason = reason
                         };
                         await _scoreRepository.AddScoreAuditLogAsync(auditLog);
+                        scoreModificationsCount++;
                     }
 
                     existingScore.Score = item.Score;
                     existingScore.Comment = item.Comment?.Trim();
-                    if (dto.LockAfterSave)
+
+                    // Staff hoặc Principal sửa thì giữ khóa; Teacher sửa trước hạn thì không khóa
+                    if (isStaff || isPrincipal)
                     {
                         existingScore.IsLocked = true;
                     }
-                    else if (dto.IsDraft)
+                    else if (isTeacher)
                     {
                         existingScore.IsLocked = false;
                     }
@@ -401,9 +471,10 @@ public class ScoreService : IScoreService
                             AssessmentId = dto.AssessmentId,
                             Score = item.Score,
                             Comment = item.Comment?.Trim(),
-                            IsLocked = dto.LockAfterSave
+                            IsLocked = isStaff || isPrincipal
                         };
                         await _scoreRepository.AddScoreAsync(newScore);
+                        if (isStaff || isPrincipal) scoreModificationsCount++;
                     }
                 }
 
@@ -412,6 +483,16 @@ public class ScoreService : IScoreService
             }
 
             await _scoreRepository.SaveChangesAsync();
+
+            // Nếu là Staff và có điểm thay đổi -> Bắn notification cho Hiệu trưởng
+            if (isStaff && scoreModificationsCount > 0)
+            {
+                await NotifyPrincipalsAboutBulkScoreChangesAsync(
+                    modifierUserId,
+                    assessment,
+                    scoreModificationsCount,
+                    dto.GlobalReason ?? "Giáo vụ điều chỉnh điểm theo quy chế");
+            }
 
             // Tính toán lại ĐTB môn cho toàn bộ học sinh được cập nhật điểm
             if (assessment.TeachingAssignment != null)
@@ -428,28 +509,94 @@ public class ScoreService : IScoreService
             }
             await transaction.CommitAsync();
 
-            string resultMessage;
-            if (dto.IsDraft)
-            {
-                resultMessage = $"Đã lưu nháp bảng điểm thành công ({savedCount} học sinh). Bảng điểm chưa bị khóa, bạn có thể tiếp tục chỉnh sửa trước khi chốt nộp.";
-            }
-            else if (isStaff)
-            {
-                resultMessage = $"Đã cập nhật bảng điểm thành công ({savedCount} học sinh). Lịch sử điều chỉnh đã được lưu vết kiểm toán.";
-            }
-            else
-            {
-                resultMessage = $"Đã chốt và nộp bảng điểm thành công ({savedCount} học sinh). Bảng điểm đã được khóa chính thức theo quy chế.";
-            }
-
-            return ServiceResult<int>.Ok(savedCount, resultMessage);
+            return ServiceResult<int>.Ok(savedCount, "Đã lưu bảng điểm thành công.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi lưu điểm hàng loạt cho bài kiểm tra Id: {AssessmentId}", dto.AssessmentId);
-            return ServiceResult<int>.Fail(
-                ErrorCodes.DatabaseError,
-                "Không thể lưu điểm hàng loạt. Vui lòng thử lại sau.");
+            _logger.LogError(ex, "Lỗi khi lưu bảng điểm bài kiểm tra Id: {AssessmentId}", dto.AssessmentId);
+            return ServiceResult<int>.Fail(ErrorCodes.DatabaseError, "Không thể lưu bảng điểm. Vui lòng thử lại sau.");
+        }
+    }
+
+    private async Task NotifyPrincipalsAboutScoreChangeAsync(
+        int modifierUserId,
+        Assessment assessment,
+        int studentId,
+        decimal? oldScore,
+        decimal? newScore,
+        string reason)
+    {
+        try
+        {
+            var principals = await _scoreRepository.GetUsersByRoleAsync("Principal");
+            if (!principals.Any()) return;
+
+            var modifier = await _scoreRepository.GetUserByIdAsync(modifierUserId);
+            var student = assessment.TeachingAssignment?.Class?.StudentClasses
+                .FirstOrDefault(sc => sc.StudentId == studentId)?.Student;
+
+            string modName = modifier?.FullName ?? "Giáo vụ";
+            string subName = assessment.TeachingAssignment?.Subject?.SubjectName ?? "Môn học";
+            string clsName = assessment.TeachingAssignment?.Class?.ClassName ?? "Lớp";
+            string stuName = student?.User?.FullName ?? $"HS ID {studentId}";
+            string oldStr = oldScore?.ToString("0.##") ?? "Trống";
+            string newStr = newScore?.ToString("0.##") ?? "Trống";
+
+            foreach (var p in principals)
+            {
+                var notif = new Notification
+                {
+                    SenderId = modifierUserId,
+                    RecipientId = p.Id,
+                    Title = "Cảnh báo điều chỉnh điểm sau khóa",
+                    Content = $"Giáo vụ {modName} vừa điều chỉnh điểm môn {subName} ({assessment.AssessmentName}) lớp {clsName} của học sinh {stuName} từ {oldStr} thành {newStr}. Lý do: {reason}.",
+                    SentAt = DateTime.UtcNow,
+                    IsRead = false
+                };
+                await _scoreRepository.AddNotificationAsync(notif);
+            }
+            await _scoreRepository.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi gửi thông báo điều chỉnh điểm tới Hiệu trưởng.");
+        }
+    }
+
+    private async Task NotifyPrincipalsAboutBulkScoreChangesAsync(
+        int modifierUserId,
+        Assessment assessment,
+        int modifiedCount,
+        string reason)
+    {
+        try
+        {
+            var principals = await _scoreRepository.GetUsersByRoleAsync("Principal");
+            if (!principals.Any()) return;
+
+            var modifier = await _scoreRepository.GetUserByIdAsync(modifierUserId);
+            string modName = modifier?.FullName ?? "Giáo vụ";
+            string subName = assessment.TeachingAssignment?.Subject?.SubjectName ?? "Môn học";
+            string clsName = assessment.TeachingAssignment?.Class?.ClassName ?? "Lớp";
+
+            foreach (var p in principals)
+            {
+                var notif = new Notification
+                {
+                    SenderId = modifierUserId,
+                    RecipientId = p.Id,
+                    Title = "Cảnh báo điều chỉnh bảng điểm sau khóa",
+                    Content = $"Giáo vụ {modName} vừa điều chỉnh điểm cho {modifiedCount} học sinh môn {subName} ({assessment.AssessmentName}) lớp {clsName}. Lý do: {reason}.",
+                    SentAt = DateTime.UtcNow,
+                    IsRead = false
+                };
+                await _scoreRepository.AddNotificationAsync(notif);
+            }
+            await _scoreRepository.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi gửi thông báo điều chỉnh bảng điểm tới Hiệu trưởng.");
         }
     }
 
@@ -502,7 +649,8 @@ public class ScoreService : IScoreService
                     var sc = studentScores.FirstOrDefault(s => s.AssessmentId == ass.Id);
                     scoreDict[ass.Id] = sc?.Score;
                     scoreIdDict[ass.Id] = sc?.Id;
-                    isLockedDict[ass.Id] = sc?.IsLocked ?? false;
+                    bool isAssLocked = (ass.ConductedAt.HasValue && DateTime.UtcNow >= ass.ConductedAt.Value.AddDays(7)) || (sc?.IsLocked ?? false);
+                    isLockedDict[ass.Id] = isAssLocked;
 
                     if (sc?.Score.HasValue == true)
                     {
@@ -542,13 +690,20 @@ public class ScoreService : IScoreService
                 AcademicYearCode = assignment.Class.AcademicYear?.YearCode ?? string.Empty,
                 TeacherName = assignment.Teacher.User.FullName,
                 EvaluationType = assignment.Subject.EvaluationType,
-                Assessments = assessments.Select(a => new AssessmentHeaderDto
+                Assessments = assessments.Select(a =>
                 {
-                    Id = a.Id,
-                    AssessmentName = a.AssessmentName,
-                    TypeCode = a.AssessmentType.TypeCode,
-                    TypeName = a.AssessmentType.TypeName,
-                    Weight = a.AssessmentType.Weight
+                    bool isDeadlinePassed = a.ConductedAt.HasValue && DateTime.UtcNow >= a.ConductedAt.Value.AddDays(7);
+                    bool hasLocked = a.StudentScores.Any(s => s.IsLocked);
+                    return new AssessmentHeaderDto
+                    {
+                        Id = a.Id,
+                        AssessmentName = a.AssessmentName,
+                        TypeCode = a.AssessmentType.TypeCode,
+                        TypeName = a.AssessmentType.TypeName,
+                        Weight = a.AssessmentType.Weight,
+                        IsLocked = isDeadlinePassed || hasLocked,
+                        ConductedAt = a.ConductedAt
+                    };
                 }).ToList(),
                 Students = studentRows
             };
@@ -886,6 +1041,48 @@ public class ScoreService : IScoreService
 
             await _scoreRepository.AddOrUpdateSemesterSubjectResultAsync(resultEntity);
             await _scoreRepository.SaveChangesAsync();
+
+            // Nếu học kỳ đã có SemesterReport của học sinh này (ví dụ Hiệu trưởng đã chốt sổ hoặc sau chốt sổ),
+            // tự động cập nhật lại GPA và xếp loại học lực trong SemesterReport
+            var existingReport = await _scoreRepository.GetStudentSemesterReportAsync(studentId, semesterId);
+            if (existingReport != null)
+            {
+                var allStudentScores = await _scoreRepository.GetScoresByStudentAndSemesterAsync(studentId, semesterId);
+                var subjectGroups = allStudentScores
+                    .GroupBy(s => s.Assessment.TeachingAssignment.SubjectId)
+                    .ToList();
+
+                decimal sumAvg = 0m;
+                int countAvg = 0;
+                var subjectAvgDict = new Dictionary<int, decimal?>();
+
+                foreach (var grp in subjectGroups)
+                {
+                    decimal wSum = 0m;
+                    decimal wTot = 0m;
+                    foreach (var s in grp.Where(x => x.Score.HasValue))
+                    {
+                        wSum += s.Score!.Value * s.Assessment.AssessmentType.Weight;
+                        wTot += s.Assessment.AssessmentType.Weight;
+                    }
+                    if (wTot > 0)
+                    {
+                        var sAvg = Math.Round(wSum / wTot, 1);
+                        sumAvg += sAvg;
+                        countAvg++;
+                        subjectAvgDict[grp.Key] = sAvg;
+                    }
+                }
+
+                if (countAvg > 0)
+                {
+                    decimal newGpa = Math.Round(sumAvg / countAvg, 2);
+                    existingReport.Gpa = newGpa;
+                    existingReport.AcademicRank = DetermineAcademicRank(newGpa, subjectAvgDict);
+                    await _scoreRepository.AddOrUpdateSemesterReportAsync(existingReport);
+                    await _scoreRepository.SaveChangesAsync();
+                }
+            }
 
             return ServiceResult<bool>.Ok(true);
         }
