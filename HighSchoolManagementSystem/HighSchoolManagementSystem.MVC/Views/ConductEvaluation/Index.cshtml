@@ -363,6 +363,7 @@ else
                 </div>
 
                 <form id="singleEvaluateForm">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" id="modalStudentId" />
                     <input type="hidden" id="modalSemesterId" value="@Model.SelectedSemesterId" />
 
@@ -523,7 +524,8 @@ else
                 const response = await fetch('@Url.Action("SaveSingle", "ConductEvaluation")', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('#singleEvaluateForm input[name="__RequestVerificationToken"]').value
                     },
                     body: JSON.stringify({
                         studentId: studentId,

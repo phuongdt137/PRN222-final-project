@@ -6,6 +6,7 @@ public interface ITimetableRepository
 {
     Task<IReadOnlyList<TimetableEntry>> GetAllAsync(int? semesterId = null);
     Task<TimetableEntry?> GetByIdAsync(int id);
+    Task<TeachingAssignment?> GetAssignmentByIdAsync(int id);
     Task<IReadOnlyList<TeachingAssignment>> GetAssignmentsAsync(int? semesterId = null);
     Task<IReadOnlyList<Room>> GetRoomsAsync();
     Task<IReadOnlyList<TimeSlot>> GetTimeSlotsAsync();

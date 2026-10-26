@@ -5,6 +5,7 @@ namespace HighSchoolManagementSystem.MVC.Models.ViewModels.Assessment;
 public class AssessmentConfigurationViewModel
 {
     public IReadOnlyList<AssessmentConfigurationItemViewModel> Items { get; set; } = [];
+    public decimal TotalWeight => Items.Sum(item => item.Weight);
 }
 
 public class AssessmentConfigurationItemViewModel

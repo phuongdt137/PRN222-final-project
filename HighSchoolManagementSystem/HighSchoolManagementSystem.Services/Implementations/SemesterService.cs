@@ -108,6 +108,13 @@ public class SemesterService : ISemesterService
                     $"Mã học kỳ \"{semesterCode}\" đã tồn tại trong hệ thống.");
             }
 
+            if (await HasOverlappingSemesterAsync(academicYearId, startDate, endDate))
+            {
+                return ServiceResult<Semester>.Fail(
+                    ErrorCodes.ValidationFailed,
+                    "Khoảng thời gian học kỳ bị trùng với một học kỳ khác trong cùng năm học.");
+            }
+
             var semester = new Semester
             {
                 AcademicYearId = academicYearId,
@@ -170,6 +177,13 @@ public class SemesterService : ISemesterService
                 return ServiceResult<Semester>.Fail(
                     ErrorCodes.ResourceAlreadyExists,
                     $"Mã học kỳ \"{semesterCode}\" đã tồn tại trong hệ thống.");
+            }
+
+            if (await HasOverlappingSemesterAsync(semester.AcademicYearId, startDate, endDate, id))
+            {
+                return ServiceResult<Semester>.Fail(
+                    ErrorCodes.ValidationFailed,
+                    "Khoảng thời gian học kỳ bị trùng với một học kỳ khác trong cùng năm học.");
             }
 
             semester.SemesterCode = semesterCode;
@@ -310,5 +324,18 @@ public class SemesterService : ISemesterService
         }
 
         return null;
+    }
+
+    private async Task<bool> HasOverlappingSemesterAsync(
+        int academicYearId,
+        DateTime startDate,
+        DateTime endDate,
+        int? excludeId = null)
+    {
+        var semesters = await _semesterRepository.GetByAcademicYearIdAsync(academicYearId);
+        return semesters.Any(s =>
+            (!excludeId.HasValue || s.Id != excludeId.Value) &&
+            startDate.Date <= s.EndDate.Date &&
+            s.StartDate.Date <= endDate.Date);
     }
 }

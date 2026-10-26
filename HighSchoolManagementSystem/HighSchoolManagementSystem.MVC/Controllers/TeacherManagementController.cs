@@ -690,21 +690,12 @@ public class TeacherManagementController : Controller
         var specsResult = await _teacherService.GetSpecializationsAsync();
         var specList = specsResult.Data?.ToList() ?? new List<string>();
 
-        var subjectsResult = await _subjectService.GetAllSubjectsAsync();
-        if (subjectsResult.Success && subjectsResult.Data != null)
+        specList.AddRange(new[]
         {
-            foreach (var sub in subjectsResult.Data)
-            {
-                var baseName = sub.SubjectName.Split(' ')[0].Trim();
-                if (!string.IsNullOrEmpty(baseName))
-                {
-                    if (!specList.Contains(baseName) && !specList.Contains("Tổ " + baseName))
-                    {
-                        specList.Add(baseName);
-                    }
-                }
-            }
-        }
+            "Âm Nhạc & Nghệ Thuật", "Công Nghệ", "Địa Lý", "Giáo Dục Công Dân",
+            "Giáo Dục Quốc Phòng - An Ninh", "Giáo Dục Thể Chất", "Hóa Học", "Lịch Sử",
+            "Ngữ Văn", "Sinh Học", "Tiếng Anh", "Tin Học", "Toán Học", "Vật Lý"
+        });
 
         ViewBag.Specializations = specList.Distinct().OrderBy(x => x).ToList();
     }

@@ -23,7 +23,8 @@ public class TimetableService(ITimetableRepository repository) : ITimetableServi
     public async Task<ServiceResult<TimetableEntry>> SaveAsync(int? id, int assignmentId, int roomId, int timeSlotId, int dayOfWeek)
     {
         if (dayOfWeek < 2 || dayOfWeek > 7) return ServiceResult<TimetableEntry>.Fail(ErrorCodes.ValidationFailed, "Ngày học phải từ Thứ 2 đến Thứ 7.");
-        if (!await repository.AssignmentExistsAsync(assignmentId)) return ServiceResult<TimetableEntry>.Fail(ErrorCodes.ResourceNotFound, "Phân công giảng dạy không tồn tại.");
+        var assignment = await repository.GetAssignmentByIdAsync(assignmentId);
+        if (assignment == null) return ServiceResult<TimetableEntry>.Fail(ErrorCodes.ResourceNotFound, "Phân công giảng dạy không tồn tại.");
         if (!await repository.RoomIsUsableAsync(roomId)) return ServiceResult<TimetableEntry>.Fail(ErrorCodes.ValidationFailed, "Phòng học không tồn tại hoặc đang bảo trì.");
         if (!await repository.TimeSlotExistsAsync(timeSlotId)) return ServiceResult<TimetableEntry>.Fail(ErrorCodes.ResourceNotFound, "Khung giờ không tồn tại.");
         if (await repository.HasConflictAsync(assignmentId, roomId, timeSlotId, dayOfWeek, id)) return ServiceResult<TimetableEntry>.Fail(ErrorCodes.ValidationFailed, "Giáo viên, lớp hoặc phòng đã có lịch vào khung giờ này.");
