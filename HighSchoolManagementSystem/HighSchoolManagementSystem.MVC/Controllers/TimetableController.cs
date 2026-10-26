@@ -15,6 +15,7 @@ public class TimetableController(ITimetableService timetableService, ISemesterSe
     {
         var activeSemesterId = await timetableService.GetActiveSemesterIdAsync();
         semesterId ??= activeSemesterId;
+        weekStart = await NormalizeWeekStartAsync(semesterId, weekStart);
         var entriesResult = await timetableService.GetAllAsync(semesterId);
         var assignmentsResult = await timetableService.GetAssignmentsAsync(semesterId);
         var slotsResult = await timetableService.GetTimeSlotsAsync();
@@ -52,6 +53,12 @@ public class TimetableController(ITimetableService timetableService, ISemesterSe
     {
         var result = await timetableService.GetByIdAsync(id);
         if (!result.Success || result.Data == null) { TempData["ErrorMessage"] = result.Message; return RedirectToAction(nameof(Index)); }
+        if ((teacherId.HasValue && result.Data.TeachingAssignment.TeacherId != teacherId.Value) ||
+            (semesterId.HasValue && result.Data.TeachingAssignment.SemesterId != semesterId.Value))
+        {
+            TempData["ErrorMessage"] = "Lịch học không thuộc giáo viên hoặc học kỳ đang chọn.";
+            return RedirectToAction(nameof(Index), new { teacherId, semesterId, weekStart });
+        }
         return View(await BuildEditModel(result.Data, null, null, teacherId ?? result.Data.TeachingAssignment.TeacherId, semesterId ?? result.Data.TeachingAssignment.SemesterId, weekStart));
     }
 
@@ -59,8 +66,15 @@ public class TimetableController(ITimetableService timetableService, ISemesterSe
     public async Task<IActionResult> Edit(TimetableEditViewModel model)
     {
         if (!ModelState.IsValid) { await PopulateOptions(model); return View(model); }
+        if (!model.SelectedSemesterId.HasValue || !model.SelectedTeacherId.HasValue)
+        {
+            ModelState.AddModelError(string.Empty, "Vui lòng chọn đúng giáo viên và học kỳ trước khi xếp lịch.");
+            await PopulateOptions(model);
+            return View(model);
+        }
         var assignments = await timetableService.GetAssignmentsAsync(model.SelectedSemesterId);
-        if (model.SelectedTeacherId.HasValue && assignments.Data?.FirstOrDefault(a => a.Id == model.TeachingAssignmentId)?.TeacherId != model.SelectedTeacherId.Value)
+        var selectedAssignment = assignments.Data?.FirstOrDefault(a => a.Id == model.TeachingAssignmentId);
+        if (selectedAssignment == null || selectedAssignment.TeacherId != model.SelectedTeacherId.Value)
         {
             ModelState.AddModelError(nameof(model.TeachingAssignmentId), "Giáo viên của lịch này không được thay đổi.");
             await PopulateOptions(model);
@@ -87,6 +101,14 @@ public class TimetableController(ITimetableService timetableService, ISemesterSe
     [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Staff")]
     public async Task<IActionResult> Delete(int id, int? teacherId, int? semesterId, DateTime? weekStart)
     {
+        var existing = await timetableService.GetByIdAsync(id);
+        if (!existing.Success || existing.Data == null ||
+            (teacherId.HasValue && existing.Data.TeachingAssignment.TeacherId != teacherId.Value) ||
+            (semesterId.HasValue && existing.Data.TeachingAssignment.SemesterId != semesterId.Value))
+        {
+            TempData["ErrorMessage"] = "Lịch học không thuộc giáo viên hoặc học kỳ đang chọn.";
+            return RedirectToAction(nameof(Index), new { teacherId, semesterId, weekStart, editMode = true });
+        }
         var result = await timetableService.DeleteAsync(id);
         TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Success ? "Đã xóa tiết học thành công." : result.Message;
         return RedirectToAction(nameof(Index), new { teacherId, semesterId, weekStart, editMode = true });
@@ -98,6 +120,7 @@ public class TimetableController(ITimetableService timetableService, ISemesterSe
         var role = User.FindFirstValue(ClaimTypes.Role) ?? "";
         var userId = int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
         semesterId ??= await timetableService.GetActiveSemesterIdAsync();
+        weekStart = await NormalizeWeekStartAsync(semesterId, weekStart);
         var result = await timetableService.GetForCurrentUserAsync(role, userId, semesterId);
         var slots = await timetableService.GetTimeSlotsAsync();
         var semesters = await semesterService.GetAllAsync();
@@ -151,4 +174,22 @@ public class TimetableController(ITimetableService timetableService, ISemesterSe
 
     private static IEnumerable<SelectListItem> BuildSemesterOptions(IReadOnlyList<HighSchoolManagementSystem.Models.Entities.Semester>? semesters, int? selectedId) =>
         semesters?.Select(s => new SelectListItem($"{s.SemesterName} ({s.StartDate:dd/MM/yyyy} - {s.EndDate:dd/MM/yyyy})", s.Id.ToString(), s.Id == selectedId)) ?? [];
+
+    private async Task<DateTime?> NormalizeWeekStartAsync(int? semesterId, DateTime? weekStart)
+    {
+        if (!semesterId.HasValue || !weekStart.HasValue) return weekStart;
+
+        var semesterResult = await semesterService.GetByIdAsync(semesterId.Value);
+        var semester = semesterResult.Success ? semesterResult.Data : null;
+        if (semester == null) return weekStart;
+
+        var requestedDate = weekStart.Value.Date;
+        if (requestedDate >= semester.StartDate.Date && requestedDate <= semester.EndDate.Date)
+        {
+            return requestedDate;
+        }
+
+        TempData["ErrorMessage"] = $"Tuần đã chọn nằm ngoài thời gian của {semester.SemesterName}. Hệ thống đã chuyển về tuần bắt đầu học kỳ.";
+        return semester.StartDate.Date;
+    }
 }

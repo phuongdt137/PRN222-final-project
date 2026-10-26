@@ -24,6 +24,14 @@ public class TimetableRepository(AppDbContext context) : ITimetableRepository
 
     public Task<TimetableEntry?> GetByIdAsync(int id) => WithDetails().FirstOrDefaultAsync(e => e.Id == id);
 
+    public Task<TeachingAssignment?> GetAssignmentByIdAsync(int id) => context.TeachingAssignments
+        .Include(a => a.Teacher).ThenInclude(t => t.User)
+        .Include(a => a.Subject)
+        .Include(a => a.Class)
+        .Include(a => a.Semester)
+        .AsNoTracking()
+        .FirstOrDefaultAsync(a => a.Id == id);
+
     public async Task<IReadOnlyList<TeachingAssignment>> GetAssignmentsAsync(int? semesterId = null)
     {
         var query = context.TeachingAssignments.AsNoTracking()

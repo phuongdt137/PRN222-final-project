@@ -179,8 +179,7 @@ public class ConductEvaluationController : Controller
         return View(model);
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
+    [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Teacher,Principal,Staff")]
     public async Task<IActionResult> SaveBulk(ConductBulkEntryViewModel model)
     {
@@ -214,7 +213,7 @@ public class ConductEvaluationController : Controller
     // =========================================================================
     // 3. ĐÁNH GIÁ & CẬP NHẬT ĐƠN LẺ / NHẬN XÉT (AJAX POST)
     // =========================================================================
-    [HttpPost]
+    [HttpPost, ValidateAntiForgeryToken]
     [Authorize(Roles = "Teacher,Principal,Staff")]
     public async Task<IActionResult> SaveSingle([FromBody] SaveStudentConductDto dto)
     {

@@ -59,6 +59,7 @@ builder.Services.AddScoped<IClassService, ClassService>();
 builder.Services.AddScoped<IRoomService, RoomService>();
 builder.Services.AddScoped<ITimeSlotService, TimeSlotService>();
 builder.Services.AddScoped<IAssessmentService, AssessmentService>();
+builder.Services.AddScoped<IAssessmentConfigurationService, AssessmentConfigurationService>();
 builder.Services.AddScoped<IScoreService, ScoreService>();
 builder.Services.AddScoped<ITeacherFeedbackService, TeacherFeedbackService>();
 builder.Services.AddScoped<IConductEvaluationService, ConductEvaluationService>();
