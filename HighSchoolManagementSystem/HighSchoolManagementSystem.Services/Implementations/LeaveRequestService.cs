@@ -11,17 +11,23 @@ public class LeaveRequestService : ILeaveRequestService
     private readonly IStudentRepository _studentRepository;
     private readonly IParentRepository _parentRepository;
     private readonly ITeacherRepository _teacherRepository;
+    private readonly INotificationService _notificationService;
+    private readonly IEmailService _emailService;
 
     public LeaveRequestService(
         ILeaveRequestRepository leaveRequestRepository,
         IStudentRepository studentRepository,
         IParentRepository parentRepository,
-        ITeacherRepository teacherRepository)
+        ITeacherRepository teacherRepository,
+        INotificationService notificationService,
+        IEmailService emailService)
     {
         _leaveRequestRepository = leaveRequestRepository;
         _studentRepository = studentRepository;
         _parentRepository = parentRepository;
         _teacherRepository = teacherRepository;
+        _notificationService = notificationService;
+        _emailService = emailService;
     }
 
     public async Task<ServiceResult<IReadOnlyList<LeaveRequest>>> GetForStaffAsync(string? status)
@@ -185,6 +191,39 @@ public class LeaveRequestService : ILeaveRequestService
             await _leaveRequestRepository.SaveChangesAsync();
 
             var created = await _leaveRequestRepository.GetByIdWithDetailsAsync(leave.Id);
+
+            // Bắn thông báo và Email tới Giáo viên chủ nhiệm
+            if (created != null)
+            {
+                var activeClass = created.Student.StudentClasses
+                    .FirstOrDefault(sc => sc.Status == "Enrolled" && sc.LeftAt == null)?.Class;
+                var homeroomTeacher = activeClass?.HomeroomTeacher;
+                if (homeroomTeacher?.User != null && homeroomTeacher.UserId > 0)
+                {
+                    var stuName = created.Student.User?.FullName ?? "Học sinh";
+                    var clsName = activeClass?.ClassName ?? "Lớp";
+                    _ = _notificationService.SendNotificationAsync(
+                        requestByUserId,
+                        homeroomTeacher.UserId,
+                        $"Đơn xin nghỉ mới - {stuName} ({clsName})",
+                        $"Học sinh {stuName} ({clsName}) vừa gửi đơn xin nghỉ học từ {start:dd/MM/yyyy} đến {end:dd/MM/yyyy}. Lý do: {reason}."
+                    );
+
+                    if (!string.IsNullOrWhiteSpace(homeroomTeacher.User.Email))
+                    {
+                        _ = _emailService.SendLeaveRequestCreatedEmailAsync(
+                            homeroomTeacher.User.Email,
+                            homeroomTeacher.User.FullName,
+                            stuName,
+                            clsName,
+                            start,
+                            end,
+                            reason
+                        );
+                    }
+                }
+            }
+
             return ServiceResult<LeaveRequest>.Ok(created!, "Gửi đơn xin nghỉ thành công.");
         }
         catch
@@ -246,6 +285,52 @@ public class LeaveRequestService : ILeaveRequestService
             await _leaveRequestRepository.SaveChangesAsync();
 
             var updated = await _leaveRequestRepository.GetByIdWithDetailsAsync(id);
+
+            // Bắn thông báo & Email cho người nộp đơn và học sinh
+            if (updated != null)
+            {
+                var stuName = updated.Student.User?.FullName ?? "Học sinh";
+                var reviewerName = updated.ReviewedByUser?.FullName ?? (isStaff ? "Giáo vụ" : "Giáo viên chủ nhiệm");
+                var statusVi = approve ? "phê duyệt" : "từ chối";
+                var title = $"Đơn xin nghỉ học đã được {statusVi}";
+                var content = $"Đơn xin nghỉ từ {updated.StartDate:dd/MM/yyyy} đến {updated.EndDate:dd/MM/yyyy} của học sinh {stuName} đã được {reviewerName} {statusVi}.{(string.IsNullOrWhiteSpace(reviewNote) ? "" : $" Ý kiến: {reviewNote.Trim()}")}";
+
+                // 1. In-App notification tới người nộp
+                _ = _notificationService.SendNotificationAsync(
+                    reviewerUserId,
+                    updated.RequestBy,
+                    title,
+                    content
+                );
+
+                // Nếu người nộp khác học sinh (ví dụ phụ huynh nộp), báo thêm cho học sinh
+                if (updated.RequestBy != updated.Student.UserId && updated.Student.UserId > 0)
+                {
+                    _ = _notificationService.SendNotificationAsync(
+                        reviewerUserId,
+                        updated.Student.UserId,
+                        title,
+                        content
+                    );
+                }
+
+                // 2. Gửi Email thông báo kết quả
+                var requesterEmail = updated.RequestedByUser?.Email;
+                if (!string.IsNullOrWhiteSpace(requesterEmail))
+                {
+                    _ = _emailService.SendLeaveRequestStatusEmailAsync(
+                        requesterEmail,
+                        updated.RequestedByUser?.FullName ?? "Phụ huynh/Học sinh",
+                        stuName,
+                        updated.StartDate,
+                        updated.EndDate,
+                        updated.Status,
+                        reviewNote,
+                        reviewerName
+                    );
+                }
+            }
+
             return ServiceResult<LeaveRequest>.Ok(
                 updated!,
                 approve ? "Đã duyệt đơn xin nghỉ." : "Đã từ chối đơn xin nghỉ.");

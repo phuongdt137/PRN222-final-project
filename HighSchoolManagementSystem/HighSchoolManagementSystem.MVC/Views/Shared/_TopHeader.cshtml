@@ -26,7 +26,37 @@
         </div>
     </div>
 
-    <div class="topbar-right">
+    <div class="topbar-right d-flex align-items-center gap-3">
+        <!-- Notification Dropdown -->
+        <div class="dropdown notification-dropdown">
+            <button type="button" class="btn btn-icon position-relative border-0 bg-transparent text-secondary p-2" 
+                    id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Thông báo hệ thống">
+                <i class="bi bi-bell-fill fs-5"></i>
+                <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size: 0.7rem;">
+                    0
+                </span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end shadow-sm p-0 border" style="width: 360px; max-width: 90vw;" aria-labelledby="notifDropdownBtn">
+                <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-light">
+                    <span class="fw-bold text-dark fs-6"><i class="bi bi-bell me-1 text-primary"></i> Thông báo</span>
+                    <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" id="btnMarkAllReadHeader" style="font-size: 0.8rem;">
+                        Đọc tất cả
+                    </button>
+                </div>
+                <div id="notifListContainer" style="max-height: 340px; overflow-y: auto;">
+                    <div class="text-center py-4 text-muted" id="notifLoading">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="ms-1 small">Đang tải thông báo...</span>
+                    </div>
+                </div>
+                <div class="p-2 border-top text-center bg-light">
+                    <a asp-controller="Notification" asp-action="Index" class="btn btn-sm btn-outline-primary w-100 py-1" style="font-size: 0.85rem;">
+                        Xem tất cả thông báo
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <a asp-controller="Profile" asp-action="Index" class="user-profile-pill text-decoration-none" title="Xem hồ sơ cá nhân">
             <div class="user-avatar overflow-hidden">
                 @if (!string.IsNullOrEmpty(avatarClaim))
@@ -53,3 +83,104 @@
         </form>
     </div>
 </header>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const notifBadge = document.getElementById("notifBadge");
+        const notifContainer = document.getElementById("notifListContainer");
+        const btnMarkAll = document.getElementById("btnMarkAllReadHeader");
+        const notifDropdownBtn = document.getElementById("notifDropdownBtn");
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadNotifications() {
+            try {
+                const res = await fetch("/Notification/GetSummary");
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.success) {
+                    if (data.unreadCount > 0) {
+                        notifBadge.textContent = data.unreadCount > 99 ? "99+" : data.unreadCount;
+                        notifBadge.classList.remove("d-none");
+                    } else {
+                        notifBadge.classList.add("d-none");
+                    }
+
+                    if (!data.recent || data.recent.length === 0) {
+                        notifContainer.innerHTML = '<div class="text-center py-4 text-muted small"><i class="bi bi-bell-slash d-block fs-4 mb-1"></i>Chưa có thông báo nào</div>';
+                    } else {
+                        let html = '';
+                        data.recent.forEach(n => {
+                            const unreadClass = !n.isRead ? 'bg-light border-start border-3 border-primary' : '';
+                            html += `
+                                <div class="p-3 border-bottom notif-item ${unreadClass}" style="cursor: pointer;" onclick="markSingleRead(${n.id})">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <span class="badge bg-${n.badgeColor} me-1" style="font-size: 0.7rem;">${escapeHtml(n.category)}</span>
+                                        <small class="text-muted" style="font-size: 0.75rem;">${escapeHtml(n.timeAgo)}</small>
+                                    </div>
+                                    <div class="fw-semibold text-dark small mb-1">${escapeHtml(n.title)}</div>
+                                    <div class="text-secondary small text-truncate-2" style="font-size: 0.8rem; line-height: 1.35;">${escapeHtml(n.content)}</div>
+                                </div>
+                            `;
+                        });
+                        notifContainer.innerHTML = html;
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi khi tải thông báo:", err);
+            }
+        }
+
+        window.markSingleRead = async function(id) {
+            try {
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                const token = tokenInput ? tokenInput.value : '';
+                await fetch(`/Notification/MarkAsRead?id=${id}`, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': token,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                loadNotifications();
+            } catch (err) {
+                console.error("Lỗi khi đánh dấu đã đọc:", err);
+            }
+        };
+
+        if (btnMarkAll) {
+            btnMarkAll.addEventListener("click", async function (e) {
+                e.stopPropagation();
+                try {
+                    const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                    const token = tokenInput ? tokenInput.value : '';
+                    await fetch('/Notification/MarkAllAsRead', {
+                        method: 'POST',
+                        headers: {
+                            'RequestVerificationToken': token,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    loadNotifications();
+                } catch (err) {
+                    console.error("Lỗi khi đánh dấu tất cả đã đọc:", err);
+                }
+            });
+        }
+
+        if (notifDropdownBtn) {
+            notifDropdownBtn.addEventListener("show.bs.dropdown", function () {
+                loadNotifications();
+            });
+        }
+
+        loadNotifications();
+        // Tự động kiểm tra thông báo mỗi 60 giây
+        setInterval(loadNotifications, 60000);
+    });
+</script>

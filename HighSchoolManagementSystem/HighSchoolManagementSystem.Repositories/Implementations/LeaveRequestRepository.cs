@@ -17,7 +17,7 @@ public class LeaveRequestRepository : ILeaveRequestRepository
     private IQueryable<LeaveRequest> DetailedQuery() =>
         _context.LeaveRequests
             .Include(lr => lr.Student).ThenInclude(s => s.User)
-            .Include(lr => lr.Student).ThenInclude(s => s.StudentClasses).ThenInclude(sc => sc.Class)
+            .Include(lr => lr.Student).ThenInclude(s => s.StudentClasses).ThenInclude(sc => sc.Class).ThenInclude(c => c.HomeroomTeacher).ThenInclude(t => t!.User)
             .Include(lr => lr.RequestedByUser)
             .Include(lr => lr.ReviewedByUser);
 

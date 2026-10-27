@@ -40,6 +40,7 @@ builder.Services.AddScoped<IConductEvaluationRepository, ConductEvaluationReposi
 builder.Services.AddScoped<ITimetableRepository, TimetableRepository>();
 builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
 builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
@@ -48,6 +49,7 @@ builder.Services.AddScoped<IFileStorageService>(sp =>
     new FileStorageService(builder.Environment.WebRootPath));
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<ITeacherService, TeacherService>();
 builder.Services.AddScoped<IParentService, ParentService>();

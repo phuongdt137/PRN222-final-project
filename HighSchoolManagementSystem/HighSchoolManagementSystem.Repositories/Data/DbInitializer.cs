@@ -418,6 +418,9 @@ public static class DbInitializer
 
         // 4. Seed năm học mẫu (để Staff xem danh sách)
         await SeedAcademicYearsAsync(context);
+
+        // 5. Seed Thời khóa biểu, Điểm danh mẫu và Thông báo kết nối các Role
+        await SeedTimetableAttendanceAndNotificationsAsync(context);
     }
 
     private static async Task SeedAcademicYearsAsync(AppDbContext context)
@@ -671,6 +674,336 @@ public static class DbInitializer
                 {
                     await context.SemesterReports.AddRangeAsync(sampleReports);
                 }
+                await context.SaveChangesAsync();
+            }
+        }
+    }
+
+    private static async Task SeedTimetableAttendanceAndNotificationsAsync(AppDbContext context)
+    {
+        var semester = await context.Semesters.FirstOrDefaultAsync(s => s.IsActive)
+                       ?? await context.Semesters.FirstOrDefaultAsync();
+        if (semester == null) return;
+
+        var class10A1 = await context.Classes.FirstOrDefaultAsync(c => c.ClassName == "10A1");
+        if (class10A1 == null) return;
+
+        var roomA101 = await context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == "A101")
+                       ?? await context.Rooms.FirstOrDefaultAsync();
+        var roomC101 = await context.Rooms.FirstOrDefaultAsync(r => r.RoomCode == "C101")
+                       ?? roomA101;
+        if (roomA101 == null) return;
+
+        var slot1 = await context.TimeSlots.FirstOrDefaultAsync(t => t.SlotCode == "T1");
+        var slot2 = await context.TimeSlots.FirstOrDefaultAsync(t => t.SlotCode == "T2");
+        var slot3 = await context.TimeSlots.FirstOrDefaultAsync(t => t.SlotCode == "T3");
+        var slot4 = await context.TimeSlots.FirstOrDefaultAsync(t => t.SlotCode == "T4");
+        if (slot1 == null || slot2 == null || slot3 == null || slot4 == null) return;
+
+        var math10 = await context.Subjects.FirstOrDefaultAsync(s => s.SubjectCode == "MATH10");
+        var tin10 = await context.Subjects.FirstOrDefaultAsync(s => s.SubjectCode == "TIN10");
+        var teacherGv001 = await context.Teachers.FirstOrDefaultAsync(t => t.TeacherCode == "GV001");
+        var teacherGv999 = await context.Teachers.FirstOrDefaultAsync(t => t.TeacherCode == "GV999");
+        if (math10 == null || tin10 == null || teacherGv001 == null) return;
+
+        var assignMath = await context.TeachingAssignments.FirstOrDefaultAsync(ta =>
+            ta.ClassId == class10A1.Id && ta.SubjectId == math10.Id && ta.SemesterId == semester.Id);
+        var assignTin = await context.TeachingAssignments.FirstOrDefaultAsync(ta =>
+            ta.ClassId == class10A1.Id && ta.SubjectId == tin10.Id && ta.SemesterId == semester.Id);
+        if (assignMath == null) return;
+
+        // 1. Seed Thời khóa biểu (TimetableEntries) nếu chưa có
+        if (!await context.TimetableEntries.AnyAsync(te => te.TeachingAssignment.ClassId == class10A1.Id))
+        {
+            var entries = new List<TimetableEntry>();
+            for (int day = 2; day <= 6; day++)
+            {
+                entries.Add(new TimetableEntry
+                {
+                    TeachingAssignmentId = assignMath.Id,
+                    TimeSlotId = slot1.Id,
+                    RoomId = roomA101.Id,
+                    DayOfWeek = day
+                });
+                entries.Add(new TimetableEntry
+                {
+                    TeachingAssignmentId = assignMath.Id,
+                    TimeSlotId = slot2.Id,
+                    RoomId = roomA101.Id,
+                    DayOfWeek = day
+                });
+
+                if (assignTin != null)
+                {
+                    entries.Add(new TimetableEntry
+                    {
+                        TeachingAssignmentId = assignTin.Id,
+                        TimeSlotId = slot3.Id,
+                        RoomId = roomC101!.Id,
+                        DayOfWeek = day
+                    });
+                    entries.Add(new TimetableEntry
+                    {
+                        TeachingAssignmentId = assignTin.Id,
+                        TimeSlotId = slot4.Id,
+                        RoomId = roomC101!.Id,
+                        DayOfWeek = day
+                    });
+                }
+            }
+
+            await context.TimetableEntries.AddRangeAsync(entries);
+            await context.SaveChangesAsync();
+        }
+
+        // 2. Seed Bảng điểm danh mẫu (AttendanceSessions & Records) cho hôm nay
+        var today = DateTime.Today;
+        int currentDayOfWeek = (int)today.DayOfWeek + 1;
+        if (currentDayOfWeek < 2 || currentDayOfWeek > 6) currentDayOfWeek = 2;
+
+        var staffUser = await context.Users.FirstOrDefaultAsync(u => u.Username == "staff");
+        var studentsInClass = await context.StudentClasses
+            .Where(sc => sc.ClassId == class10A1.Id && sc.Status == "Enrolled" && sc.LeftAt == null)
+            .Select(sc => sc.Student)
+            .ToListAsync();
+
+        if (studentsInClass.Any() && !await context.AttendanceSessions.AnyAsync(s => s.AttendanceDate == today && s.ClassId == class10A1.Id))
+        {
+            var entryMath = await context.TimetableEntries
+                .FirstOrDefaultAsync(e => e.TeachingAssignmentId == assignMath.Id && e.TimeSlotId == slot1.Id && e.DayOfWeek == currentDayOfWeek)
+                ?? await context.TimetableEntries.FirstOrDefaultAsync(e => e.TeachingAssignmentId == assignMath.Id);
+
+            if (entryMath != null)
+            {
+                var session1 = new AttendanceSession
+                {
+                    TimetableEntryId = entryMath.Id,
+                    AttendanceDate = today,
+                    ClassId = class10A1.Id,
+                    SubjectId = math10.Id,
+                    SemesterId = semester.Id,
+                    AssignedTeacherId = teacherGv001.Id,
+                    TimeSlotId = slot1.Id,
+                    RoomId = roomA101.Id,
+                    SlotCode = slot1.SlotCode,
+                    SchoolSession = slot1.Session,
+                    PeriodNo = slot1.PeriodNo,
+                    StartTime = slot1.StartTime,
+                    EndTime = slot1.EndTime,
+                    Status = AttendanceStatuses.Open,
+                    CreatedByUserId = staffUser?.Id,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                foreach (var st in studentsInClass)
+                {
+                    session1.Records.Add(new AttendanceRecord
+                    {
+                        StudentId = st.Id,
+                        TimetableEntryId = entryMath.Id,
+                        AttendanceDate = today,
+                        Status = AttendanceStatuses.NotMarked
+                    });
+                }
+
+                await context.AttendanceSessions.AddAsync(session1);
+            }
+
+            if (assignTin != null && teacherGv999 != null)
+            {
+                var entryTin = await context.TimetableEntries
+                    .FirstOrDefaultAsync(e => e.TeachingAssignmentId == assignTin.Id && e.TimeSlotId == slot3.Id && e.DayOfWeek == currentDayOfWeek)
+                    ?? await context.TimetableEntries.FirstOrDefaultAsync(e => e.TeachingAssignmentId == assignTin.Id);
+
+                if (entryTin != null)
+                {
+                    var session2 = new AttendanceSession
+                    {
+                        TimetableEntryId = entryTin.Id,
+                        AttendanceDate = today,
+                        ClassId = class10A1.Id,
+                        SubjectId = tin10.Id,
+                        SemesterId = semester.Id,
+                        AssignedTeacherId = teacherGv999.Id,
+                        TimeSlotId = slot3.Id,
+                        RoomId = roomC101!.Id,
+                        SlotCode = slot3.SlotCode,
+                        SchoolSession = slot3.Session,
+                        PeriodNo = slot3.PeriodNo,
+                        StartTime = slot3.StartTime,
+                        EndTime = slot3.EndTime,
+                        Status = AttendanceStatuses.Submitted,
+                        CreatedByUserId = staffUser?.Id,
+                        CreatedAt = DateTime.UtcNow.AddHours(-3),
+                        SubmittedAt = DateTime.UtcNow.AddHours(-1)
+                    };
+
+                    int idx = 0;
+                    foreach (var st in studentsInClass)
+                    {
+                        string recordStatus = AttendanceStatuses.Present;
+                        string? comment = null;
+
+                        if (idx == 0)
+                        {
+                            recordStatus = AttendanceStatuses.Absent;
+                            comment = "Vắng không phép";
+                        }
+                        else if (idx == 1)
+                        {
+                            recordStatus = AttendanceStatuses.Late;
+                            comment = "Đi muộn 15 phút";
+                        }
+                        else if (idx == 2)
+                        {
+                            recordStatus = AttendanceStatuses.Excused;
+                            comment = "Gia đình có việc xin nghỉ";
+                        }
+
+                        session2.Records.Add(new AttendanceRecord
+                        {
+                            StudentId = st.Id,
+                            TimetableEntryId = entryTin.Id,
+                            AttendanceDate = today,
+                            Status = recordStatus,
+                            Comment = comment,
+                            RecordedBy = teacherGv999.Id,
+                            RecordedAt = DateTime.UtcNow.AddHours(-1)
+                        });
+                        idx++;
+                    }
+
+                    await context.AttendanceSessions.AddAsync(session2);
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        // 3. Seed Thông báo mẫu kết nối các Role (Notifications)
+        if (!await context.Notifications.AnyAsync())
+        {
+            var principal = await context.Users.FirstOrDefaultAsync(u => u.Username == "principal");
+            var staff = await context.Users.FirstOrDefaultAsync(u => u.Username == "staff");
+            var teacher = await context.Users.FirstOrDefaultAsync(u => u.Username == "teacher");
+            var student = await context.Users.FirstOrDefaultAsync(u => u.Username == "student");
+            var parent = await context.Users.FirstOrDefaultAsync(u => u.Username == "parent");
+
+            if (principal != null && staff != null && teacher != null && student != null && parent != null)
+            {
+                var sampleNotifications = new List<Notification>
+                {
+                    // Thông báo gửi tới Staff (Cô Trần Thị Quản Trị)
+                    new Notification
+                    {
+                        SenderId = principal.Id,
+                        RecipientId = staff.Id,
+                        Title = "Kế hoạch rà soát học vụ Học kỳ 1",
+                        Content = "Đề nghị bộ phận Giáo vụ kiểm tra lại phân công chuyên môn và thời khóa biểu các lớp khối 10 để chuẩn bị cho kỳ kiểm tra định kỳ.",
+                        IsRead = false,
+                        SentAt = DateTime.UtcNow.AddHours(-2)
+                    },
+                    new Notification
+                    {
+                        SenderId = teacher.Id,
+                        RecipientId = staff.Id,
+                        Title = "Báo cáo nề nếp lớp 10A1",
+                        Content = "Giáo viên chủ nhiệm lớp 10A1 đã hoàn tất cập nhật sổ điểm danh và tổng hợp danh sách chuyên cần tuần 8.",
+                        IsRead = true,
+                        SentAt = DateTime.UtcNow.AddHours(-6)
+                    },
+                    new Notification
+                    {
+                        SenderId = principal.Id,
+                        RecipientId = staff.Id,
+                        Title = "Thông báo họp giao ban tuần",
+                        Content = "Kính mời các đồng chí cán bộ quản trị học vụ tham dự họp giao ban vào 8h00 sáng Thứ Hai tại Phòng Hội Đồng.",
+                        IsRead = false,
+                        SentAt = DateTime.UtcNow.AddDays(-1)
+                    },
+
+                    // Thông báo gửi tới Teacher (Thầy Lê Văn Giáo Viên)
+                    new Notification
+                    {
+                        SenderId = staff.Id,
+                        RecipientId = teacher.Id,
+                        Title = "Thời khóa biểu mới lớp 10A1",
+                        Content = "Lịch dạy môn Toán Học 10 lớp 10A1 đã được bố trí vào Tiết 1-2 các ngày trong tuần tại phòng A101.",
+                        IsRead = false,
+                        SentAt = DateTime.UtcNow.AddHours(-3)
+                    },
+                    new Notification
+                    {
+                        SenderId = parent.Id,
+                        RecipientId = teacher.Id,
+                        Title = "Đơn xin nghỉ phép của em Phạm Minh Đức",
+                        Content = "Kính gửi Thầy chủ nhiệm, em Phạm Minh Đức xin phép nghỉ học 01 ngày để đi khám bệnh. Kính mong Thầy xem xét và phê duyệt.",
+                        IsRead = false,
+                        SentAt = DateTime.UtcNow.AddHours(-4)
+                    },
+                    new Notification
+                    {
+                        SenderId = principal.Id,
+                        RecipientId = teacher.Id,
+                        Title = "Quy định chốt sổ điểm kiểm tra",
+                        Content = "Nhắc nhở giáo viên bộ môn hoàn thành nhập điểm thường xuyên trước ngày 30 hàng tháng để hệ thống tự động khóa điểm theo quy chế.",
+                        IsRead = true,
+                        SentAt = DateTime.UtcNow.AddDays(-2)
+                    },
+
+                    // Thông báo gửi tới Student (Em Phạm Minh Đức)
+                    new Notification
+                    {
+                        SenderId = teacher.Id,
+                        RecipientId = student.Id,
+                        Title = "Thông báo điểm bài kiểm tra môn Toán 10",
+                        Content = "Thầy đã cập nhật điểm kiểm tra thường xuyên của em vào hệ thống: 9.0 điểm. Hãy tiếp tục phát huy nhé!",
+                        IsRead = false,
+                        SentAt = DateTime.UtcNow.AddHours(-5)
+                    },
+                    new Notification
+                    {
+                        SenderId = staff.Id,
+                        RecipientId = student.Id,
+                        Title = "Lịch sinh hoạt đầu tuần & Chào cờ",
+                        Content = "Yêu cầu tất cả học sinh mặc đồng phục trang nghiêm tham dự lễ Chào cờ đầu tuần lúc 07h00 sáng Thứ Hai.",
+                        IsRead = true,
+                        SentAt = DateTime.UtcNow.AddDays(-1)
+                    },
+
+                    // Thông báo gửi tới Parent (Phụ huynh Phạm Văn Hải)
+                    new Notification
+                    {
+                        SenderId = teacher.Id,
+                        RecipientId = parent.Id,
+                        Title = "Thông báo chuyên cần của học sinh Phạm Minh Đức",
+                        Content = "Kính gửi phụ huynh, học sinh Phạm Minh Đức đã tham gia đầy đủ và đúng giờ các tiết học trong tuần vừa qua.",
+                        IsRead = false,
+                        SentAt = DateTime.UtcNow.AddHours(-5)
+                    },
+                    new Notification
+                    {
+                        SenderId = staff.Id,
+                        RecipientId = parent.Id,
+                        Title = "Mời họp phụ huynh đầu năm học 2026-2027",
+                        Content = "Trân trọng kính mời Quý phụ huynh tham dự buổi họp phụ huynh học sinh định kỳ vào 8h00 sáng Chủ nhật tại phòng học lớp 10A1.",
+                        IsRead = true,
+                        SentAt = DateTime.UtcNow.AddDays(-2)
+                    },
+
+                    // Thông báo gửi tới Principal (Hiệu trưởng)
+                    new Notification
+                    {
+                        SenderId = staff.Id,
+                        RecipientId = principal.Id,
+                        Title = "Báo cáo tiến độ phân công giảng dạy",
+                        Content = "Bộ phận Giáo vụ đã hoàn thành phân công giảng dạy và xếp thời khóa biểu cho toàn bộ 12 lớp khối 10, 11, 12.",
+                        IsRead = false,
+                        SentAt = DateTime.UtcNow.AddHours(-1)
+                    }
+                };
+
+                await context.Notifications.AddRangeAsync(sampleNotifications);
                 await context.SaveChangesAsync();
             }
         }

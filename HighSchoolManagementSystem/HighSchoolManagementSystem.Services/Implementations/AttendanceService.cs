@@ -10,8 +10,12 @@ using Microsoft.Extensions.Logging;
 
 namespace HighSchoolManagementSystem.Services.Implementations;
 
-public class AttendanceService(IAttendanceRepository repository, TimeProvider clock,
-    ILogger<AttendanceService> logger) : IAttendanceService
+public class AttendanceService(
+    IAttendanceRepository repository, 
+    TimeProvider clock,
+    ILogger<AttendanceService> logger,
+    INotificationService notificationService,
+    IEmailService emailService) : IAttendanceService
 {
     private DateTimeOffset Now => clock.GetUtcNow();
     private static ServiceResult Forbidden() => ServiceResult.Fail(ErrorCodes.AuthForbidden, "Bạn không có quyền thực hiện thao tác này.");
@@ -94,7 +98,12 @@ public class AttendanceService(IAttendanceRepository repository, TimeProvider cl
         if (!IsStaff(await repository.GetActorAsync(userId))) return Forbidden();
         var ids = input.EntryIds.Distinct().ToArray();
         if (ids.Length == 0 || ids.Length > 100) return Invalid("Chọn từ 1 đến 100 tiết học.");
-        var entries = await repository.Entries.Where(e => ids.Contains(e.Id)).ToListAsync();
+        var entries = await repository.Entries
+            .Include(e => e.TeachingAssignment).ThenInclude(ta => ta.Teacher)
+            .Include(e => e.TeachingAssignment).ThenInclude(ta => ta.Class)
+            .Include(e => e.TeachingAssignment).ThenInclude(ta => ta.Subject)
+            .Where(e => ids.Contains(e.Id))
+            .ToListAsync();
         if (entries.Count != ids.Length) return Invalid("Có tiết học không còn tồn tại. Vui lòng tải lại.");
         var created = 0;
         var skipped = 0;
@@ -119,6 +128,28 @@ public class AttendanceService(IAttendanceRepository repository, TimeProvider cl
             Audit(session, userId, "Create", new { Students = roster });
             created++;
         }
+
+        // Bắn thông báo tới Giáo viên được phân công điểm danh
+        if (pending.Any())
+        {
+            foreach (var s in pending)
+            {
+                var matchEntry = entries.FirstOrDefault(e => e.Id == s.TimetableEntryId);
+                var teacherUserId = matchEntry?.TeachingAssignment?.Teacher?.UserId;
+                if (teacherUserId.HasValue && teacherUserId.Value > 0)
+                {
+                    var clsName = matchEntry?.TeachingAssignment?.Class?.ClassName ?? "Lớp";
+                    var subName = matchEntry?.TeachingAssignment?.Subject?.SubjectName ?? "Môn học";
+                    _ = notificationService.SendNotificationAsync(
+                        userId,
+                        teacherUserId.Value,
+                        $"Bảng điểm danh mới - {subName} ({clsName})",
+                        $"Bảng điểm danh lớp {clsName} tiết {s.PeriodNo} môn {subName} ngày {s.AttendanceDate:dd/MM/yyyy} đã được tạo. Thầy/Cô vui lòng vào điểm danh đúng giờ."
+                    );
+                }
+            }
+        }
+
         return ServiceResult.Ok($"Đã tạo {created} bảng điểm danh; {skipped} bảng đã tồn tại.");
     });
 
@@ -165,7 +196,11 @@ public class AttendanceService(IAttendanceRepository repository, TimeProvider cl
         {
             var actor = await repository.GetActorAsync(userId);
             if (!IsTeacher(actor)) return Forbidden();
-            var session = await repository.Sessions.Include(s => s.Records).SingleOrDefaultAsync(s => s.Id == input.SessionId);
+            var session = await repository.Sessions
+                .Include(s => s.Records)
+                .Include(s => s.Class)
+                .Include(s => s.Subject)
+                .SingleOrDefaultAsync(s => s.Id == input.SessionId);
             if (session == null) return Invalid("Không tìm thấy bảng điểm danh.");
             if (!Owns(actor, session)) return Forbidden();
             deadline = AttendanceRules.Deadline(session.AttendanceDate);
@@ -220,6 +255,57 @@ public class AttendanceService(IAttendanceRepository repository, TimeProvider cl
             session.SubmittedAt ??= Now.UtcDateTime;
             session.UpdatedAt = Now.UtcDateTime;
             Audit(session, userId, wasSubmitted ? "Update" : "Submit", new { Before = before, After = input.Students, Reason = Clean(input.Reason) });
+
+            // Bắn thông báo & Email khi có học sinh Vắng không phép hoặc Đi muộn
+            var alertRows = changes
+                .Where(c => c.Status is AttendanceStatuses.Absent or AttendanceStatuses.Late)
+                .ToList();
+
+            if (alertRows.Any())
+            {
+                var alertIds = alertRows.Select(c => c.StudentId).ToList();
+                var alertStudents = await repository.Students
+                    .AsNoTracking()
+                    .Include(s => s.User)
+                    .Include(s => s.Parent).ThenInclude(p => p!.User)
+                    .Where(s => alertIds.Contains(s.Id))
+                    .ToListAsync();
+
+                foreach (var st in alertStudents)
+                {
+                    var row = alertRows.First(c => c.StudentId == st.Id);
+                    var statusVi = row.Status == AttendanceStatuses.Absent ? "Vắng không phép" : "Đi muộn";
+                    var title = $"Thông báo chuyên cần: {statusVi} - Tiết {session.PeriodNo}";
+                    var content = $"Học sinh {st.User.FullName} đã được ghi nhận: {statusVi} trong tiết {session.PeriodNo} (môn {session.Subject?.SubjectName ?? "Môn học"}) ngày {session.AttendanceDate:dd/MM/yyyy}.{(string.IsNullOrWhiteSpace(row.Comment) ? "" : $" Ghi chú: {row.Comment}")}";
+
+                    if (st.UserId > 0)
+                    {
+                        _ = notificationService.SendNotificationAsync(userId, st.UserId, title, content);
+                    }
+
+                    if (st.Parent?.UserId > 0)
+                    {
+                        _ = notificationService.SendNotificationAsync(userId, st.Parent.UserId, title, content);
+                    }
+
+                    var parentEmail = st.Parent?.User?.Email;
+                    if (!string.IsNullOrWhiteSpace(parentEmail))
+                    {
+                        _ = emailService.SendAttendanceAlertEmailAsync(
+                            parentEmail,
+                            st.Parent?.User?.FullName ?? "Quý phụ huynh",
+                            st.User.FullName,
+                            session.Class?.ClassName ?? "Lớp",
+                            session.Subject?.SubjectName ?? "Môn học",
+                            session.PeriodNo,
+                            session.AttendanceDate,
+                            row.Status,
+                            row.Comment
+                        );
+                    }
+                }
+            }
+
             return ServiceResult.Ok(wasSubmitted ? "Đã cập nhật điểm danh." : "Đã xác nhận điểm danh.");
         }, () => deadline);
     }

@@ -469,6 +469,13 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
+                    <a asp-controller="Notification" asp-action="Index" 
+                       class="sidebar-link @(currentController == "Notification" ? "active" : "")">
+                        <i class="bi bi-bell-fill"></i>
+                        <span>Thông báo của tôi</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
                     <a asp-controller="Profile" asp-action="ChangePassword" 
                        class="sidebar-link @(currentController == "Profile" && currentAction == "ChangePassword" ? "active" : "")">
                         <i class="bi bi-key-fill"></i>
