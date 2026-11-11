@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="HighSchoolManagementSystem.Attendance.Tests/HighSchoolManagementSystem.Attendance.Tests.csproj" />
   <Project Path="HighSchoolManagementSystem.Models/HighSchoolManagementSystem.Models.csproj" />
   <Project Path="HighSchoolManagementSystem.MVC/HighSchoolManagementSystem.MVC.csproj" />
   <Project Path="HighSchoolManagementSystem.Repositories/HighSchoolManagementSystem.Repositories.csproj" />

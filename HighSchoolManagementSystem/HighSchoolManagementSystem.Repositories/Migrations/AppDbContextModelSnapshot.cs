@@ -161,7 +161,7 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                         .HasColumnType("nvarchar(30)")
                         .HasColumnName("action");
 
-                    b.Property<int>("ActorUserId")
+                    b.Property<int?>("ActorUserId")
                         .HasColumnType("int")
                         .HasColumnName("actor_user_id");
 
@@ -1409,8 +1409,7 @@ namespace HighSchoolManagementSystem.Repositories.Migrations
                     b.HasOne("HighSchoolManagementSystem.Models.Entities.User", "ActorUser")
                         .WithMany()
                         .HasForeignKey("ActorUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("HighSchoolManagementSystem.Models.Entities.AttendanceSession", "AttendanceSession")
                         .WithMany()

@@ -29,29 +29,6 @@ public class AttendanceController(IAttendanceService attendance) : Controller
         return result.Success ? View("Index", result.Data) : Error(result);
     }
 
-    [HttpGet, Authorize(Roles = "Staff")]
-    public async Task<IActionResult> Create(DateTime? date, int? semesterId, int? classId)
-    {
-        var result = await attendance.PreviewAsync(UserId, new() { Date = date ?? SchoolDate.Today, SemesterId = semesterId, ClassId = classId });
-        return result.Success ? View(result.Data) : Error(result);
-    }
-
-    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Staff")]
-    public async Task<IActionResult> Create([Bind("Date,SemesterId,ClassId,EntryIds")] AttendanceCreateDto input)
-    {
-        if (!ModelState.IsValid) return BadRequest("Ngày hoặc tiết học không hợp lệ.");
-        var result = await attendance.CreateAsync(UserId, input);
-        if (!result.Success)
-        {
-            if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
-            ModelState.AddModelError("", result.Message ?? "Không thể tạo bảng.");
-            var preview = await attendance.PreviewAsync(UserId, input);
-            return preview.Success ? View(preview.Data) : Error(preview);
-        }
-        TempData["SuccessMessage"] = result.Message;
-        return RedirectToAction(nameof(Manage), new { fromDate = input.Date.ToString("yyyy-MM-dd"), toDate = input.Date.ToString("yyyy-MM-dd"), input.SemesterId, input.ClassId });
-    }
-
     [HttpGet, Authorize(Roles = "Staff,Teacher")]
     public async Task<IActionResult> Take(int id)
     {
@@ -59,7 +36,7 @@ public class AttendanceController(IAttendanceService attendance) : Controller
         return result.Success ? View(result.Data) : Error(result);
     }
 
-    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Teacher")]
+    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Staff,Teacher")]
     public async Task<IActionResult> Save(AttendanceSaveDto input)
     {
         if (!ModelState.IsValid)
@@ -71,15 +48,6 @@ public class AttendanceController(IAttendanceService attendance) : Controller
         if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
         TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Message;
         return RedirectToAction(nameof(Take), new { id = input.SessionId });
-    }
-
-    [HttpPost, ValidateAntiForgeryToken, Authorize(Roles = "Staff")]
-    public async Task<IActionResult> ManageSession(int sessionId, string rowVersion, string operation, string? reason)
-    {
-        var result = await attendance.ManageSessionAsync(UserId, sessionId, rowVersion, operation, reason);
-        if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
-        TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Message;
-        return RedirectToAction(nameof(Take), new { id = sessionId });
     }
 
     [HttpGet, Authorize(Roles = "Student")]

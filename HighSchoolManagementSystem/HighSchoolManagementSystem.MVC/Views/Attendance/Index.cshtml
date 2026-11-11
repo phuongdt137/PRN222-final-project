@@ -5,8 +5,8 @@
     var action = Model.IsStaff ? "Manage" : "MyTeachingSessions";
 }
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <div><h1 class="h3">@ViewData["Title"]</h1><p class="text-muted mb-0">Mỗi bảng tương ứng một tiết học vào một ngày. Giáo viên được sửa trước 00:00 ngày kế tiếp (giờ Việt Nam).</p></div>
-    @if (Model.IsStaff) { <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg"></i> Tạo bảng điểm danh</a> }
+    <div><h1 class="h3">@ViewData["Title"]</h1><p class="text-muted mb-0">Hệ thống tự tạo bảng trong ngày từ lịch học và tự đồng bộ bảng chưa điểm danh. Staff chỉ sửa sau khi giáo viên điểm danh. Giáo viên được sửa trước 00:00 ngày kế tiếp (giờ Việt Nam).</p></div>
+
 </div>
 <partial name="_Messages" />
 <form method="get" class="card card-body mb-3">

@@ -1,70 +1,74 @@
-# Điểm danh theo slot — hướng dẫn sử dụng và triển khai
+# Điểm danh theo lịch học — cập nhật 11/11/2026
 
-Chức năng được bổ sung ngày 21/10/2026 trên kiến trúc MVC → Services → Repositories → Models hiện có.
+## Phạm vi
 
-## Quy tắc đã triển khai
+Module attendance gồm nghiệp vụ điểm danh, tiến trình tự động đăng ký trong Program.cs và phần dữ liệu điểm danh trên Dashboard giáo viên/học sinh/phụ huynh. Các action và giao diện ngoài phần điểm danh của Dashboard được giữ nguyên. Mã nguồn các module thời khóa biểu, đơn xin nghỉ, thông báo, email và điểm số giữ nguyên. Attendance đọc dữ liệu qua AttendanceRepository hiện có, gọi lại INotificationService và IEmailService hiện có.
 
-- Một bảng ứng với một tiết trong thời khóa biểu và một ngày cụ thể. Slot sáng/chiều có cùng số tiết vẫn là hai slot riêng.
-- Staff tạo bảng; giáo viên phụ trách nhập kết quả; học sinh xem chính mình; phụ huynh chỉ xem học sinh đã liên kết với tài khoản.
-- Giáo viên được nhập và sửa từ giờ bắt đầu tiết học đến **trước 00:00 ngày kế tiếp, theo giờ Việt Nam (UTC+7)**. Ví dụ tiết ngày 21/10 được sửa đến 23:59:59 ngày 21/10; từ 00:00 ngày 22/10 chỉ được xem.
-- Máy chủ kiểm tra hạn khi lưu, kể cả biểu mẫu đã mở từ trước. Giao diện cũng tự khóa khi hết hạn. Không có thao tác mở lại sau hạn.
-- Học sinh mới trong bảng có trạng thái **Chưa điểm danh**. Chỉ khi giáo viên xác nhận đủ danh sách mới công bố kết quả.
-- Kết quả gồm Có mặt, Vắng không phép, Đi muộn, Vắng có phép. Đơn nghỉ đã duyệt đúng học sinh/ngày được gợi ý; vắng có phép không có đơn cần ghi lý do.
-- Khi sửa kết quả đã xác nhận, giáo viên phải nhập lý do. Hệ thống lưu người thao tác, thời gian và nội dung thay đổi.
-- Bảng lưu lớp, giáo viên, môn và slot tại lúc tạo; chuyển lớp hoặc sửa thời khóa biểu không tự thay đổi lịch sử đã xác nhận.
-- Khi lịch hoặc danh sách của bảng chưa xác nhận thay đổi, staff phải đồng bộ trước khi giáo viên điểm danh.
-- Chống tạo trùng và lưu đè biểu mẫu cũ. Nếu có thao tác đồng thời gây xung đột, hệ thống yêu cầu tải lại; không lưu một phần danh sách.
+## Dashboard qua controller và ViewModel
 
-## Cách dùng
+Đã bỏ AttendanceDashboardViewComponent. Action Dashboard của TeacherController, StudentController và ParentController gọi IAttendanceService, đưa dữ liệu/kết quả lỗi vào ViewModel riêng của từng vai trò rồi trả về View. View không gọi service, không dùng Component.InvokeAsync để lấy dữ liệu điểm danh.
 
-### Staff
+- TeacherDashboardViewModel chứa kết quả điểm danh hôm nay; controller chỉ truy vấn một lần, dùng chung cho thẻ và bảng.
+- StudentDashboardViewModel và ParentDashboardViewModel chứa chuyên cần từ đầu tháng đến hôm nay và bảng điểm danh hôm nay. Mỗi phần có thông báo lỗi riêng; một phần tải lỗi không làm mất dữ liệu phần còn lại.
+- Các partial chỉ hiển thị dữ liệu, nằm tại Views/Shared/AttendanceDashboard: _TeacherCard.cshtml, _TeacherTable.cshtml, _StudentCard.cshtml và _StudentTable.cshtml. Học sinh và phụ huynh dùng chung hai partial Student.
+- Controller dùng user ID từ claim đã xác thực; thiếu/sai ID hoặc service trả về không có quyền thì trả Forbid. Phân quyền dữ liệu học sinh/con vẫn do AttendanceService hiện có kiểm tra.
+- Các thao tác mở danh sách, mở bảng và lưu điểm danh tiếp tục đi qua AttendanceController. Nghiệp vụ tạo bảng, kiểm tra đơn nghỉ, lưu log và gửi email ở service/tiến trình nền.
 
-Điều kiện: học kỳ đang mở phải có phân công giảng dạy và các tiết trong thời khóa biểu. Nếu trang tạo bảng chưa có tiết, thực hiện **Phân công giảng dạy → Quản lý thời khóa biểu → chọn giáo viên → Bật Xếp Lịch (+) → thêm tiết**, rồi quay lại chọn ngày học tương ứng. Trang sẽ thông báo riêng khi chưa có lịch, khi ngày đã chọn không có tiết hoặc khi chưa mở học kỳ; không hiển thị khung lỗi trống.
+## Luồng vận hành
 
-1. Mở **Quản lý điểm danh** trong menu, chọn tạo bảng.
-2. Chọn ngày, học kỳ và lớp; xem trước các tiết khớp ngày trong thời khóa biểu.
-3. Chọn tiết rồi tạo bảng. Có thể tạo trước cho ngày tương lai trong học kỳ đang mở. Tạo lại cùng tiết/ngày không nhân đôi bảng.
-4. Mở bảng để theo dõi trạng thái. Bảng chưa xác nhận có thể đồng bộ danh sách/lịch, hủy hoặc khôi phục, kèm lý do, trước khi hết ngày học. Staff không nhập kết quả thay giáo viên.
+- Hệ thống tạo bảng cho các tiết **trong ngày hiện tại theo UTC+7**, lúc ứng dụng chạy và kiểm tra lại mỗi phút. Trang danh sách/bảng điểm danh cũng thực hiện đồng bộ trước khi đọc. Không còn trang hay API tạo bảng thủ công, đồng bộ/hủy/khôi phục thủ công của staff.
+- Chỉ tạo khi ngày thuộc học kỳ đang mở, phân công/giáo viên/môn/phòng hợp lệ và có học sinh thuộc lớp tại giờ bắt đầu tiết. Hai lịch trùng giờ của lớp, giáo viên hoặc phòng không được tự chọn ngẫu nhiên một lịch để tạo bảng.
+- Bảng chưa được giáo viên xác nhận tự cập nhật lịch và danh sách. Nếu không còn lịch/danh sách hợp lệ thì tự hủy; nếu lịch hợp lệ trở lại thì tự khôi phục. Những thay đổi tự động đều có lý do và dữ liệu trước/sau trong log.
+- Bảng đã xác nhận giữ lịch và danh sách lịch sử, không bị đồng bộ nền ghi đè. Không tự tạo bù ngày quá khứ nếu ứng dụng chưa chạy ngày đó; không suy diễn kết quả học sinh.
+- Giáo viên đang hoạt động, được phân công đúng tiết, nhập kết quả cho đủ danh sách. Không cho lưu thiếu học sinh, trùng học sinh, học sinh lạ hoặc trạng thái chưa chọn.
+- Có đơn nghỉ **Approved**, đúng học sinh, bao phủ ngày học: không được ghi **Vắng không phép**. Nếu học sinh thực tế đến học thì vẫn cho ghi **Có mặt/Đi muộn**, không gán đơn nghỉ vào hai kết quả này.
+- Chọn **Vắng có phép** bắt buộc tự chọn một đơn Approved phù hợp trong danh sách. Ghi chú không thay thế đơn; đơn Pending/Rejected/Cancelled, khác học sinh hoặc ngoài ngày đều bị từ chối tại server, kể cả gửi POST trực tiếp.
+- Staff chỉ sửa kết quả **sau khi giáo viên đã điểm danh đầy đủ tiết đó**, không nhập điểm danh lần đầu. Staff giữ nguyên giáo viên ghi nhận ban đầu; danh tính staff chỉnh sửa nằm trong audit log.
+- Mọi chỉnh sửa sau xác nhận, kể cả chỉ đổi ghi chú hay đơn nghỉ, phải có nội dung/lý do không rỗng, tối đa 500 ký tự. Log lưu người thao tác, thời gian UTC, lý do, dữ liệu trước/sau. Giao diện hiển thị học sinh, kết quả, ghi chú và đơn nghỉ thay đổi. **Chỉ Staff được xem lịch sử thao tác**; service không truy vấn/trả audit history cho giáo viên và giao diện cũng kiểm tra vai trò Staff. Việc ghi log của mọi người thao tác vẫn được giữ nguyên.
+- Giữ quy tắc thời gian hiện có: nhập/sửa từ giờ bắt đầu tiết đến **trước 00:00 ngày kế tiếp theo UTC+7**. Áp dụng cho cả giáo viên và staff; kiểm tra trước/sau khi lưu. Không mở khóa sau hạn.
+- Dùng transaction Serializable, unique index và rowversion hiện có để tránh tạo trùng, cập nhật đè và lưu một phần kết quả. Kết quả và log lưu trong cùng giao dịch.
 
-### Giáo viên
+## Thông báo và email
 
-1. Mở **Điểm danh** để xem các bảng được phân công; dùng bộ lọc ngày để xem lại lịch sử.
-2. Mở bảng của tiết học, chọn kết quả từng học sinh và ghi chú khi cần. Nút đánh dấu có mặt chỉ điền các học sinh chưa chọn kết quả.
-3. Xác nhận toàn bộ bảng. Muốn sửa trong cùng ngày, mở lại bảng, thay đổi kết quả và ghi lý do.
-4. Từ 00:00 ngày kế tiếp, bảng tự chuyển sang chỉ xem; yêu cầu lưu gửi trực tiếp cũng bị từ chối.
+- Khi một học sinh chuyển sang **Vắng không phép** hoặc **Đi muộn**, lưu thành công rồi mới gửi thông báo cho học sinh/phụ huynh và email cho phụ huynh.
+- Đợi hoàn tất các lời gọi gửi; không dùng tác vụ chạy rời trên DbContext của request. Nếu lưu/commit thất bại thì không gọi dịch vụ gửi.
+- Không gửi lặp khi lưu lại kết quả y hệt hoặc chỉ sửa ghi chú/đơn nghỉ mà trạng thái cảnh báo không đổi. Nếu đổi sang một trạng thái cảnh báo khác thì gửi cảnh báo mới.
+- Hàm email dùng tên trạng thái cũ `AbsentWithoutPermission`: attendance chuyển `Absent` sang tên này ở chỗ gọi để email hiển thị đúng **VẮNG MẶT KHÔNG PHÉP**, giữ nguyên mã nguồn email dùng chung.
+- Thiếu email phụ huynh hoặc dịch vụ gửi lỗi: giữ kết quả điểm danh đã lưu, ghi lỗi có mã tiết/học sinh vào application log, trả cảnh báo cho người lưu. Chưa có hàng đợi gửi lại bền vững; không cam kết gửi đúng một lần khi ứng dụng dừng giữa lưu và gửi.
 
-### Học sinh và phụ huynh
+## Cơ sở dữ liệu
 
-Mở mục điểm danh để xem kết quả, lọc theo khoảng ngày, học kỳ, môn và trạng thái. Phụ huynh chọn con trong danh sách liên kết. Màn hình không cung cấp bảng điểm danh của học sinh khác.
+Migration mới: `20261111091302_AttendanceSystemAuditActor`. Chỉ đổi `attendance_audit_logs.actor_user_id` sang nullable để log hệ thống có actor NULL, không giả danh giáo viên/staff. Không sửa dữ liệu hay schema của module khác. Snapshot chỉ thay phần AttendanceAuditLog. Rollback dừng nếu còn log hệ thống để tránh mất lịch sử/gán sai người thao tác.
 
-Dashboard đã dùng dữ liệu điểm danh thực tế; thời khóa biểu có liên kết xem điểm danh theo tuần. Báo cáo và thống kê chuyên cần chỉ tính bảng đã xác nhận, dùng lớp/học kỳ của buổi học. Không có kết quả thì hiển thị chưa có dữ liệu thay vì tự coi là 100% có mặt. Tỷ lệ có mặt tính cả đi muộn.
-
-## Cơ sở dữ liệu và khởi chạy
-
-Migration mới: `20261021065337_AddSlotAttendanceSessions` trong project Repositories. Migration thêm bảng phiên điểm danh, nhật ký thao tác và liên kết các bản ghi cũ với phiên tương ứng.
-
-Migration giữ kết quả cũ; các thông tin người tạo/thời gian không có nguồn xác thực được để trống. Migration dừng để yêu cầu rà soát nếu phát hiện bản ghi trùng, trạng thái/ngày không hợp lệ, giáo viên/học kỳ/thứ/lịch sử lớp không khớp hoặc nhiều tiết chiếm cùng lớp/ngày/slot. Không tự xóa hay đoán lại dữ liệu cũ.
-
-Chạy từ thư mục `HighSchoolManagementSystem`, dùng kết nối `ConnectionStrings:DefaultConnection` của ứng dụng (hoặc biến môi trường `ConnectionStrings__DefaultConnection`):
+Chạy từ thư mục `HighSchoolManagementSystem`:
 
 ```powershell
 dotnet ef database update --project HighSchoolManagementSystem.Repositories --startup-project HighSchoolManagementSystem.MVC
 dotnet run --project HighSchoolManagementSystem.MVC
 ```
 
-Ứng dụng cũng có cơ chế tự chạy migration khi khởi động qua `DbInitializer`. Factory dành cho công cụ EF chỉ đọc cấu hình, không khởi chạy ứng dụng hoặc seed. Cơ sở dữ liệu ứng dụng thực tế chưa được cập nhật trong quá trình thực hiện chức năng; các lần kiểm thử dùng cơ sở dữ liệu riêng.
+Chưa chạy migration vào database ứng dụng trong quá trình sửa. Cơ chế DbInitializer hiện có của dự án có thể áp dụng migration khi chạy ứng dụng; không thay đổi cơ chế đó.
 
 ## Kiểm thử
 
-Kết quả ngày 21/10/2026: **23/23 bài kiểm thử đạt**, không bỏ qua bài nào; build thành công. EF xác nhận không có thay đổi mô hình chưa được đưa vào migration. Luồng MVC được kiểm tra qua máy chủ thử nghiệm với cookie và biểu mẫu thật; chưa kiểm tra trực quan bằng trình duyệt trên dữ liệu ứng dụng chính.
-
-Chạy từ thư mục solution:
-
 ```powershell
-dotnet test HighSchoolManagementSystem.Tests/HighSchoolManagementSystem.Tests.csproj --disable-build-servers -m:1
+dotnet test HighSchoolManagementSystem.Attendance.Tests/HighSchoolManagementSystem.Attendance.Tests.csproj
 dotnet ef migrations has-pending-model-changes --project HighSchoolManagementSystem.Repositories --startup-project HighSchoolManagementSystem.MVC --no-build
 ```
 
-Kiểm thử tích hợp mặc định dùng SQL Server LocalDB `(localdb)\MSSQLLocalDB`. Có thể đặt `ATTENDANCE_TEST_SQL` để chọn SQL Server khác có quyền tạo database. Mỗi bài kiểm thử tạo database tên `CodexAttendanceTests_<guid>` riêng rồi xóa đúng database đó; không dùng tên database ứng dụng trong cấu hình.
+Bộ kiểm thử attendance dùng SQLite in-memory với repository và transaction thật, giả lập rowversion do SQLite không có rowversion tự sinh như SQL Server. Email/thông báo dùng spy để xác minh được gọi sau commit; không gửi thư thật và không kết nối database ứng dụng. Các ca bao gồm tạo tự động/idempotent, lịch trùng/không hợp lệ, đồng bộ/hủy/khôi phục tự động, bảo toàn lịch sử, đơn nghỉ, staff, lý do chỉnh sửa, nội dung audit, khóa 00:00, rowversion, rollback và lỗi gửi email. Cần kiểm tra tiếp cấu hình SMTP và SQL Server thực tế khi triển khai.
 
-Bộ kiểm thử bao gồm ranh giới giờ bắt đầu/00:00 theo UTC+7, phân quyền bốn vai trò, chống xem học sinh khác, gửi đủ danh sách, đơn nghỉ, dữ liệu cũ, cập nhật đồng thời, lịch sử chuyển lớp, báo cáo và luồng biểu mẫu MVC thực với cookie đăng nhập/chống giả mạo yêu cầu.
+### Kết quả xác minh 11/11/2026
+
+- Build MVC và bộ test thành công, 0 warning, 0 error.
+- **63/63 ca kiểm thử đạt**, chạy trực tiếp cùng các phương thức/assertion xUnit. VSTest trong môi trường sửa code bị timeout khi kết nối testhost, nên bổ sung runner trong tiến trình làm phương án dự phòng.
+- EF xác nhận không có thay đổi model chưa có migration. SQL migration sinh ra chỉ ALTER cột actor_user_id của attendance_audit_logs và ghi lịch sử migration; không thao tác bảng nghiệp vụ khác.
+- Gồm 46 ca nghiệp vụ/phân quyền attendance và 17 ca Dashboard/controller: đúng user/ngày, dùng chung dữ liệu giáo viên, lỗi từng phần và phân quyền.
+- Chưa chạy SQL Server thật, chưa kiểm tra trình duyệt hoặc gửi SMTP thật.
+
+Chạy dự phòng khi VSTest không kết nối được testhost, từ thư mục solution:
+
+```powershell
+dotnet build HighSchoolManagementSystem.Attendance.Tests/HighSchoolManagementSystem.Attendance.Tests.csproj -m:1
+dotnet HighSchoolManagementSystem.Attendance.Tests/bin/Debug/net8.0/HighSchoolManagementSystem.Attendance.Tests.dll
+```

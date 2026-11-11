@@ -189,6 +189,9 @@ public class AppDbContext : DbContext
         });
         modelBuilder.Entity<AttendanceAuditLog>()
             .HasIndex(a => new { a.AttendanceSessionId, a.OccurredAt });
+        modelBuilder.Entity<AttendanceAuditLog>()
+            .HasOne(a => a.ActorUser).WithMany().HasForeignKey(a => a.ActorUserId)
+            .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<AttendanceRecord>(entity =>
         {
             entity.HasIndex(a => new { a.AttendanceSessionId, a.StudentId }).IsUnique();
