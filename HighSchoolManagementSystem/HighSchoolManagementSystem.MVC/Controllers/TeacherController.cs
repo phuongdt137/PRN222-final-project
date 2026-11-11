@@ -7,6 +7,7 @@ using HighSchoolManagementSystem.MVC.Models.ViewModels.Teacher;
 using HighSchoolManagementSystem.MVC.Models.ViewModels.Class;
 using HighSchoolManagementSystem.Repositories.Interfaces;
 using HighSchoolManagementSystem.Services.Common;
+using HighSchoolManagementSystem.Services.DTOs;
 using HighSchoolManagementSystem.Services.Interfaces;
 
 namespace HighSchoolManagementSystem.MVC.Controllers;
@@ -19,24 +20,40 @@ public class TeacherController : Controller
     private readonly ITimetableService _timetableService;
     private readonly ITeacherService _teacherService;
     private readonly ISubjectService _subjectService;
+    private readonly IAttendanceService _attendanceService;
 
     public TeacherController(
         IClassService classService,
         ITeacherRepository teacherRepository,
         ITimetableService timetableService,
         ITeacherService teacherService,
-        ISubjectService subjectService)
+        ISubjectService subjectService,
+        IAttendanceService attendanceService)
     {
         _classService = classService;
         _teacherRepository = teacherRepository;
         _timetableService = timetableService;
         _teacherService = teacherService;
         _subjectService = subjectService;
+        _attendanceService = attendanceService;
     }
 
-    public IActionResult Dashboard()
+    [HttpGet]
+    public async Task<IActionResult> Dashboard()
     {
-        return View();
+        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) || userId <= 0)
+            return Forbid();
+
+        var today = SchoolDate.Today;
+        var result = await _attendanceService.GetSessionsAsync(userId, new AttendanceFilter { FromDate = today, ToDate = today });
+        if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
+
+        // The card and table share the same result; views only render this model.
+        return View(new TeacherDashboardViewModel
+        {
+            AttendanceToday = result.Success ? result.Data : null,
+            AttendanceError = result.Success && result.Data != null ? null : result.Message ?? "Không thể tải điểm danh hôm nay."
+        });
     }
 
     [HttpGet]

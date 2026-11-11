@@ -42,17 +42,6 @@ public class AttendanceListDto
     public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / 25m));
     public bool IsStaff { get; set; }
 }
-public class AttendanceCreateDto
-{
-    public string? EmptyMessage { get; set; }
-    [DataType(DataType.Date)] public DateTime Date { get; set; }
-    public int? SemesterId { get; set; }
-    public int? ClassId { get; set; }
-    public List<int> EntryIds { get; set; } = [];
-    public List<AttendanceSessionDto> Entries { get; set; } = [];
-    public List<AttendanceOption> Semesters { get; set; } = [];
-    public List<AttendanceOption> Classes { get; set; } = [];
-}
 public class AttendanceStudentDto
 {
     public int StudentId { get; set; }
@@ -61,7 +50,7 @@ public class AttendanceStudentDto
     public string Status { get; set; } = AttendanceStatuses.NotMarked;
     public string? Comment { get; set; }
     public int? LeaveRequestId { get; set; }
-    public int? ApprovedLeaveId { get; set; }
+    public List<AttendanceOption> ApprovedLeaves { get; set; } = [];
 }
 public class AttendanceSheetDto
 {
@@ -73,7 +62,21 @@ public class AttendanceSheetDto
     public string? ReadOnlyReason { get; set; }
     public List<AttendanceAuditDto> Audit { get; set; } = [];
 }
-public record AttendanceAuditDto(DateTime At, string Actor, string Action);
+public record AttendanceAuditDto(DateTime At, string Actor, string Action, string Details)
+{
+    public string? Reason
+    {
+        get
+        {
+            try
+            {
+                using var json = System.Text.Json.JsonDocument.Parse(Details);
+                return json.RootElement.TryGetProperty("Reason", out var reason) ? reason.GetString() : null;
+            }
+            catch (System.Text.Json.JsonException) { return null; }
+        }
+    }
+}
 public class AttendanceSaveDto
 {
     public int SessionId { get; set; }

@@ -3,16 +3,23 @@
     if (!form || form.dataset.editable !== 'true') return;
     const selects = [...form.querySelectorAll('.attendance-status')];
     const counter = document.getElementById('attendance-count');
+    const validate = select => {
+        const leave = select.closest('tr').querySelector('.attendance-leave');
+        const excused = select.value === 'Excused';
+        leave.disabled = !excused;
+        leave.required = excused;
+        if (!excused) leave.value = '';
+        select.setCustomValidity(select.value === 'Absent' && leave.dataset.hasApproved === 'true'
+            ? 'Học sinh có đơn nghỉ đã duyệt; không được chọn vắng không phép.' : '');
+    };
     const update = () => {
+        selects.forEach(validate);
         counter.textContent = `Đã chọn ${selects.filter(s => s.value).length}/${selects.length} học sinh`;
     };
-    selects.forEach(select => select.addEventListener('change', () => {
-        const leave = select.closest('td').querySelector('.attendance-leave');
-        leave.value = select.value === 'Excused' ? (leave.dataset.approved || '') : '';
-        update();
-    }));
+    selects.forEach(select => select.addEventListener('change', update));
     document.getElementById('mark-present').addEventListener('click', () => {
-        selects.filter(s => !s.value).forEach(s => { s.value = 'Present'; s.dispatchEvent(new Event('change')); });
+        selects.filter(s => !s.value).forEach(s => { s.value = 'Present'; });
+        update();
     });
     const checkDeadline = () => {
         if (Date.now() < Date.parse(form.dataset.deadline)) return false;
@@ -23,9 +30,12 @@
         return true;
     };
     form.addEventListener('submit', event => {
-        if (checkDeadline()) event.preventDefault();
+        if (checkDeadline()) { event.preventDefault(); return; }
+        update();
+        if (!form.reportValidity()) event.preventDefault();
     });
     update();
-    checkDeadline();
-    const timer = setInterval(() => { if (checkDeadline()) clearInterval(timer); }, 1000);
+    if (!checkDeadline()) {
+        const timer = setInterval(() => { if (checkDeadline()) clearInterval(timer); }, 1000);
+    }
 })();

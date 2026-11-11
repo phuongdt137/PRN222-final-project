@@ -1,3 +1,4 @@
+@model StudentDashboardViewModel
 @{
     ViewData["Title"] = "Bảng Học Tập - Học Sinh";
     var displayName = User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Em Học Sinh";
@@ -78,7 +79,14 @@
     </div>
 
     <div class="col-12 col-sm-6 col-xl-3">
-        @await Component.InvokeAsync("AttendanceDashboard", new { mode = "card" })
+        @if(Model.AttendanceThisMonth != null)
+        {
+            <partial name="~/Views/Shared/AttendanceDashboard/_StudentCard.cshtml" model="Model.AttendanceThisMonth" />
+        }
+        else
+        {
+            <div class="alert alert-warning" role="alert">@Model.AttendanceMonthError</div>
+        }
     </div>
     <!-- Card 4: Rèn luyện & Hạnh kiểm -->
     <div class="col-12 col-sm-6 col-xl-3">
@@ -101,7 +109,14 @@
 </div>
 
 <!-- Section 2: Bảng dữ liệu tác vụ -->
-@await Component.InvokeAsync("AttendanceDashboard", new { mode = "table" })
+@if(Model.AttendanceToday != null)
+{
+    <partial name="~/Views/Shared/AttendanceDashboard/_StudentTable.cshtml" model="Model.AttendanceToday" />
+}
+else
+{
+    <div class="alert alert-warning" role="alert">@Model.AttendanceTodayError</div>
+}
 
 <!-- Table 2: Điểm số gần đây -->
 <div class="card-table-wrap">

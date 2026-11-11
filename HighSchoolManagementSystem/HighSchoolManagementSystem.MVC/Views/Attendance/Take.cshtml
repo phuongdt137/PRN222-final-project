@@ -3,7 +3,8 @@
 @using HighSchoolManagementSystem.Services.Common
 @{
     ViewData["Title"] = "Bảng điểm danh";
-    var canEdit = Model.Session.CanWrite && !Model.IsStaff;
+    var canEdit = Model.Session.CanWrite;
+    ViewData["AttendanceStudentNames"] = Model.Students.ToDictionary(s => s.StudentId, s => s.FullName + " (" + s.StudentCode + ")");
 }
 <div class="d-flex justify-content-between mb-3">
     <div><h1 class="h3">@Model.Session.ClassName · @Model.Session.SubjectName</h1>
@@ -14,22 +15,6 @@
 <partial name="_Messages" />
 @if(!canEdit){<div class="alert alert-info">@Model.ReadOnlyReason</div>}
 else{<div class="alert alert-warning" id="attendance-deadline">Được nhập/chỉnh sửa đến trước 00:00 ngày @Model.Session.Date.AddDays(1).ToString("dd/MM/yyyy") theo giờ Việt Nam. Qua hạn, bảng chỉ được xem.</div>}
-@if(Model.IsStaff && Model.Session.Status != AttendanceStatuses.Submitted && SchoolDate.Today <= Model.Session.Date)
-{
-    <form asp-action="ManageSession" method="post" class="card card-body mb-3">
-        <input type="hidden" name="sessionId" value="@Model.Session.Id" /><input type="hidden" name="rowVersion" value="@Model.Session.RowVersion" />
-        <label for="staff-reason" class="form-label">Lý do thay đổi bảng</label>
-        <input id="staff-reason" name="reason" required maxlength="500" class="form-control mb-2" placeholder="Nhập lý do đồng bộ lịch/danh sách hoặc hủy bảng" />
-        <div class="d-flex gap-2">
-        @if(Model.Session.Status == AttendanceStatuses.Open)
-        {
-            <button name="operation" value="Refresh" class="btn btn-outline-primary">Đồng bộ lịch và danh sách học sinh</button>
-            <button name="operation" value="Cancel" class="btn btn-outline-danger">Hủy bảng chưa điểm danh</button>
-        }
-        else{<button name="operation" value="Restore" class="btn btn-outline-primary">Khôi phục và đồng bộ bảng</button>}
-        </div>
-    </form>
-}
 <form asp-action="Save" method="post" id="attendance-form" data-editable="@(canEdit ? "true" : "false")" data-deadline="@AttendanceRules.Deadline(Model.Session.Date).ToString("O")">
     <input type="hidden" name="SessionId" value="@Model.Session.Id" /><input type="hidden" name="RowVersion" value="@Model.Session.RowVersion" />
     @if(canEdit){<button type="button" class="btn btn-outline-success mb-3" id="mark-present">Đánh dấu có mặt cho các học sinh chưa chọn</button>}
@@ -39,24 +24,33 @@ else{<div class="alert alert-warning" id="attendance-deadline">Được nhập/c
         @for(var i = 0; i < Model.Students.Count; i++)
         {
             var row = Model.Students[i];
-            var selectedStatus = canEdit && row.Status == AttendanceStatuses.NotMarked && row.ApprovedLeaveId.HasValue ? AttendanceStatuses.Excused : row.Status;
-            var leaveId = selectedStatus == AttendanceStatuses.Excused ? row.LeaveRequestId ?? row.ApprovedLeaveId : null;
+            var selectedStatus = canEdit && row.Status == AttendanceStatuses.NotMarked && row.ApprovedLeaves.Count > 0 ? AttendanceStatuses.Excused : row.Status;
+            var leaveId = selectedStatus == AttendanceStatuses.Excused ? row.LeaveRequestId : null;
             <tr><td>@(i+1)<input type="hidden" name="Students[@i].StudentId" value="@row.StudentId" /></td><td><strong>@row.FullName</strong><div class="text-muted">@row.StudentCode</div></td>
             <td>@if(canEdit){
                 <select name="Students[@i].Status" class="form-select attendance-status" required aria-label="Kết quả của @row.FullName">
                     <option value="">Chọn kết quả</option>
                     @foreach(var s in new[]{"Present","Absent","Late","Excused"}){<option value="@s" selected="@(selectedStatus == s)">@AttendanceStatuses.Label(s)</option>}
                 </select>
-                <input type="hidden" class="attendance-leave" name="Students[@i].LeaveRequestId" value="@leaveId" data-approved="@row.ApprovedLeaveId" />
             }else{<span>@AttendanceStatuses.Label(row.Status)</span>}</td>
-            <td>@if(row.ApprovedLeaveId.HasValue){<span class="badge bg-info text-dark">Đã duyệt nghỉ ngày này</span>}else{<span class="text-muted">—</span>}</td>
+            <td>
+            @if(canEdit)
+            {
+                <select class="form-select attendance-leave" name="Students[@i].LeaveRequestId" aria-label="Đơn nghỉ của @row.FullName" data-has-approved="@(row.ApprovedLeaves.Count > 0 ? "true" : "false")">
+                    <option value="">Chọn đơn nghỉ đã duyệt</option>
+                    @foreach(var leave in row.ApprovedLeaves){<option value="@leave.Id" selected="@(leaveId == leave.Id)">@leave.Name</option>}
+                </select>
+            }
+            else if(row.LeaveRequestId.HasValue){<span>Đơn #@row.LeaveRequestId</span>}
+            else{<span class="text-muted">—</span>}
+            </td>
             <td>@if(canEdit){<input name="Students[@i].Comment" value="@row.Comment" maxlength="255" class="form-control" aria-label="Ghi chú cho @row.FullName" />}else{@row.Comment}</td></tr>
         }
         </tbody>
     </table></div>
     @if(canEdit)
     {
-        <p class="text-muted mt-2">Vắng có phép chưa có đơn đã duyệt cần ghi chú lý do. Kết quả chỉ công bố sau khi xác nhận toàn bộ danh sách.</p>
+        <p class="text-muted mt-2">Vắng có phép bắt buộc chọn đơn nghỉ đã duyệt đúng học sinh và ngày học. Không được ghi vắng không phép khi đã có đơn nghỉ phù hợp. Kết quả chỉ công bố sau khi xác nhận toàn bộ danh sách.</p>
         @if(Model.Session.Status == AttendanceStatuses.Submitted){
             <label for="reason" class="form-label">Lý do chỉnh sửa</label><textarea id="reason" name="Reason" required maxlength="500" class="form-control mb-3"></textarea>
         }
@@ -64,12 +58,15 @@ else{<div class="alert alert-warning" id="attendance-deadline">Được nhập/c
         <span class="text-muted ms-2" id="attendance-count" aria-live="polite"></span>
     }
 </form>
-@if(Model.Audit.Count > 0)
+@if(Model.IsStaff && Model.Audit.Count > 0)
 {
     <details class="card card-body mt-4"><summary>Lịch sử thao tác gần đây</summary><ul class="mt-2 mb-0">
     @foreach(var audit in Model.Audit){
-        var action = audit.Action switch { "Create" => "Tạo bảng", "Submit" => "Xác nhận điểm danh", "Update" => "Sửa điểm danh", "Refresh" => "Đồng bộ bảng", "Cancel" => "Hủy bảng", "Restore" => "Khôi phục bảng", _ => audit.Action };
-        <li>@audit.At.AddHours(7).ToString("dd/MM/yyyy HH:mm") · @audit.Actor · @action</li>
+        var action = audit.Action switch { "AutoCreate" => "Tự tạo theo lịch học", "AutoRefresh" => "Tự đồng bộ lịch/danh sách", "AutoCancel" => "Tự hủy bảng không còn lịch hợp lệ", "Create" => "Tạo bảng", "Submit" => "Xác nhận điểm danh", "Update" => "Sửa điểm danh", "Refresh" => "Đồng bộ bảng", "Cancel" => "Hủy bảng", "Restore" => "Khôi phục bảng", _ => audit.Action };
+        <li class="mb-3">@audit.At.AddHours(7).ToString("dd/MM/yyyy HH:mm") · @audit.Actor · @action
+            @if(!string.IsNullOrWhiteSpace(audit.Reason)){<div><strong>Nội dung/lý do:</strong> @audit.Reason</div>}
+            <partial name="_AuditChanges" model="audit" />
+        </li>
     }</ul></details>
 }
 @section Scripts { <script src="~/js/attendance.js" asp-append-version="true"></script> }

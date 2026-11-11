@@ -2,8 +2,11 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using HighSchoolManagementSystem.MVC.Models.ViewModels.Score;
+using HighSchoolManagementSystem.MVC.Models.ViewModels.Parent;
 using HighSchoolManagementSystem.Repositories.Interfaces;
 using HighSchoolManagementSystem.Services.Interfaces;
+using HighSchoolManagementSystem.Services.Common;
+using HighSchoolManagementSystem.Services.DTOs;
 
 namespace HighSchoolManagementSystem.MVC.Controllers;
 
@@ -14,22 +17,44 @@ public class ParentController : Controller
     private readonly IAcademicYearRepository _academicYearRepository;
     private readonly IScoreService _scoreService;
     private readonly ILogger<ParentController> _logger;
+    private readonly IAttendanceService _attendanceService;
 
     public ParentController(
         IParentRepository parentRepository,
         IAcademicYearRepository academicYearRepository,
         IScoreService scoreService,
-        ILogger<ParentController> logger)
+        ILogger<ParentController> logger,
+        IAttendanceService attendanceService)
     {
         _parentRepository = parentRepository;
         _academicYearRepository = academicYearRepository;
         _scoreService = scoreService;
         _logger = logger;
+        _attendanceService = attendanceService;
     }
 
-    public IActionResult Dashboard()
+    [HttpGet]
+    public async Task<IActionResult> Dashboard()
     {
-        return View();
+        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) || userId <= 0)
+            return Forbid();
+
+        var today = SchoolDate.Today;
+        var month = await _attendanceService.GetHistoryAsync(userId, new AttendanceFilter
+        {
+            FromDate = new DateTime(today.Year, today.Month, 1), ToDate = today
+        });
+        if (month.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
+        var daily = await _attendanceService.GetHistoryAsync(userId, new AttendanceFilter { FromDate = today, ToDate = today });
+        if (daily.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
+
+        return View(new ParentDashboardViewModel
+        {
+            AttendanceThisMonth = month.Success ? month.Data : null,
+            AttendanceToday = daily.Success ? daily.Data : null,
+            AttendanceMonthError = month.Success && month.Data != null ? null : month.Message ?? "Không thể tải chuyên cần tháng này.",
+            AttendanceTodayError = daily.Success && daily.Data != null ? null : daily.Message ?? "Không thể tải điểm danh hôm nay."
+        });
     }
 
     [HttpGet]
