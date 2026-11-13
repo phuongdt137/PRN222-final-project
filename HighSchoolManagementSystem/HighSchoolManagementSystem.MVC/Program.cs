@@ -42,7 +42,7 @@ builder.Services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
 builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
-builder.Services.AddHostedService<HighSchoolManagementSystem.MVC.Services.Background.AttendanceGenerationBackgroundService>();
+builder.Services.AddScoped<AttendanceAlertSender>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<IAuthService, AuthService>();
