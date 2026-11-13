@@ -13,4 +13,10 @@ public interface IScoreService
     Task<ServiceResult<StudentTranscriptDto>> GetStudentTranscriptAsync(int studentId, int semesterId, int? requestingUserId = null);
     Task<ServiceResult<IEnumerable<ScoreAuditLogDto>>> GetScoreAuditLogsAsync(int scoreId, int? teacherId = null);
     Task<ServiceResult<bool>> RecalculateStudentSubjectAverageAsync(int studentId, int subjectId, int semesterId);
+    Task<int?> GetTeacherIdByUserIdAsync(int userId);
+    Task<ServiceResult<ScoreEntryContextDto>> GetScoreEntryContextAsync(int assessmentId, int? teacherId, bool isStaff, bool isPrincipal);
+    Task<ServiceResult<List<TeachingAssignmentSummaryDto>>> GetSubjectAssignmentsForViewAsync(int? assignmentId, int? classId, int? semesterId, int? teacherId, bool isStaffOrPrincipal);
+    Task<HomeroomScorePageDataDto> GetHomeroomScoresPageDataAsync(int? classId, int? semesterId, int? teacherId, bool isStaffOrPrincipal);
+    Task<List<SemesterOptionDto>> GetAllSemesterOptionsAsync();
+    Task AutoLockAssessmentIfExpiredAsync(int assessmentId);
 }

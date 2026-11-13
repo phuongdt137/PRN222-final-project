@@ -44,8 +44,7 @@ public class ScoreAutoLockBackgroundService : BackgroundService
                 foreach (var assId in expiredAssessmentIds)
                 {
                     if (stoppingToken.IsCancellationRequested) break;
-                    // Trigger logic kiểm tra & auto-fill điểm 0 cho học sinh trống
-                    await scoreService.GetScoresForAssessmentAsync(assId);
+                    await scoreService.AutoLockAssessmentIfExpiredAsync(assId);
                 }
             }
             catch (Exception ex)

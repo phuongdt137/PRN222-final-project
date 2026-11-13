@@ -1,9 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using HighSchoolManagementSystem.Models.Entities;
 using HighSchoolManagementSystem.MVC.Models.ViewModels.Score;
-using HighSchoolManagementSystem.Repositories.Interfaces;
 using HighSchoolManagementSystem.Services.Common;
 using HighSchoolManagementSystem.Services.DTOs;
 using HighSchoolManagementSystem.Services.Interfaces;
@@ -14,35 +12,14 @@ namespace HighSchoolManagementSystem.MVC.Controllers;
 public class ScoreController : Controller
 {
     private readonly IScoreService _scoreService;
-    private readonly IAssessmentService _assessmentService;
     private readonly ITeacherFeedbackService _feedbackService;
-    private readonly ITeacherRepository _teacherRepository;
-    private readonly IClassRepository _classRepository;
-    private readonly IAcademicYearRepository _academicYearRepository;
-    private readonly ISemesterRepository _semesterRepository;
-    private readonly IScoreRepository _scoreRepository;
-    private readonly ILogger<ScoreController> _logger;
 
     public ScoreController(
         IScoreService scoreService,
-        IAssessmentService assessmentService,
-        ITeacherFeedbackService feedbackService,
-        ITeacherRepository teacherRepository,
-        IClassRepository classRepository,
-        IAcademicYearRepository academicYearRepository,
-        ISemesterRepository semesterRepository,
-        IScoreRepository scoreRepository,
-        ILogger<ScoreController> logger)
+        ITeacherFeedbackService feedbackService)
     {
         _scoreService = scoreService;
-        _assessmentService = assessmentService;
         _feedbackService = feedbackService;
-        _teacherRepository = teacherRepository;
-        _classRepository = classRepository;
-        _academicYearRepository = academicYearRepository;
-        _semesterRepository = semesterRepository;
-        _scoreRepository = scoreRepository;
-        _logger = logger;
     }
 
     // =========================================================================
@@ -59,54 +36,25 @@ public class ScoreController : Controller
 
         if (!isStaff && !isPrincipal)
         {
-            var teacher = await ResolveCurrentTeacherAsync();
-            if (teacher == null)
+            teacherId = await ResolveCurrentTeacherIdAsync();
+            if (!teacherId.HasValue)
             {
                 TempData["ErrorMessage"] = "Không tìm thấy hồ sơ giáo viên của tài khoản này.";
                 return RedirectToAction("Dashboard", "Teacher");
             }
-            teacherId = teacher.Id;
         }
 
-        var assessmentResult = await _assessmentService.GetAssessmentByIdAsync(assessmentId, teacherId);
-        if (!assessmentResult.Success || assessmentResult.Data == null)
+        var contextResult = await _scoreService.GetScoreEntryContextAsync(assessmentId, teacherId, isStaff, isPrincipal);
+        if (!contextResult.Success || contextResult.Data == null)
         {
-            TempData["ErrorMessage"] = assessmentResult.Message ?? "Không tìm thấy thông tin bài kiểm tra.";
+            TempData["ErrorMessage"] = contextResult.Message ?? "Không thể tải thông tin nhập điểm.";
             if (isPrincipal) return RedirectToAction("AcademicReview", "Principal");
             if (isStaff) return RedirectToAction(nameof(HomeroomScores));
             return RedirectToAction("Index", "Assessment");
         }
 
-        var assessment = assessmentResult.Data;
-        var scoresResult = await _scoreService.GetScoresForAssessmentAsync(assessmentId, teacherId);
-        if (!scoresResult.Success)
-        {
-            TempData["ErrorMessage"] = scoresResult.Message ?? "Không thể lấy danh sách học sinh để nhập điểm.";
-            if (isPrincipal) return RedirectToAction("AcademicReview", "Principal");
-            if (isStaff) return RedirectToAction(nameof(HomeroomScores));
-            return RedirectToAction("Index", "Assessment", new { assignmentId = assessment.TeachingAssignmentId });
-        }
-
-        var studentScores = scoresResult.Data?.ToList() ?? new();
-
-        bool isLocked = assessment.IsDeadlinePassed || assessment.HasLockedScores || studentScores.Any(s => s.IsLocked);
-        bool isSemesterFinalized = await _scoreRepository.IsSemesterFinalizedAsync(assessment.SemesterId);
-
-        // Quyền sửa:
-        // - Nếu học kỳ đã chốt sổ: CHỈ DUY NHẤT HIỆU TRƯỞNG được sửa
-        // - Nếu chưa chốt:
-        //   + Giáo viên: chỉ được sửa khi chưa hết hạn (chưa locked)
-        //   + Giáo vụ: được sửa khi đã locked (để xử lý phúc khảo, nhầm lẫn)
-        //   + Hiệu trưởng: luôn có quyền sửa
-        bool canEdit;
-        if (isSemesterFinalized)
-        {
-            canEdit = isPrincipal;
-        }
-        else
-        {
-            canEdit = isPrincipal || isStaff || (!isLocked && !isStaff && !isPrincipal);
-        }
+        var ctx = contextResult.Data;
+        var assessment = ctx.Assessment;
 
         var model = new ScoreEntryViewModel
         {
@@ -120,13 +68,13 @@ public class ScoreController : Controller
             ClassName = assessment.ClassName,
             SemesterName = assessment.SemesterName,
             AssignmentId = assessment.TeachingAssignmentId,
-            IsAssessmentLocked = isLocked,
+            IsAssessmentLocked = ctx.IsAssessmentLocked,
             IsStaff = isStaff,
             IsPrincipal = isPrincipal,
-            IsSemesterFinalized = isSemesterFinalized,
-            CanEdit = canEdit,
+            IsSemesterFinalized = ctx.IsSemesterFinalized,
+            CanEdit = ctx.CanEdit,
             ConductedAt = assessment.ConductedAt,
-            Students = studentScores.Select(s => new StudentScoreItemRowViewModel
+            Students = ctx.Students.Select(s => new StudentScoreItemRowViewModel
             {
                 StudentId = s.StudentId,
                 StudentCode = s.StudentCode,
@@ -152,13 +100,12 @@ public class ScoreController : Controller
 
         if (!isStaff && !isPrincipal)
         {
-            var teacher = await ResolveCurrentTeacherAsync();
-            if (teacher == null)
+            teacherId = await ResolveCurrentTeacherIdAsync();
+            if (!teacherId.HasValue)
             {
                 TempData["ErrorMessage"] = "Không tìm thấy hồ sơ giáo viên.";
                 return RedirectToAction("Dashboard", "Teacher");
             }
-            teacherId = teacher.Id;
         }
 
         if (model.Scores == null || !model.Scores.Any())
@@ -173,8 +120,7 @@ public class ScoreController : Controller
             return await RedisplayEntryAsync(model);
         }
 
-        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!int.TryParse(userIdValue, out var userId)) return Forbid();
+        if (!TryGetCurrentUserId(out var userId)) return Forbid();
 
         var dto = new BulkSaveScoreDto
         {
@@ -198,28 +144,27 @@ public class ScoreController : Controller
         if (result.Success)
         {
             TempData["SuccessMessage"] = result.Message ?? "Đã lưu bảng điểm thành công.";
-        }
-        else
-        {
-            TempData["ErrorMessage"] = result.Message ?? "Lưu bảng điểm thất bại.";
-            if (result.ErrorCode == ErrorCodes.DatabaseError)
-                return RedirectToAction(nameof(Entry), new { assessmentId = model.AssessmentId });
-            return await RedisplayEntryAsync(model);
+            return RedirectToAction(nameof(Entry), new { assessmentId = model.AssessmentId });
         }
 
-        return RedirectToAction(nameof(Entry), new { assessmentId = model.AssessmentId });
+        TempData["ErrorMessage"] = result.Message ?? "Lưu bảng điểm thất bại.";
+        if (result.ErrorCode == ErrorCodes.DatabaseError)
+            return RedirectToAction(nameof(Entry), new { assessmentId = model.AssessmentId });
+
+        return await RedisplayEntryAsync(model);
     }
 
     // =========================================================================
-    // 2. AUDIT LOG (LỊCH SỬ ĐIỀU CHỈNH ĐIỂM)
+    // 2. AUDIT LOG & LƯU ĐIỂM ĐƠN LẺ
     // =========================================================================
 
     [HttpGet]
     public async Task<IActionResult> AuditLogs(int scoreId)
     {
-        var teacher = await ResolveCurrentTeacherAsync();
-        if (!User.IsInRole("Staff") && !User.IsInRole("Principal") && teacher == null) return Forbid();
-        var result = await _scoreService.GetScoreAuditLogsAsync(scoreId, teacher?.Id);
+        var teacherId = await ResolveCurrentTeacherIdAsync();
+        if (!User.IsInRole("Staff") && !User.IsInRole("Principal") && !teacherId.HasValue) return Forbid();
+
+        var result = await _scoreService.GetScoreAuditLogsAsync(scoreId, teacherId);
         if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
         return Json(result);
     }
@@ -231,11 +176,12 @@ public class ScoreController : Controller
     {
         bool isStaff = User.IsInRole("Staff");
         bool isPrincipal = User.IsInRole("Principal");
-        var teacher = (!isStaff && !isPrincipal) ? await ResolveCurrentTeacherAsync() : null;
-        if (!isStaff && !isPrincipal && teacher == null) return Forbid();
+        var teacherId = (!isStaff && !isPrincipal) ? await ResolveCurrentTeacherIdAsync() : null;
+
+        if (!isStaff && !isPrincipal && !teacherId.HasValue) return Forbid();
         if (!ModelState.IsValid || !model.TryGetDecimalScore(out var score))
             return BadRequest(new { success = false, message = "Điểm không đúng định dạng số." });
-        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Forbid();
+        if (!TryGetCurrentUserId(out var userId)) return Forbid();
 
         var result = await _scoreService.SaveSingleScoreAsync(new SaveStudentScoreDto
         {
@@ -245,7 +191,8 @@ public class ScoreController : Controller
             Comment = model.Comment,
             Reason = model.Reason,
             IsPrincipalOverride = isPrincipal
-        }, userId, teacher?.Id, isPrincipal);
+        }, userId, teacherId, isPrincipal);
+
         if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
         return Json(result);
     }
@@ -258,40 +205,24 @@ public class ScoreController : Controller
     [Authorize(Roles = "Teacher,Staff,Principal")]
     public async Task<IActionResult> SubjectMatrix(int? assignmentId, int? classId = null, int? semesterId = null)
     {
-        bool isStaff = User.IsInRole("Staff") || User.IsInRole("Principal");
-        var teacher = isStaff ? null : await ResolveCurrentTeacherAsync();
-        if (!isStaff && teacher == null)
+        bool isPrivileged = User.IsInRole("Staff") || User.IsInRole("Principal");
+        var teacherId = isPrivileged ? null : await ResolveCurrentTeacherIdAsync();
+
+        if (!isPrivileged && !teacherId.HasValue)
         {
             TempData["ErrorMessage"] = "Không tìm thấy hồ sơ giáo viên.";
             return RedirectToAction("Dashboard", "Teacher");
         }
 
-        var assignments = new List<TeachingAssignmentSummaryDto>();
-        if (isStaff)
+        var assignmentsResult = await _scoreService.GetSubjectAssignmentsForViewAsync(
+            assignmentId, classId, semesterId, teacherId, isPrivileged);
+
+        if (!assignmentsResult.Success)
         {
-            if (!classId.HasValue && assignmentId.HasValue)
-            {
-                var summary = await _assessmentService.GetTeachingAssignmentSummaryAsync(assignmentId.Value);
-                classId = summary.Data?.ClassId;
-                semesterId ??= summary.Data?.SemesterId;
-            }
-            var classEntity = classId.HasValue ? await _classRepository.GetByIdWithDetailsAsync(classId.Value) : null;
-            if (classEntity != null)
-            {
-                foreach (var assignment in classEntity.TeachingAssignments.Where(ta => !semesterId.HasValue || ta.SemesterId == semesterId.Value))
-                {
-                    var summary = await _assessmentService.GetTeachingAssignmentSummaryAsync(assignment.Id);
-                    if (summary.Success && summary.Data != null) assignments.Add(summary.Data);
-                }
-            }
-        }
-        else
-        {
-            var assignmentsResult = await _assessmentService.GetTeacherAssignmentsAsync(teacher!.Id);
-            if (!assignmentsResult.Success) TempData["ErrorMessage"] = assignmentsResult.Message;
-            assignments = assignmentsResult.Data?.ToList() ?? new();
+            TempData["ErrorMessage"] = assignmentsResult.Message;
         }
 
+        var assignments = assignmentsResult.Data ?? new List<TeachingAssignmentSummaryDto>();
         var model = new SubjectScoreMatrixViewModel
         {
             TeacherAssignments = assignments
@@ -302,15 +233,13 @@ public class ScoreController : Controller
             return View(model);
         }
 
-        int targetAssignmentId = assignmentId ?? assignments.First().Id;
-        if (!assignments.Any(a => a.Id == targetAssignmentId))
-        {
-            targetAssignmentId = assignments.First().Id;
-        }
+        int targetAssignmentId = assignmentId.HasValue && assignments.Any(a => a.Id == assignmentId.Value)
+            ? assignmentId.Value
+            : assignments.First().Id;
 
         model.SelectedAssignmentId = targetAssignmentId;
 
-        var matrixResult = await _scoreService.GetSubjectScoreMatrixAsync(targetAssignmentId, teacher?.Id);
+        var matrixResult = await _scoreService.GetSubjectScoreMatrixAsync(targetAssignmentId, teacherId);
         if (matrixResult.Success)
         {
             model.Matrix = matrixResult.Data;
@@ -330,95 +259,40 @@ public class ScoreController : Controller
     [HttpGet]
     public async Task<IActionResult> HomeroomScores(int? classId, int? semesterId)
     {
-        bool isStaff = User.IsInRole("Staff") || User.IsInRole("Principal");
-        Teacher? teacher = null;
-        List<ClassItemOption> availableClasses;
+        bool isPrivileged = User.IsInRole("Staff") || User.IsInRole("Principal");
+        var teacherId = isPrivileged ? null : await ResolveCurrentTeacherIdAsync();
 
-        if (isStaff)
+        if (!isPrivileged && !teacherId.HasValue)
         {
-            var allClasses = await _classRepository.GetByFiltersAsync(null, null);
-            availableClasses = allClasses.Select(c => new ClassItemOption
-            {
-                Id = c.Id,
-                ClassName = c.ClassName,
-                AcademicYearCode = c.AcademicYear?.YearCode ?? string.Empty
-            }).ToList();
-        }
-        else
-        {
-            teacher = await ResolveCurrentTeacherAsync();
-            if (teacher == null)
-            {
-                TempData["ErrorMessage"] = "Không tìm thấy hồ sơ giáo viên.";
-                return RedirectToAction("Dashboard", "Teacher");
-            }
-
-            var homeroomClasses = await _classRepository.GetHomeroomClassesByTeacherIdAsync(teacher.Id);
-            availableClasses = homeroomClasses.Select(c => new ClassItemOption
-            {
-                Id = c.Id,
-                ClassName = c.ClassName,
-                AcademicYearCode = c.AcademicYear?.YearCode ?? string.Empty
-            }).ToList();
+            TempData["ErrorMessage"] = "Không tìm thấy hồ sơ giáo viên.";
+            return RedirectToAction("Dashboard", "Teacher");
         }
 
-        var allYears = await _academicYearRepository.GetAllAsync();
-
-        var semestersList = new List<SemesterItemOption>();
-        foreach (var yr in allYears)
+        var pageData = await _scoreService.GetHomeroomScoresPageDataAsync(classId, semesterId, teacherId, isPrivileged);
+        if (!string.IsNullOrEmpty(pageData.ReportErrorMessage))
         {
-            foreach (var sem in yr.Semesters)
-            {
-                semestersList.Add(new SemesterItemOption
-                {
-                    Id = sem.Id,
-                    SemesterName = sem.SemesterName,
-                    AcademicYearCode = yr.YearCode,
-                    IsActive = sem.IsActive
-                });
-            }
+            TempData["ErrorMessage"] = pageData.ReportErrorMessage;
         }
 
         var model = new HomeroomScoresViewModel
         {
-            HomeroomClasses = availableClasses,
-            Semesters = semestersList
+            HomeroomClasses = pageData.AvailableClasses.Select(c => new ClassItemOption
+            {
+                Id = c.Id,
+                ClassName = c.ClassName,
+                AcademicYearCode = c.AcademicYearCode
+            }).ToList(),
+            Semesters = pageData.AvailableSemesters.Select(s => new SemesterItemOption
+            {
+                Id = s.Id,
+                SemesterName = s.SemesterName,
+                AcademicYearCode = s.AcademicYearCode,
+                IsActive = s.IsActive
+            }).ToList(),
+            SelectedClassId = pageData.SelectedClassId,
+            SelectedSemesterId = pageData.SelectedSemesterId,
+            Report = pageData.Report
         };
-
-        if (!availableClasses.Any())
-        {
-            return View(model);
-        }
-
-        int targetClassId = classId ?? availableClasses.First().Id;
-        if (!availableClasses.Any(c => c.Id == targetClassId))
-        {
-            targetClassId = availableClasses.First().Id;
-        }
-
-        var selectedClass = availableClasses.First(c => c.Id == targetClassId);
-        semestersList = semestersList.Where(s => s.AcademicYearCode == selectedClass.AcademicYearCode).ToList();
-        model.Semesters = semestersList;
-        int targetSemesterId = semesterId.HasValue && semestersList.Any(s => s.Id == semesterId.Value)
-            ? semesterId.Value
-            : (semestersList.FirstOrDefault(s => s.IsActive)?.Id ?? semestersList.FirstOrDefault()?.Id ?? 0);
-
-        model.SelectedClassId = targetClassId;
-        model.SelectedSemesterId = targetSemesterId;
-
-        if (targetSemesterId > 0)
-        {
-            int? teacherIdParam = isStaff ? null : teacher?.Id;
-            var reportResult = await _scoreService.GetHomeroomScoreReportAsync(targetClassId, targetSemesterId, teacherIdParam);
-            if (reportResult.Success)
-            {
-                model.Report = reportResult.Data;
-            }
-            else
-            {
-                TempData["ErrorMessage"] = reportResult.Message;
-            }
-        }
 
         return View(model);
     }
@@ -431,31 +305,26 @@ public class ScoreController : Controller
     public async Task<IActionResult> StudentTranscript(int studentId, int? semesterId, int? subjectId)
     {
         bool isPrivileged = User.IsInRole("Staff") || User.IsInRole("Principal");
-        var teacher = isPrivileged ? null : await ResolveCurrentTeacherAsync();
-        if (!isPrivileged && teacher == null) return Forbid();
-        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Forbid();
-        var allYears = await _academicYearRepository.GetAllAsync();
-        var semestersList = new List<SemesterItemOption>();
-        foreach (var yr in allYears)
+        var teacherId = isPrivileged ? null : await ResolveCurrentTeacherIdAsync();
+
+        if (!isPrivileged && !teacherId.HasValue) return Forbid();
+        if (!TryGetCurrentUserId(out var userId)) return Forbid();
+
+        var semestersDto = await _scoreService.GetAllSemesterOptionsAsync();
+        var semestersList = semestersDto.Select(s => new SemesterItemOption
         {
-            foreach (var sem in yr.Semesters)
-            {
-                semestersList.Add(new SemesterItemOption
-                {
-                    Id = sem.Id,
-                    SemesterName = sem.SemesterName,
-                    AcademicYearCode = yr.YearCode,
-                    IsActive = sem.IsActive
-                });
-            }
-        }
+            Id = s.Id,
+            SemesterName = s.SemesterName,
+            AcademicYearCode = s.AcademicYearCode,
+            IsActive = s.IsActive
+        }).ToList();
 
         int targetSemesterId = semesterId ?? (semestersList.FirstOrDefault(s => s.IsActive)?.Id ?? (semestersList.FirstOrDefault()?.Id ?? 0));
 
         var model = new StudentTranscriptViewModel
         {
             StudentId = studentId,
-            CurrentTeacherId = teacher?.Id,
+            CurrentTeacherId = teacherId,
             SelectedSemesterId = targetSemesterId,
             SelectedSubjectId = subjectId,
             AvailableSemesters = semestersList
@@ -481,7 +350,7 @@ public class ScoreController : Controller
     }
 
     // =========================================================================
-    // 6. THÊM NHẬN XÉT CỦA GIÁO VIÊN (TEACHER FEEDBACK)
+    // 6. NHẬN XÉT CỦA GIÁO VIÊN (TEACHER FEEDBACK)
     // =========================================================================
 
     [HttpPost]
@@ -489,33 +358,28 @@ public class ScoreController : Controller
     [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> AddFeedback(CreateFeedbackInputModel model)
     {
-        var teacher = await ResolveCurrentTeacherAsync();
-        if (teacher == null)
+        var teacherId = await ResolveCurrentTeacherIdAsync();
+        if (!teacherId.HasValue)
         {
             TempData["ErrorMessage"] = "Không tìm thấy hồ sơ giáo viên.";
             return RedirectToAction("Dashboard", "Teacher");
         }
 
         if (!ModelState.IsValid) return BadRequest();
-        var dto = new CreateTeacherFeedbackDto
+
+        var result = await _feedbackService.CreateFeedbackAsync(new CreateTeacherFeedbackDto
         {
             StudentId = model.StudentId,
-            TeacherId = teacher.Id,
+            TeacherId = teacherId.Value,
             SemesterId = model.SemesterId,
             FeedbackType = model.FeedbackType,
             Content = model.Content
-        };
+        }, teacherId.Value);
 
-        var result = await _feedbackService.CreateFeedbackAsync(dto, teacher.Id);
         if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
-        if (result.Success)
-        {
-            TempData["SuccessMessage"] = "Đã gửi nhận xét cho học sinh thành công.";
-        }
-        else
-        {
-            TempData["ErrorMessage"] = result.Message ?? "Gửi nhận xét thất bại.";
-        }
+        TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Success
+            ? "Đã gửi nhận xét cho học sinh thành công."
+            : (result.Message ?? "Gửi nhận xét thất bại.");
 
         if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
         {
@@ -530,11 +394,17 @@ public class ScoreController : Controller
     [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> EditFeedback(EditFeedbackInputModel model)
     {
-        var teacher = await ResolveCurrentTeacherAsync();
-        if (teacher == null) return Forbid();
+        var teacherId = await ResolveCurrentTeacherIdAsync();
+        if (!teacherId.HasValue) return Forbid();
         if (!ModelState.IsValid) return BadRequest();
+
         var result = await _feedbackService.UpdateFeedbackAsync(new UpdateTeacherFeedbackDto
-        { Id = model.Id, Content = model.Content, FeedbackType = model.FeedbackType }, teacher.Id);
+        {
+            Id = model.Id,
+            Content = model.Content,
+            FeedbackType = model.FeedbackType
+        }, teacherId.Value);
+
         if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
         TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Message;
         return RedirectToAction(nameof(StudentTranscript), new { studentId = model.StudentId, semesterId = model.SemesterId });
@@ -545,13 +415,18 @@ public class ScoreController : Controller
     [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> DeleteFeedback(int id, int studentId, int semesterId)
     {
-        var teacher = await ResolveCurrentTeacherAsync();
-        if (teacher == null) return Forbid();
-        var result = await _feedbackService.DeleteFeedbackAsync(id, teacher.Id);
+        var teacherId = await ResolveCurrentTeacherIdAsync();
+        if (!teacherId.HasValue) return Forbid();
+
+        var result = await _feedbackService.DeleteFeedbackAsync(id, teacherId.Value);
         if (result.ErrorCode == ErrorCodes.AuthForbidden) return Forbid();
         TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Message;
         return RedirectToAction(nameof(StudentTranscript), new { studentId, semesterId });
     }
+
+    // =========================================================================
+    // PRIVATE HELPERS
+    // =========================================================================
 
     private async Task<IActionResult> RedisplayEntryAsync(BulkScoreFormModel input)
     {
@@ -571,18 +446,14 @@ public class ScoreController : Controller
         return result;
     }
 
-    // =========================================================================
-    // PRIVATE HELPERS
-    // =========================================================================
-
-    private async Task<Teacher?> ResolveCurrentTeacherAsync()
+    private bool TryGetCurrentUserId(out int userId)
     {
-        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!int.TryParse(userIdValue, out var userId))
-        {
-            return null;
-        }
+        return int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out userId);
+    }
 
-        return await _teacherRepository.GetByUserIdAsync(userId);
+    private async Task<int?> ResolveCurrentTeacherIdAsync()
+    {
+        if (!TryGetCurrentUserId(out var userId)) return null;
+        return await _scoreService.GetTeacherIdByUserIdAsync(userId);
     }
 }

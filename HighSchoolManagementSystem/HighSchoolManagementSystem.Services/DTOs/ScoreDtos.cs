@@ -199,3 +199,37 @@ public class UpdateTeacherFeedbackDto
     public string FeedbackType { get; set; } = "Academic";
     public string Content { get; set; } = string.Empty;
 }
+
+public class ScoreEntryContextDto
+{
+    public AssessmentDto Assessment { get; set; } = null!;
+    public List<StudentScoreItemDto> Students { get; set; } = new();
+    public bool IsAssessmentLocked { get; set; }
+    public bool IsSemesterFinalized { get; set; }
+    public bool CanEdit { get; set; }
+}
+
+public class ClassOptionDto
+{
+    public int Id { get; set; }
+    public string ClassName { get; set; } = string.Empty;
+    public string AcademicYearCode { get; set; } = string.Empty;
+}
+
+public class SemesterOptionDto
+{
+    public int Id { get; set; }
+    public string SemesterName { get; set; } = string.Empty;
+    public string AcademicYearCode { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+}
+
+public class HomeroomScorePageDataDto
+{
+    public List<ClassOptionDto> AvailableClasses { get; set; } = new();
+    public List<SemesterOptionDto> AvailableSemesters { get; set; } = new();
+    public int SelectedClassId { get; set; }
+    public int SelectedSemesterId { get; set; }
+    public HomeroomScoreReportDto? Report { get; set; }
+    public string? ReportErrorMessage { get; set; }
+}

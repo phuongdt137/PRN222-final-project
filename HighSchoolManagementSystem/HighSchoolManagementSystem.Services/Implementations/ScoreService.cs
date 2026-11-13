@@ -13,6 +13,10 @@ public class ScoreService : IScoreService
     private readonly IStudentRepository _studentRepository;
     private readonly ITeacherFeedbackRepository _feedbackRepository;
     private readonly ISemesterRepository _semesterRepository;
+    private readonly ITeacherRepository? _teacherRepository;
+    private readonly IClassRepository? _classRepository;
+    private readonly IAcademicYearRepository? _academicYearRepository;
+    private readonly IAssessmentService? _assessmentService;
     private readonly ILogger<ScoreService> _logger;
 
     public ScoreService(
@@ -20,13 +24,21 @@ public class ScoreService : IScoreService
         IStudentRepository studentRepository,
         ITeacherFeedbackRepository feedbackRepository,
         ISemesterRepository semesterRepository,
-        ILogger<ScoreService> logger)
+        ILogger<ScoreService> logger,
+        ITeacherRepository? teacherRepository = null,
+        IClassRepository? classRepository = null,
+        IAcademicYearRepository? academicYearRepository = null,
+        IAssessmentService? assessmentService = null)
     {
         _scoreRepository = scoreRepository;
         _studentRepository = studentRepository;
         _feedbackRepository = feedbackRepository;
         _semesterRepository = semesterRepository;
         _logger = logger;
+        _teacherRepository = teacherRepository;
+        _classRepository = classRepository;
+        _academicYearRepository = academicYearRepository;
+        _assessmentService = assessmentService;
     }
 
     public async Task<ServiceResult<IEnumerable<StudentScoreItemDto>>> GetScoresForAssessmentAsync(int assessmentId, int? teacherId = null)
@@ -56,69 +68,8 @@ public class ScoreService : IScoreService
 
             var existingScores = assessment.StudentScores.ToDictionary(s => s.StudentId);
 
-            // Kiểm tra tự động khóa theo hạn 7 ngày kể từ ngày làm bài (ConductedAt)
             DateTime? deadline = assessment.ConductedAt?.AddDays(7);
             bool isAutoLocked = deadline.HasValue && DateTime.UtcNow >= deadline.Value;
-
-            // Nếu đã quá hạn: hệ thống tự động ghi nhận điểm 0 cho những học sinh chưa có điểm
-            if (isAutoLocked && enrolledStudents.Any())
-            {
-                bool hasAutoFilled = false;
-                var autoFilledStudentIds = new List<int>();
-
-                foreach (var st in enrolledStudents)
-                {
-                    if (!existingScores.TryGetValue(st.Id, out var scoreEntity) || !scoreEntity.Score.HasValue)
-                    {
-                        if (scoreEntity == null)
-                        {
-                            scoreEntity = new StudentScore
-                            {
-                                StudentId = st.Id,
-                                AssessmentId = assessmentId,
-                                Score = 0.0m,
-                                Comment = "Quá hạn nhập điểm - Hệ thống tự động ghi nhận điểm 0",
-                                IsLocked = true
-                            };
-                            await _scoreRepository.AddScoreAsync(scoreEntity);
-                            existingScores[st.Id] = scoreEntity;
-                        }
-                        else
-                        {
-                            scoreEntity.Score = 0.0m;
-                            if (string.IsNullOrWhiteSpace(scoreEntity.Comment))
-                            {
-                                scoreEntity.Comment = "Quá hạn nhập điểm - Hệ thống tự động ghi nhận điểm 0";
-                            }
-                            scoreEntity.IsLocked = true;
-                            await _scoreRepository.UpdateScoreAsync(scoreEntity);
-                        }
-                        hasAutoFilled = true;
-                        autoFilledStudentIds.Add(st.Id);
-                    }
-                    else if (!scoreEntity.IsLocked)
-                    {
-                        scoreEntity.IsLocked = true;
-                        await _scoreRepository.UpdateScoreAsync(scoreEntity);
-                        hasAutoFilled = true;
-                    }
-                }
-
-                if (hasAutoFilled)
-                {
-                    await _scoreRepository.SaveChangesAsync();
-                    if (assessment.TeachingAssignment != null)
-                    {
-                        foreach (var sId in autoFilledStudentIds)
-                        {
-                            await RecalculateStudentSubjectAverageAsync(
-                                sId,
-                                assessment.TeachingAssignment.SubjectId,
-                                assessment.TeachingAssignment.SemesterId);
-                        }
-                    }
-                }
-            }
 
             var resultList = new List<StudentScoreItemDto>();
             foreach (var st in enrolledStudents)
@@ -147,6 +98,87 @@ public class ScoreService : IScoreService
             return ServiceResult<IEnumerable<StudentScoreItemDto>>.Fail(
                 ErrorCodes.DatabaseError,
                 "Không thể tải danh sách điểm bài kiểm tra. Vui lòng thử lại sau.");
+        }
+    }
+
+    public async Task AutoLockAssessmentIfExpiredAsync(int assessmentId)
+    {
+        try
+        {
+            var assessment = await _scoreRepository.GetAssessmentWithDetailsAsync(assessmentId);
+            if (assessment == null) return;
+
+            DateTime? deadline = assessment.ConductedAt?.AddDays(7);
+            bool isAutoLocked = deadline.HasValue && DateTime.UtcNow >= deadline.Value;
+            if (!isAutoLocked) return;
+
+            var enrolledStudents = assessment.TeachingAssignment?.Class?.StudentClasses
+                .Where(sc => sc.Status == "Enrolled" && sc.LeftAt == null)
+                .Select(sc => sc.Student)
+                .ToList() ?? new List<Student>();
+
+            if (!enrolledStudents.Any()) return;
+
+            var existingScores = assessment.StudentScores.ToDictionary(s => s.StudentId);
+            bool hasChanges = false;
+            var autoFilledStudentIds = new List<int>();
+
+            foreach (var st in enrolledStudents)
+            {
+                if (!existingScores.TryGetValue(st.Id, out var scoreEntity) || !scoreEntity.Score.HasValue)
+                {
+                    if (scoreEntity == null)
+                    {
+                        scoreEntity = new StudentScore
+                        {
+                            StudentId = st.Id,
+                            AssessmentId = assessmentId,
+                            Score = 0.0m,
+                            Comment = "Quá hạn nhập điểm - Hệ thống tự động ghi nhận điểm 0",
+                            IsLocked = true
+                        };
+                        await _scoreRepository.AddScoreAsync(scoreEntity);
+                        existingScores[st.Id] = scoreEntity;
+                    }
+                    else
+                    {
+                        scoreEntity.Score = 0.0m;
+                        if (string.IsNullOrWhiteSpace(scoreEntity.Comment))
+                        {
+                            scoreEntity.Comment = "Quá hạn nhập điểm - Hệ thống tự động ghi nhận điểm 0";
+                        }
+                        scoreEntity.IsLocked = true;
+                        await _scoreRepository.UpdateScoreAsync(scoreEntity);
+                    }
+                    hasChanges = true;
+                    autoFilledStudentIds.Add(st.Id);
+                }
+                else if (!scoreEntity.IsLocked)
+                {
+                    scoreEntity.IsLocked = true;
+                    await _scoreRepository.UpdateScoreAsync(scoreEntity);
+                    hasChanges = true;
+                }
+            }
+
+            if (hasChanges)
+            {
+                await _scoreRepository.SaveChangesAsync();
+                if (assessment.TeachingAssignment != null)
+                {
+                    foreach (var sId in autoFilledStudentIds)
+                    {
+                        await RecalculateStudentSubjectAverageAsync(
+                            sId,
+                            assessment.TeachingAssignment.SubjectId,
+                            assessment.TeachingAssignment.SemesterId);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi tự động khóa điểm quá hạn cho Assessment Id: {AssessmentId}", assessmentId);
         }
     }
 
@@ -1104,5 +1136,205 @@ public class ScoreService : IScoreService
         if (gpa.Value >= 6.5m && !hasBelow5) return "Khá";
         if (gpa.Value >= 5.0m) return "Đạt";
         return "Chưa đạt";
+    }
+
+    public async Task<int?> GetTeacherIdByUserIdAsync(int userId)
+    {
+        if (_teacherRepository == null) return null;
+        var teacher = await _teacherRepository.GetByUserIdAsync(userId);
+        return teacher?.Id;
+    }
+
+    public async Task<ServiceResult<ScoreEntryContextDto>> GetScoreEntryContextAsync(
+        int assessmentId,
+        int? teacherId,
+        bool isStaff,
+        bool isPrincipal)
+    {
+        if (_assessmentService == null)
+        {
+            return ServiceResult<ScoreEntryContextDto>.Fail(ErrorCodes.DatabaseError, "Dịch vụ bài kiểm tra chưa sẵn sàng.");
+        }
+
+        var assessmentResult = await _assessmentService.GetAssessmentByIdAsync(assessmentId, teacherId);
+        if (!assessmentResult.Success || assessmentResult.Data == null)
+        {
+            return ServiceResult<ScoreEntryContextDto>.Fail(
+                assessmentResult.ErrorCode ?? ErrorCodes.AssessmentNotFound,
+                assessmentResult.Message ?? "Không tìm thấy thông tin bài kiểm tra.");
+        }
+
+        var assessment = assessmentResult.Data;
+        var scoresResult = await GetScoresForAssessmentAsync(assessmentId, teacherId);
+        if (!scoresResult.Success)
+        {
+            return ServiceResult<ScoreEntryContextDto>.Fail(
+                scoresResult.ErrorCode ?? ErrorCodes.DatabaseError,
+                scoresResult.Message ?? "Không thể lấy danh sách học sinh để nhập điểm.");
+        }
+
+        var studentScores = scoresResult.Data?.ToList() ?? new List<StudentScoreItemDto>();
+        bool isLocked = assessment.IsDeadlinePassed || assessment.HasLockedScores || studentScores.Any(s => s.IsLocked);
+        bool isSemesterFinalized = await _scoreRepository.IsSemesterFinalizedAsync(assessment.SemesterId);
+
+        bool canEdit = isSemesterFinalized
+            ? isPrincipal
+            : (isPrincipal || isStaff || (!isLocked && !isStaff && !isPrincipal));
+
+        return ServiceResult<ScoreEntryContextDto>.Ok(new ScoreEntryContextDto
+        {
+            Assessment = assessment,
+            Students = studentScores,
+            IsAssessmentLocked = isLocked,
+            IsSemesterFinalized = isSemesterFinalized,
+            CanEdit = canEdit
+        });
+    }
+
+    public async Task<ServiceResult<List<TeachingAssignmentSummaryDto>>> GetSubjectAssignmentsForViewAsync(
+        int? assignmentId,
+        int? classId,
+        int? semesterId,
+        int? teacherId,
+        bool isStaffOrPrincipal)
+    {
+        if (_assessmentService == null)
+        {
+            return ServiceResult<List<TeachingAssignmentSummaryDto>>.Ok(new List<TeachingAssignmentSummaryDto>());
+        }
+
+        if (!isStaffOrPrincipal)
+        {
+            if (!teacherId.HasValue)
+            {
+                return ServiceResult<List<TeachingAssignmentSummaryDto>>.Fail(
+                    ErrorCodes.ResourceNotFound,
+                    "Không tìm thấy hồ sơ giáo viên.");
+            }
+
+            var assignmentsResult = await _assessmentService.GetTeacherAssignmentsAsync(teacherId.Value);
+            if (!assignmentsResult.Success)
+            {
+                return ServiceResult<List<TeachingAssignmentSummaryDto>>.Fail(
+                    assignmentsResult.ErrorCode ?? ErrorCodes.DatabaseError,
+                    assignmentsResult.Message ?? "Không thể tải danh sách phân công.");
+            }
+
+            return ServiceResult<List<TeachingAssignmentSummaryDto>>.Ok(assignmentsResult.Data?.ToList() ?? new List<TeachingAssignmentSummaryDto>());
+        }
+
+        var assignments = new List<TeachingAssignmentSummaryDto>();
+        if (!classId.HasValue && assignmentId.HasValue)
+        {
+            var summary = await _assessmentService.GetTeachingAssignmentSummaryAsync(assignmentId.Value);
+            classId = summary.Data?.ClassId;
+            semesterId ??= summary.Data?.SemesterId;
+        }
+
+        var classEntity = (classId.HasValue && _classRepository != null)
+            ? await _classRepository.GetByIdWithDetailsAsync(classId.Value)
+            : null;
+
+        if (classEntity != null)
+        {
+            foreach (var assignment in classEntity.TeachingAssignments.Where(ta => !semesterId.HasValue || ta.SemesterId == semesterId.Value))
+            {
+                var summary = await _assessmentService.GetTeachingAssignmentSummaryAsync(assignment.Id);
+                if (summary.Success && summary.Data != null)
+                {
+                    assignments.Add(summary.Data);
+                }
+            }
+        }
+
+        return ServiceResult<List<TeachingAssignmentSummaryDto>>.Ok(assignments);
+    }
+
+    public async Task<List<SemesterOptionDto>> GetAllSemesterOptionsAsync()
+    {
+        var semestersList = new List<SemesterOptionDto>();
+        if (_academicYearRepository == null) return semestersList;
+
+        var allYears = await _academicYearRepository.GetAllAsync();
+        foreach (var yr in allYears)
+        {
+            foreach (var sem in yr.Semesters)
+            {
+                semestersList.Add(new SemesterOptionDto
+                {
+                    Id = sem.Id,
+                    SemesterName = sem.SemesterName,
+                    AcademicYearCode = yr.YearCode,
+                    IsActive = sem.IsActive
+                });
+            }
+        }
+
+        return semestersList;
+    }
+
+    public async Task<HomeroomScorePageDataDto> GetHomeroomScoresPageDataAsync(
+        int? classId,
+        int? semesterId,
+        int? teacherId,
+        bool isStaffOrPrincipal)
+    {
+        var availableClasses = new List<ClassOptionDto>();
+        if (_classRepository != null)
+        {
+            var classes = isStaffOrPrincipal
+                ? await _classRepository.GetByFiltersAsync(null, null)
+                : (teacherId.HasValue ? await _classRepository.GetHomeroomClassesByTeacherIdAsync(teacherId.Value) : Enumerable.Empty<Class>());
+
+            availableClasses = classes.Select(c => new ClassOptionDto
+            {
+                Id = c.Id,
+                ClassName = c.ClassName,
+                AcademicYearCode = c.AcademicYear?.YearCode ?? string.Empty
+            }).ToList();
+        }
+
+        var semestersList = await GetAllSemesterOptionsAsync();
+        var result = new HomeroomScorePageDataDto
+        {
+            AvailableClasses = availableClasses,
+            AvailableSemesters = semestersList
+        };
+
+        if (!availableClasses.Any())
+        {
+            return result;
+        }
+
+        int targetClassId = classId.HasValue && availableClasses.Any(c => c.Id == classId.Value)
+            ? classId.Value
+            : availableClasses.First().Id;
+
+        var selectedClass = availableClasses.First(c => c.Id == targetClassId);
+        semestersList = semestersList.Where(s => s.AcademicYearCode == selectedClass.AcademicYearCode).ToList();
+        result.AvailableSemesters = semestersList;
+
+        int targetSemesterId = semesterId.HasValue && semestersList.Any(s => s.Id == semesterId.Value)
+            ? semesterId.Value
+            : (semestersList.FirstOrDefault(s => s.IsActive)?.Id ?? semestersList.FirstOrDefault()?.Id ?? 0);
+
+        result.SelectedClassId = targetClassId;
+        result.SelectedSemesterId = targetSemesterId;
+
+        if (targetSemesterId > 0)
+        {
+            int? teacherIdParam = isStaffOrPrincipal ? null : teacherId;
+            var reportResult = await GetHomeroomScoreReportAsync(targetClassId, targetSemesterId, teacherIdParam);
+            if (reportResult.Success)
+            {
+                result.Report = reportResult.Data;
+            }
+            else
+            {
+                result.ReportErrorMessage = reportResult.Message;
+            }
+        }
+
+        return result;
     }
 }
