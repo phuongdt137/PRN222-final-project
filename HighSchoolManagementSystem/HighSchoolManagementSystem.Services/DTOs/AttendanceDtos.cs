@@ -4,6 +4,7 @@ using HighSchoolManagementSystem.Models.Entities;
 namespace HighSchoolManagementSystem.Services.DTOs;
 
 public record AttendanceOption(int Id, string Name);
+
 public class AttendanceFilter
 {
     public int? SemesterId { get; set; }
@@ -15,6 +16,7 @@ public class AttendanceFilter
     public string? Status { get; set; }
     public int Page { get; set; } = 1;
 }
+
 public class AttendanceSessionDto
 {
     public int Id { get; set; }
@@ -30,8 +32,8 @@ public class AttendanceSessionDto
     public string Status { get; set; } = AttendanceStatuses.Open;
     public int StudentCount { get; set; }
     public bool CanWrite { get; set; }
-    public string RowVersion { get; set; } = "";
 }
+
 public class AttendanceListDto
 {
     public AttendanceFilter Filter { get; set; } = new();
@@ -42,6 +44,7 @@ public class AttendanceListDto
     public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / 25m));
     public bool IsStaff { get; set; }
 }
+
 public class AttendanceStudentDto
 {
     public int StudentId { get; set; }
@@ -52,16 +55,16 @@ public class AttendanceStudentDto
     public int? LeaveRequestId { get; set; }
     public List<AttendanceOption> ApprovedLeaves { get; set; } = [];
 }
+
 public class AttendanceSheetDto
 {
     public AttendanceSessionDto Session { get; set; } = new();
     public List<AttendanceStudentDto> Students { get; set; } = [];
     public bool IsStaff { get; set; }
-    public bool RosterChanged { get; set; }
-    public bool ScheduleChanged { get; set; }
     public string? ReadOnlyReason { get; set; }
     public List<AttendanceAuditDto> Audit { get; set; } = [];
 }
+
 public record AttendanceAuditDto(DateTime At, string Actor, string Action, string Details)
 {
     public string? Reason
@@ -77,20 +80,27 @@ public record AttendanceAuditDto(DateTime At, string Actor, string Action, strin
         }
     }
 }
+
 public class AttendanceSaveDto
 {
     public int SessionId { get; set; }
-    [Required] public string RowVersion { get; set; } = "";
+    public int TimetableEntryId { get; set; }
+    public DateTime Date { get; set; }
+    [MaxLength(500)]
+    public string? Reason { get; set; }
     public List<AttendanceSaveRowDto> Students { get; set; } = [];
-    [MaxLength(500)] public string? Reason { get; set; }
 }
+
 public class AttendanceSaveRowDto
 {
     public int StudentId { get; set; }
-    [Required] public string Status { get; set; } = "";
-    [MaxLength(255)] public string? Comment { get; set; }
+    [Required]
+    public string Status { get; set; } = "";
+    [MaxLength(255)]
+    public string? Comment { get; set; }
     public int? LeaveRequestId { get; set; }
 }
+
 public class AttendanceStudentHistoryDto
 {
     public AttendanceFilter Filter { get; set; } = new();
@@ -110,6 +120,7 @@ public class AttendanceStudentHistoryDto
     public int Recorded => Present + Absent + Late + Excused;
     public decimal? Rate => Common.AttendanceRules.Rate(Present, Late, Recorded);
 }
+
 public class AttendanceHistoryRowDto
 {
     public AttendanceSessionDto Session { get; set; } = new();

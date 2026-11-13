@@ -1,25 +1,52 @@
 using HighSchoolManagementSystem.Models.Entities;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace HighSchoolManagementSystem.Repositories.Interfaces;
 
 public interface IAttendanceRepository
 {
-    IQueryable<AttendanceSession> Sessions { get; }
-    IQueryable<AttendanceRecord> Records { get; }
-    IQueryable<TimetableEntry> Entries { get; }
-    IQueryable<Semester> Semesters { get; }
-    IQueryable<Class> Classes { get; }
-    IQueryable<Student> Students { get; }
-    IQueryable<StudentClass> Memberships { get; }
-    IQueryable<LeaveRequest> LeaveRequests { get; }
-    IQueryable<AttendanceAuditLog> AuditLogs { get; }
+    Task<List<TimetableEntry>> GetEntriesAsync(int? semesterId, int? classId, int? teacherId);
+
+    Task<TimetableEntry?> GetEntryAsync(int entryId);
+
+    Task<List<AttendanceSession>> GetSessionsAsync(DateTime fromDate, DateTime toDate);
+    // Single-session reads are tracked so SaveAsync can persist record updates.
+    Task<AttendanceSession?> GetSessionAsync(int sessionId);
+
+    Task<AttendanceSession?> GetSessionByLessonAsync(int entryId, DateTime date);
+
+    Task<Dictionary<int, int>> GetClassSizesAsync();
+
+    Task<List<Student>> GetCurrentStudentsAsync(int classId);
+
+    Task<List<int>> GetCurrentStudentIdsAsync(int classId);
+
+    Task<List<LeaveRequest>> GetApprovedLeavesAsync(int[] studentIds, DateTime date);
+
+    Task<List<Semester>> GetSemestersAsync();
+
+    Task<List<Class>> GetClassesAsync(int? semesterId);
+
+    Task<List<Student>> GetChildrenAsync(int parentId);
+
+    Task<string> GetStudentNameAsync(int studentId);
+
+    Task<List<Subject>> GetHistorySubjectsAsync(int studentId);
+
+    Task<Dictionary<string, int>> GetHistoryCountsAsync(int studentId, DateTime fromDate, DateTime toDate,
+        int? semesterId, int? subjectId, string? status);
+
+    Task<List<AttendanceRecord>> GetHistoryRecordsAsync(int studentId, DateTime fromDate, DateTime toDate,
+        int? semesterId, int? subjectId, string? status, int page, int pageSize);
+
+    Task<List<Student>> GetAlertStudentsAsync(int[] studentIds);
+
     Task<User?> GetActorAsync(int userId);
-    Task<IDbContextTransaction> BeginTransactionAsync();
+
     void Add(AttendanceSession session);
-    void AddAudit(AttendanceAuditLog log);
-    void RemoveRecords(IEnumerable<AttendanceRecord> records);
-    void ExpectVersion(AttendanceSession session, byte[] version);
+
+    void AddAudit(AttendanceAuditLog audit);
+
+    Task<List<AttendanceAuditLog>> GetAuditAsync(int sessionId);
+
     Task SaveAsync();
-    void ClearTracking();
 }

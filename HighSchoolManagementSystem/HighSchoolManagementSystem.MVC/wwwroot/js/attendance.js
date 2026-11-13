@@ -25,7 +25,7 @@
         if (Date.now() < Date.parse(form.dataset.deadline)) return false;
         form.querySelectorAll('input, select, textarea, button').forEach(e => { e.disabled = true; });
         const message = document.getElementById('attendance-deadline');
-        message.textContent = 'Đã đến 00:00 ngày kế tiếp (giờ Việt Nam). Bảng điểm danh chỉ được xem.';
+        message.textContent = 'Đã đến 00:00 ngày kế tiếp (giờ Việt Nam). Không thể nhập/sửa điểm danh. Giáo viên chỉ được mở các tiết trong hôm nay.';
         message.className = 'alert alert-info';
         return true;
     };

@@ -1,516 +1,596 @@
-using System.Data.Common;
 using System.Text.Json;
 using HighSchoolManagementSystem.Models.Entities;
 using HighSchoolManagementSystem.Repositories.Interfaces;
 using HighSchoolManagementSystem.Services.Common;
 using HighSchoolManagementSystem.Services.DTOs;
 using HighSchoolManagementSystem.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace HighSchoolManagementSystem.Services.Implementations;
 
-public class AttendanceService(
-    IAttendanceRepository repository, 
-    TimeProvider clock,
-    ILogger<AttendanceService> logger,
-    INotificationService notificationService,
-    IEmailService emailService) : IAttendanceService
+public class AttendanceService : IAttendanceService
 {
-    private DateTimeOffset Now => clock.GetUtcNow();
-    private static ServiceResult Forbidden() => ServiceResult.Fail(ErrorCodes.AuthForbidden, "Bạn không có quyền thực hiện thao tác này.");
-    private static ServiceResult Invalid(string message) => ServiceResult.Fail(ErrorCodes.ValidationFailed, message);
-    private static ServiceResult<T> Failure<T>(ServiceResult result) =>
-        ServiceResult<T>.Fail(result.ErrorCode ?? ErrorCodes.ValidationFailed, result.Message ?? "Không thể thực hiện.");
-    private static bool IsStaff(User? user) => user?.Role.RoleName == "Staff";
-    private static bool IsTeacher(User? user) => user?.Role.RoleName == "Teacher" && user.Teacher is { Status: "Active" };
-    private static bool Owns(User? user, AttendanceSession session) =>
-        IsTeacher(user) && user!.Teacher!.Id == session.AssignedTeacherId;
+    private readonly IAttendanceRepository _attendanceRepository;
+    private readonly TimeProvider _clock;
+    private readonly AttendanceAlertSender _alertSender;
 
-    public async Task<ServiceResult<AttendanceListDto>> GetSessionsAsync(int userId, AttendanceFilter filter)
+    public AttendanceService(
+        IAttendanceRepository attendanceRepository,
+        TimeProvider clock,
+        AttendanceAlertSender alertSender)
     {
-        var actor = await repository.GetActorAsync(userId);
-        if (!IsStaff(actor) && !IsTeacher(actor)) return Failure<AttendanceListDto>(Forbidden());
-        var sync = await EnsureTodaySessionsAsync();
-        if (!sync.Success) return Failure<AttendanceListDto>(sync);
-        Normalize(filter);
-        var query = FilterSessions(repository.Sessions.AsNoTracking(), filter);
-        if (!IsStaff(actor)) query = query.Where(s => s.AssignedTeacherId == actor!.Teacher!.Id);
-        if (!string.IsNullOrEmpty(filter.Status)) query = query.Where(s => s.Status == filter.Status);
-        var total = await query.CountAsync();
-        filter.Page = ClampPage(filter.Page, total);
-        var sessions = await query.Include(s => s.Records).OrderByDescending(s => s.AttendanceDate)
-            .ThenBy(s => s.StartTime).ThenBy(s => s.Id).Skip((filter.Page - 1) * 25).Take(25).ToListAsync();
-        return ServiceResult<AttendanceListDto>.Ok(new()
-        {
-            Filter = filter, IsStaff = IsStaff(actor), TotalCount = total,
-            Items = sessions.Select(s => Map(s, Owns(actor, s), IsStaff(actor))).ToList(),
-            Semesters = await SemesterOptions(), Classes = await ClassOptions(filter.SemesterId)
-        });
+        _attendanceRepository = attendanceRepository;
+        _clock = clock;
+        _alertSender = alertSender;
     }
 
-    /// <summary>Creates today's sheets and reconciles only unsubmitted sheets with the timetable.</summary>
-    public Task<ServiceResult> EnsureTodaySessionsAsync() => Write(async () =>
+    private DateTimeOffset Now => _clock.GetUtcNow();
+
+    // Chỉ đọc thời khóa biểu và kết quả đã lưu; không tạo bảng khi mở danh sách.
+    public async Task<ServiceResult<AttendanceListDto>> GetSessionsAsync(int userId, AttendanceFilter filter)
     {
-        var today = AttendanceRules.Today(Now);
-        var day = (int)today.DayOfWeek + 1;
-        var entries = await repository.Entries.Where(e => e.DayOfWeek == day &&
-            e.TeachingAssignment.Semester.IsActive && e.TeachingAssignment.Semester.StartDate <= today &&
-            e.TeachingAssignment.Semester.EndDate >= today).ToListAsync();
-        var sessions = await repository.Sessions.Include(s => s.Records)
-            .Where(s => s.AttendanceDate == today).ToListAsync();
-        var candidates = new List<AttendanceSession>();
-        foreach (var entry in entries)
+        var actor = await _attendanceRepository.GetActorAsync(userId);
+
+        if (!IsStaff(actor) && !IsTeacher(actor))
         {
-            if (ValidateEntry(entry, today) != null) continue;
-            var candidate = NewSession(entry, today);
-            var roster = await Roster(candidate.ClassId, today, candidate.StartTime);
-            if (roster.Count == 0) continue;
-            foreach (var id in roster) candidate.Records.Add(NewRecord(candidate, id));
-            candidates.Add(candidate);
+            return ServiceResult<AttendanceListDto>.Fail(
+                ErrorCodes.AuthForbidden, "Bạn không có quyền thực hiện thao tác này.");
         }
-        // Conflicting timetable entries must not produce an arbitrary attendance sheet.
-        var valid = candidates.Where(c => !candidates.Any(other => !ReferenceEquals(c, other) && Overlaps(c, other)) &&
-            !sessions.Any(other => other.Status == AttendanceStatuses.Submitted &&
-                other.TimetableEntryId != c.TimetableEntryId && Overlaps(c, other))).ToList();
-        foreach (var session in sessions.Where(s => s.Status == AttendanceStatuses.Open &&
-                     !valid.Any(c => c.TimetableEntryId == s.TimetableEntryId)))
+
+        NormalizeFilter(filter);
+        int? teacherId = null;
+
+        if (IsTeacher(actor))
         {
-            var before = Snapshot(session);
-            session.Status = AttendanceStatuses.Cancelled;
-            session.UpdatedAt = Now.UtcDateTime;
-            Audit(session, null, "AutoCancel", new { Reason = "Lịch học hoặc danh sách học sinh không còn hợp lệ, hoặc có lịch trùng giờ.", Before = before, After = Snapshot(session) });
+            var today = AttendanceRules.Today(Now);
+            filter.FromDate = today;
+            filter.ToDate = today;
+            teacherId = actor!.Teacher!.Id;
         }
-        foreach (var candidate in valid)
+
+        var entries = await _attendanceRepository.GetEntriesAsync(filter.SemesterId, filter.ClassId, teacherId);
+        var saved = await _attendanceRepository.GetSessionsAsync(filter.FromDate!.Value, filter.ToDate!.Value);
+        var sizes = await _attendanceRepository.GetClassSizesAsync();
+        var items = new List<AttendanceSessionDto>();
+
+        for (var date = filter.FromDate!.Value; date <= filter.ToDate!.Value; date = date.AddDays(1))
         {
-            var session = sessions.SingleOrDefault(s => s.TimetableEntryId == candidate.TimetableEntryId);
-            if (session?.Status == AttendanceStatuses.Submitted) continue; // Preserve completed attendance and its roster.
-            if (session == null)
+            foreach (var entry in entries)
             {
-                repository.Add(candidate);
-                Audit(candidate, null, "AutoCreate", new { Reason = "Tự động tạo từ lịch học trong ngày.", After = Snapshot(candidate) });
-                continue;
+                var semester = entry.TeachingAssignment.Semester;
+
+                if (entry.DayOfWeek != (int)date.DayOfWeek + 1 ||
+                    date < semester.StartDate.Date || date > semester.EndDate.Date)
+                {
+                    continue;
+                }
+
+                var session = saved.FirstOrDefault(s => s.TimetableEntryId == entry.Id && s.AttendanceDate.Date == date);
+
+                if (session == null)
+                {
+                    // Đối tượng tạm để hiển thị, chưa lưu xuống DB.
+                    session = NewSession(entry, date);
+                }
+
+                var item = ToSessionDto(session, actor);
+                item.StudentCount = sizes.GetValueOrDefault(entry.TeachingAssignment.ClassId);
+                items.Add(item);
             }
-            var entry = entries.Single(e => e.Id == candidate.TimetableEntryId);
-            var roster = candidate.Records.Select(r => r.StudentId).ToHashSet();
-            if (session.Status == AttendanceStatuses.Open && MatchesSchedule(session, entry) &&
-                roster.SetEquals(session.Records.Select(r => r.StudentId))) continue;
-            var before = Snapshot(session);
-            ApplySnapshot(session, entry);
-            var removed = session.Records.Where(r => !roster.Contains(r.StudentId)).ToArray();
-            repository.RemoveRecords(removed);
-            foreach (var row in removed) session.Records.Remove(row);
-            foreach (var id in roster.Except(session.Records.Select(r => r.StudentId)).ToArray())
-                session.Records.Add(NewRecord(session, id));
-            session.Status = AttendanceStatuses.Open;
-            session.UpdatedAt = Now.UtcDateTime;
-            Audit(session, null, "AutoRefresh", new { Reason = "Tự động đồng bộ lịch học/danh sách trước khi giáo viên điểm danh.", Before = before, After = Snapshot(session) });
         }
-        return ServiceResult.Ok();
-    });
 
-    private static object Snapshot(AttendanceSession s) => new
-    {
-        s.Status, s.ClassId, s.SubjectId, s.AssignedTeacherId, s.RoomId, s.TimeSlotId,
-        s.SlotCode, s.PeriodNo, s.SchoolSession, s.StartTime, s.EndTime,
-        Students = s.Records.Select(r => r.StudentId).Order().ToArray()
-    };
+        if (!string.IsNullOrEmpty(filter.Status))
+        {
+            items = items.Where(s => s.Status == filter.Status).ToList();
+        }
 
-    public async Task<ServiceResult<AttendanceSheetDto>> GetSheetAsync(int userId, int sessionId)
+        filter.Page = GetValidPage(filter.Page, items.Count);
+
+        var model = new AttendanceListDto
+        {
+            Filter = filter,
+            IsStaff = IsStaff(actor),
+            TotalCount = items.Count,
+            Items = items
+                .OrderByDescending(s => s.Date)
+                .ThenBy(s => s.StartTime)
+                .ThenBy(s => s.TimetableEntryId)
+                .Skip((filter.Page - 1) * 25)
+                .Take(25)
+                .ToList(),
+            Semesters = await GetSemesterOptionsAsync(),
+            Classes = await GetClassOptionsAsync(filter.SemesterId)
+        };
+
+        return ServiceResult<AttendanceListDto>.Ok(model);
+    }
+
+    // Mở tiết đã chọn, lấy học sinh hiện tại và ghép kết quả đã lưu nếu có.
+    public async Task<ServiceResult<AttendanceSheetDto>> GetSheetAsync(
+        int userId,
+        int sessionId = 0,
+        int? timetableEntryId = null,
+        DateTime? date = null)
     {
-        var actor = await repository.GetActorAsync(userId);
-        if (!IsStaff(actor) && !IsTeacher(actor)) return Failure<AttendanceSheetDto>(Forbidden());
-        var sync = await EnsureTodaySessionsAsync();
-        if (!sync.Success) return Failure<AttendanceSheetDto>(sync);
-        var session = await repository.Sessions.AsNoTracking().Include(s => s.Records)
-            .ThenInclude(r => r.Student).ThenInclude(s => s.User).SingleOrDefaultAsync(s => s.Id == sessionId);
-        if (session == null) return ServiceResult<AttendanceSheetDto>.Fail(ErrorCodes.ResourceNotFound, "Không tìm thấy bảng điểm danh.");
-        if (!IsStaff(actor) && !Owns(actor, session)) return Failure<AttendanceSheetDto>(Forbidden());
-        var model = new AttendanceSheetDto { Session = Map(session, Owns(actor, session), IsStaff(actor)), IsStaff = IsStaff(actor) };
-        if (session.Status == AttendanceStatuses.Open)
+        var actor = await _attendanceRepository.GetActorAsync(userId);
+        var session = await FindSessionAsync(sessionId, timetableEntryId ?? 0, date ?? AttendanceRules.Today(Now));
+
+        if (session == null)
         {
-            var roster = await Roster(session.ClassId, session.AttendanceDate, session.StartTime);
-            model.RosterChanged = !roster.ToHashSet().SetEquals(session.Records.Select(r => r.StudentId));
-            var entry = await repository.Entries.AsNoTracking().SingleOrDefaultAsync(e => e.Id == session.TimetableEntryId);
-            model.ScheduleChanged = entry == null || !MatchesSchedule(session, entry);
+            return ServiceResult<AttendanceSheetDto>.Fail(
+                ErrorCodes.ResourceNotFound, "Không tìm thấy tiết học.");
         }
-        if (!model.Session.CanWrite) model.ReadOnlyReason = ReadOnlyReason(session, IsStaff(actor));
-        if (model.RosterChanged || model.ScheduleChanged)
+
+        if (!CanView(actor, session))
         {
-            model.Session.CanWrite = false;
-            model.ReadOnlyReason = "Danh sách học sinh hoặc lịch học đã thay đổi. Vui lòng tải lại để hệ thống đồng bộ trước khi điểm danh.";
+            return ServiceResult<AttendanceSheetDto>.Fail(
+                ErrorCodes.AuthForbidden, "Bạn không có quyền thực hiện thao tác này.");
         }
-        var ids = session.Records.Select(r => r.StudentId).ToArray();
-        var leaves = await ApprovedLeaves(ids, session.AttendanceDate);
-        model.Students = session.Records.OrderBy(r => r.Student.StudentCode).Select(r => new AttendanceStudentDto
+
+        var students = await _attendanceRepository.GetCurrentStudentsAsync(session.ClassId);
+        var leaves = await _attendanceRepository.GetApprovedLeavesAsync(students.Select(s => s.Id).ToArray(), session.AttendanceDate);
+        var model = new AttendanceSheetDto
         {
-            StudentId = r.StudentId, StudentCode = r.Student.StudentCode, FullName = r.Student.User.FullName,
-            Status = r.Status, Comment = r.Comment, LeaveRequestId = r.LeaveRequestId,
-            ApprovedLeaves = leaves.Where(l => l.StudentId == r.StudentId)
-                .Select(l => new AttendanceOption(l.Id, $"Đơn #{l.Id}: {l.StartDate:dd/MM/yyyy} – {l.EndDate:dd/MM/yyyy} · {l.Reason}")).ToList()
-        }).ToList();
-        if (model.IsStaff)
+            Session = ToSessionDto(session, actor),
+            IsStaff = IsStaff(actor),
+            ReadOnlyReason = GetEditError(actor, session)
+        };
+
+        foreach (var student in students)
         {
-            model.Audit = await repository.AuditLogs.AsNoTracking().Where(a => a.AttendanceSessionId == sessionId)
-                .OrderByDescending(a => a.Id).Take(20)
-                .Select(a => new AttendanceAuditDto(a.OccurredAt, a.ActorUser == null ? "Hệ thống" : a.ActorUser.FullName, a.Action, a.Details)).ToListAsync();
+            var record = session.Records.FirstOrDefault(r => r.StudentId == student.Id);
+            var item = new AttendanceStudentDto
+            {
+                StudentId = student.Id,
+                StudentCode = student.StudentCode,
+                FullName = student.User.FullName,
+                Status = record?.Status ?? AttendanceStatuses.NotMarked,
+                Comment = record?.Comment,
+                LeaveRequestId = record?.LeaveRequestId,
+                ApprovedLeaves = leaves
+                    .Where(l => l.StudentId == student.Id)
+                    .Select(l => new AttendanceOption(l.Id, $"Đơn #{l.Id}: {l.Reason}"))
+                    .ToList()
+            };
+
+            model.Students.Add(item);
         }
+
+        if (IsStaff(actor) && session.Id > 0)
+        {
+            var logs = await _attendanceRepository.GetAuditAsync(session.Id);
+
+            foreach (var log in logs)
+            {
+                model.Audit.Add(new AttendanceAuditDto(log.OccurredAt, log.ActorUser?.FullName ?? "Hệ thống", log.Action, log.Details));
+            }
+        }
+
         return ServiceResult<AttendanceSheetDto>.Ok(model);
     }
 
+    // CRUD: tìm hoặc tạo bảng -> cập nhật các dòng học sinh -> SaveChanges.
     public async Task<ServiceResult> SaveAsync(int userId, AttendanceSaveDto input)
     {
-        DateTimeOffset? deadline = null;
-        AttendanceSession? savedSession = null;
-        List<AttendanceSaveRowDto> alertRows = [];
-        var result = await Write(async () =>
-        {
-            var actor = await repository.GetActorAsync(userId);
-            if (!IsTeacher(actor) && !IsStaff(actor)) return Forbidden();
-            var session = await repository.Sessions
-                .Include(s => s.Records)
-                .Include(s => s.Class)
-                .Include(s => s.Subject)
-                .SingleOrDefaultAsync(s => s.Id == input.SessionId);
-            if (session == null) return Invalid("Không tìm thấy bảng điểm danh.");
-            if (!IsStaff(actor) && !Owns(actor, session)) return Forbidden();
-            if (IsStaff(actor) && (session.Status != AttendanceStatuses.Submitted ||
-                session.Records.Count == 0 || session.Records.Any(r => !r.RecordedBy.HasValue || !AttendanceStatuses.IsResult(r.Status))))
-                return Invalid("Staff chỉ được sửa sau khi giáo viên đã điểm danh đầy đủ tiết học này.");
-            deadline = AttendanceRules.Deadline(session.AttendanceDate);
-            if (session.Status is not (AttendanceStatuses.Open or AttendanceStatuses.Submitted) || !session.Semester.IsActive ||
-                !AttendanceRules.CanWrite(session.AttendanceDate, session.StartTime, Now))
-                return Invalid(ReadOnlyReason(session, IsStaff(actor)));
-            if (!CheckVersion(session, input.RowVersion)) return Invalid("Bảng đã thay đổi. Vui lòng tải lại trước khi lưu.");
-            if (input.Students.Count != session.Records.Count || input.Students.Count == 0 ||
-                input.Students.Select(r => r.StudentId).Distinct().Count() != input.Students.Count ||
-                !input.Students.Select(r => r.StudentId).ToHashSet().SetEquals(session.Records.Select(r => r.StudentId)))
-                return Invalid("Danh sách gửi lên không khớp bảng điểm danh.");
-            if (session.Status == AttendanceStatuses.Open)
-            {
-                var entry = await repository.Entries.SingleOrDefaultAsync(e => e.Id == session.TimetableEntryId);
-                if (entry == null || !MatchesSchedule(session, entry)) return Invalid("Lịch học đã thay đổi. Vui lòng tải lại để hệ thống tự đồng bộ bảng.");
-                var entryError = ValidateEntry(entry, session.AttendanceDate);
-                if (entryError != null) return Invalid(entryError);
-                var roster = await Roster(session.ClassId, session.AttendanceDate, session.StartTime);
-                if (!roster.ToHashSet().SetEquals(session.Records.Select(r => r.StudentId)))
-                    return Invalid("Học sinh đã chuyển lớp hoặc danh sách đã thay đổi. Vui lòng tải lại để hệ thống tự đồng bộ bảng.");
-            }
-            var leaves = await ApprovedLeaves(input.Students.Select(r => r.StudentId).ToArray(), session.AttendanceDate);
-            var validation = ValidateRows(input.Students, leaves);
-            if (validation != null) return Invalid(validation);
-            var wasSubmitted = session.Status == AttendanceStatuses.Submitted;
-            var changes = input.Students.Where(row =>
-            {
-                var old = session.Records.Single(r => r.StudentId == row.StudentId);
-                return old.Status != row.Status || old.Comment != Clean(row.Comment) || old.LeaveRequestId != row.LeaveRequestId;
-            }).ToList();
-            if (wasSubmitted && changes.Count == 0) return ServiceResult.Ok("Kết quả không thay đổi.");
-            if (wasSubmitted && (string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length > 500))
-                return Invalid("Vui lòng nhập lý do chỉnh sửa (tối đa 500 ký tự).");
-            var before = session.Records.Select(r => new { r.StudentId, r.Status, r.Comment, r.LeaveRequestId }).ToArray();
-            foreach (var row in changes)
-            {
-                var record = session.Records.Single(r => r.StudentId == row.StudentId);
-                record.Status = row.Status;
-                record.Comment = Clean(row.Comment);
-                record.LeaveRequestId = row.LeaveRequestId;
-                // Staff corrections retain the teacher who originally recorded attendance.
-                if (IsTeacher(actor)) record.RecordedBy = actor!.Teacher!.Id;
-                record.RecordedAt ??= Now.UtcDateTime;
-                record.UpdatedAt = Now.UtcDateTime;
-            }
-            session.Status = AttendanceStatuses.Submitted;
-            session.SubmittedAt ??= Now.UtcDateTime;
-            session.UpdatedAt = Now.UtcDateTime;
-            Audit(session, userId, wasSubmitted ? "Update" : "Submit", new
-            {
-                Before = before,
-                After = session.Records.Select(r => new { r.StudentId, r.Status, r.Comment, r.LeaveRequestId }).ToArray(),
-                Reason = Clean(input.Reason)
-            });
+        var actor = await _attendanceRepository.GetActorAsync(userId);
+        var session = await FindSessionAsync(input.SessionId, input.TimetableEntryId, input.Date);
 
-            // Delivery runs only after the attendance and audit transaction commits.
-            savedSession = session;
-            alertRows = changes.Where(c => (c.Status is AttendanceStatuses.Absent or AttendanceStatuses.Late) &&
-                before.Any(old => old.StudentId == c.StudentId && old.Status != c.Status)).ToList();
-            return ServiceResult.Ok(wasSubmitted ? "Đã cập nhật điểm danh." : "Đã xác nhận điểm danh.");
-        }, () => deadline);
-        if (!result.Success || savedSession == null || alertRows.Count == 0) return result;
-        var delivered = await SendAlerts(userId, savedSession, alertRows);
-        return delivered ? result : ServiceResult.Ok(result.Message + " Một số thông báo/email chưa gửi được; vui lòng kiểm tra nhật ký hệ thống.");
-    }
-
-    private static string? ValidateRows(List<AttendanceSaveRowDto> rows, List<LeaveRequest> leaves)
-    {
-        foreach (var row in rows)
+        if (session == null)
         {
-            if (!AttendanceStatuses.IsResult(row.Status)) return "Vui lòng chọn kết quả cho tất cả học sinh.";
-            if (row.Comment?.Length > 255) return "Ghi chú không được vượt quá 255 ký tự.";
+            return ServiceResult.Fail(
+                ErrorCodes.ValidationFailed, "Không tìm thấy tiết học.");
+        }
+
+        if (!CanView(actor, session))
+        {
+            return ServiceResult.Fail(
+                ErrorCodes.AuthForbidden, "Bạn không có quyền thực hiện thao tác này.");
+        }
+
+        var editError = GetEditError(actor, session);
+
+        if (editError != null)
+        {
+            return ServiceResult.Fail(
+                ErrorCodes.ValidationFailed, editError);
+        }
+
+        var isUpdate = session.Status == AttendanceStatuses.Submitted;
+
+        if (isUpdate && string.IsNullOrWhiteSpace(input.Reason))
+        {
+            return ServiceResult.Fail(
+                ErrorCodes.ValidationFailed, "Vui lòng nhập lý do chỉnh sửa điểm danh.");
+        }
+
+        if (input.Reason?.Length > 500)
+        {
+            return ServiceResult.Fail(
+                ErrorCodes.ValidationFailed, "Lý do chỉnh sửa tối đa 500 ký tự.");
+        }
+
+        var studentIds = await _attendanceRepository.GetCurrentStudentIdsAsync(session.ClassId);
+        var submittedIds = input.Students.Select(r => r.StudentId).Distinct().ToList();
+        var hasInvalidResult = input.Students.Any(r =>
+            !studentIds.Contains(r.StudentId) || !AttendanceStatuses.IsResult(r.Status));
+
+        if (input.Students.Count == 0 ||
+            input.Students.Count != studentIds.Count ||
+            submittedIds.Count != studentIds.Count || hasInvalidResult)
+        {
+            return ServiceResult.Fail(
+                ErrorCodes.ValidationFailed, "Vui lòng chọn kết quả cho đủ danh sách học sinh.");
+        }
+
+        var leaves = await _attendanceRepository.GetApprovedLeavesAsync(studentIds.ToArray(), session.AttendanceDate);
+
+        foreach (var row in input.Students)
+        {
+            if (row.Status == AttendanceStatuses.Excused && !leaves.Any(l => l.Id == row.LeaveRequestId && l.StudentId == row.StudentId))
+            {
+                return ServiceResult.Fail(
+                    ErrorCodes.ValidationFailed, "Vắng có phép cần chọn đơn nghỉ đã duyệt của học sinh.");
+            }
+
             if (row.Status == AttendanceStatuses.Absent && leaves.Any(l => l.StudentId == row.StudentId))
-                return "Học sinh có đơn nghỉ đã duyệt cho ngày học này; không được đánh dấu vắng không phép.";
-            if (row.Status == AttendanceStatuses.Excused && !row.LeaveRequestId.HasValue)
-                return "Vắng có phép bắt buộc chọn một đơn nghỉ đã duyệt phù hợp; ghi chú không thay thế đơn nghỉ.";
-            if (row.LeaveRequestId.HasValue && (row.Status != AttendanceStatuses.Excused ||
-                !leaves.Any(l => l.Id == row.LeaveRequestId && l.StudentId == row.StudentId)))
-                return "Đơn nghỉ phải đã duyệt, thuộc đúng học sinh, bao phủ ngày học và dùng cho kết quả vắng có phép.";
-        }
-        return null;
-    }
-
-    private async Task<bool> SendAlerts(int userId, AttendanceSession session, List<AttendanceSaveRowDto> rows)
-    {
-        var delivered = true;
-        try
-        {
-            var ids = rows.Select(r => r.StudentId).ToArray();
-            var students = await repository.Students.AsNoTracking().Include(s => s.Parent).ThenInclude(p => p!.User)
-                .Where(s => ids.Contains(s.Id)).ToListAsync();
-            foreach (var student in students)
             {
-                var row = rows.Single(r => r.StudentId == student.Id);
-                var status = AttendanceStatuses.Label(row.Status);
-                var title = $"Thông báo chuyên cần: {status} - Tiết {session.PeriodNo}";
-                var content = $"Học sinh {student.User.FullName}: {status}, tiết {session.PeriodNo} môn {session.Subject.SubjectName}, lớp {session.Class.ClassName}, ngày {session.AttendanceDate:dd/MM/yyyy}.";
-                foreach (var recipient in new int?[] { student.UserId, student.Parent?.UserId }.Where(id => id > 0).Distinct())
-                {
-                    try
-                    {
-                        var sent = await notificationService.SendNotificationAsync(userId, recipient!.Value, title, content);
-                        if (!sent.Success) { delivered = false; logger.LogWarning("Attendance notification failed: session {SessionId}, student {StudentId}, recipient {RecipientId}", session.Id, student.Id, recipient); }
-                    }
-                    catch (Exception ex)
-                    {
-                        delivered = false;
-                        logger.LogError(ex, "Attendance notification failed: session {SessionId}, student {StudentId}", session.Id, student.Id);
-                    }
-                }
-                var parent = student.Parent?.User;
-                if (string.IsNullOrWhiteSpace(parent?.Email))
-                {
-                    delivered = false;
-                    logger.LogWarning("Attendance email missing parent address: session {SessionId}, student {StudentId}", session.Id, student.Id);
-                    continue;
-                }
-                try
-                {
-                    var sent = await emailService.SendAttendanceAlertEmailAsync(parent.Email, parent.FullName,
-                        student.User.FullName, session.Class.ClassName, session.Subject.SubjectName, session.PeriodNo,
-                        // The existing shared email template uses legacy absence status names.
-                        session.AttendanceDate, row.Status == AttendanceStatuses.Absent ? "AbsentWithoutPermission" : row.Status, Clean(row.Comment));
-                    if (!sent.Success) { delivered = false; logger.LogWarning("Attendance email failed: session {SessionId}, student {StudentId}", session.Id, student.Id); }
-                }
-                catch (Exception ex)
-                {
-                    delivered = false;
-                    logger.LogError(ex, "Attendance email failed: session {SessionId}, student {StudentId}", session.Id, student.Id);
-                }
+                return ServiceResult.Fail(
+                    ErrorCodes.ValidationFailed, "Học sinh có đơn nghỉ đã duyệt; vui lòng chọn kết quả phù hợp.");
             }
         }
-        catch (Exception ex)
+
+        editError = GetEditError(actor, session);
+
+        if (editError != null)
         {
-            delivered = false;
-            logger.LogError(ex, "Attendance alert delivery failed for session {SessionId}", session.Id);
+            return ServiceResult.Fail(
+                ErrorCodes.ValidationFailed, editError);
         }
-        return delivered;
+
+        var utcNow = Now.UtcDateTime;
+        var alertRows = new List<AttendanceSaveRowDto>();
+
+        if (session.Id == 0)
+        {
+            session.CreatedByUserId = userId;
+            _attendanceRepository.Add(session);
+        }
+
+        foreach (var row in input.Students)
+        {
+            var record = session.Records.FirstOrDefault(r => r.StudentId == row.StudentId);
+
+            if (row.Status == AttendanceStatuses.Absent && record?.Status != AttendanceStatuses.Absent)
+            {
+                alertRows.Add(row);
+            }
+
+            if (record == null)
+            {
+                record = new AttendanceRecord
+                {
+                    StudentId = row.StudentId,
+                    TimetableEntryId = session.TimetableEntryId,
+                    AttendanceDate = session.AttendanceDate,
+                    AttendanceSession = session
+                };
+
+                session.Records.Add(record);
+            }
+
+            record.Status = row.Status;
+            record.Comment = string.IsNullOrWhiteSpace(row.Comment) ? null : row.Comment.Trim();
+            record.LeaveRequestId = row.Status == AttendanceStatuses.Excused ? row.LeaveRequestId : null;
+            record.RecordedBy ??= session.AssignedTeacherId;
+            record.RecordedAt ??= utcNow;
+            record.UpdatedAt = utcNow;
+        }
+
+        session.Status = AttendanceStatuses.Submitted;
+        session.SubmittedAt ??= utcNow;
+        session.UpdatedAt = utcNow;
+
+        var log = new AttendanceAuditLog
+        {
+            AttendanceSession = session,
+            ActorUserId = userId,
+            Action = isUpdate ? "Update" : "Submit",
+            OccurredAt = utcNow,
+            Details = JsonSerializer.Serialize(new { Reason = input.Reason?.Trim() })
+        };
+
+        _attendanceRepository.AddAudit(log);
+        await _attendanceRepository.SaveAsync();
+
+        if (alertRows.Count > 0)
+        {
+            var delivered = await _alertSender.SendAsync(userId, session, alertRows);
+
+            if (!delivered)
+            {
+                return ServiceResult.Ok("Đã lưu điểm danh. Một số thông báo/email chưa gửi được; vui lòng kiểm tra nhật ký hệ thống.");
+            }
+        }
+
+        return ServiceResult.Ok("Đã lưu điểm danh.");
     }
 
+    // Học sinh xem chính mình; phụ huynh chỉ xem các con đã liên kết.
     public async Task<ServiceResult<AttendanceStudentHistoryDto>> GetHistoryAsync(int userId, AttendanceFilter filter)
     {
-        var actor = await repository.GetActorAsync(userId);
-        if (actor?.Role.RoleName is not ("Student" or "Parent")) return Failure<AttendanceStudentHistoryDto>(Forbidden());
-        var model = new AttendanceStudentHistoryDto { Filter = filter, IsParent = actor.Role.RoleName == "Parent" };
+        var actor = await _attendanceRepository.GetActorAsync(userId);
+
+        if (actor == null || (actor.Role.RoleName != "Student" && actor.Role.RoleName != "Parent"))
+        {
+            return ServiceResult<AttendanceStudentHistoryDto>.Fail(
+                ErrorCodes.AuthForbidden, "Bạn không có quyền thực hiện thao tác này.");
+        }
+
+        var model = new AttendanceStudentHistoryDto
+        {
+            Filter = filter,
+            IsParent = actor.Role.RoleName == "Parent"
+        };
+
         if (model.IsParent)
         {
-            if (actor.Parent == null) return Failure<AttendanceStudentHistoryDto>(Forbidden());
-            model.Children = await repository.Students.AsNoTracking().Where(s => s.ParentId == actor.Parent.ParentId)
-                .OrderBy(s => s.StudentCode).Select(s => new AttendanceOption(s.Id, s.User.FullName + " (" + s.StudentCode + ")")).ToListAsync();
+            if (actor.Parent == null)
+            {
+                return ServiceResult<AttendanceStudentHistoryDto>.Fail(
+                    ErrorCodes.AuthForbidden, "Bạn không có quyền thực hiện thao tác này.");
+            }
+
+            var children = await _attendanceRepository.GetChildrenAsync(actor.Parent.ParentId);
+            model.Children = children.Select(s => new AttendanceOption(s.Id, s.User.FullName + " (" + s.StudentCode + ")")).ToList();
+
             if (filter.StudentId.HasValue && !model.Children.Any(c => c.Id == filter.StudentId))
-                return Failure<AttendanceStudentHistoryDto>(Forbidden());
-            filter.StudentId ??= model.Children.FirstOrDefault()?.Id;
+            {
+                return ServiceResult<AttendanceStudentHistoryDto>.Fail(
+                    ErrorCodes.AuthForbidden, "Bạn không có quyền thực hiện thao tác này.");
+            }
+
+            if (!filter.StudentId.HasValue)
+            {
+                filter.StudentId = model.Children.FirstOrDefault()?.Id;
+            }
         }
         else
         {
             if (actor.Student == null || (filter.StudentId.HasValue && filter.StudentId != actor.Student.Id))
-                return Failure<AttendanceStudentHistoryDto>(Forbidden());
+            {
+                return ServiceResult<AttendanceStudentHistoryDto>.Fail(
+                    ErrorCodes.AuthForbidden, "Bạn không có quyền thực hiện thao tác này.");
+            }
+
             filter.StudentId = actor.Student.Id;
         }
-        Normalize(filter);
-        model.Semesters = await SemesterOptions();
-        if (!filter.StudentId.HasValue) return ServiceResult<AttendanceStudentHistoryDto>.Ok(model);
-        model.StudentName = await repository.Students.Where(s => s.Id == filter.StudentId).Select(s => s.User.FullName).SingleAsync();
-        var own = repository.Records.AsNoTracking().Where(r => r.StudentId == filter.StudentId &&
-            r.AttendanceSession.Status != AttendanceStatuses.Cancelled);
-        var subjects = await own.Select(r => new { Id = r.AttendanceSession.SubjectId, Name = r.AttendanceSession.Subject.SubjectName })
-            .Distinct().OrderBy(s => s.Name).ToListAsync();
-        model.Subjects = subjects.Select(s => new AttendanceOption(s.Id, s.Name)).ToList();
-        var query = own.Where(r => r.AttendanceDate >= filter.FromDate && r.AttendanceDate <= filter.ToDate &&
-            (!filter.SemesterId.HasValue || r.AttendanceSession.SemesterId == filter.SemesterId) &&
-            (!filter.SubjectId.HasValue || r.AttendanceSession.SubjectId == filter.SubjectId));
-        if (!string.IsNullOrEmpty(filter.Status))
-            query = filter.Status == AttendanceStatuses.NotMarked
-                ? query.Where(r => r.AttendanceSession.Status == AttendanceStatuses.Open)
-                : query.Where(r => r.AttendanceSession.Status == AttendanceStatuses.Submitted && r.Status == filter.Status);
-        var counts = await query.GroupBy(r => r.AttendanceSession.Status == AttendanceStatuses.Submitted ? r.Status : AttendanceStatuses.NotMarked)
-            .Select(g => new { Status = g.Key, Count = g.Count() }).ToListAsync();
-        int Count(string s) => counts.Where(c => c.Status == s).Sum(c => c.Count);
-        model.Present = Count(AttendanceStatuses.Present); model.Absent = Count(AttendanceStatuses.Absent);
-        model.Late = Count(AttendanceStatuses.Late); model.Excused = Count(AttendanceStatuses.Excused);
-        model.Pending = Count(AttendanceStatuses.NotMarked);
-        model.TotalCount = counts.Sum(c => c.Count);
-        filter.Page = ClampPage(filter.Page, model.TotalCount);
-        var rows = await query.Include(r => r.AttendanceSession).ThenInclude(s => s.Class)
-            .Include(r => r.AttendanceSession).ThenInclude(s => s.Subject)
-            .Include(r => r.AttendanceSession).ThenInclude(s => s.AssignedTeacher).ThenInclude(t => t.User)
-            .Include(r => r.AttendanceSession).ThenInclude(s => s.Room)
-            .Include(r => r.AttendanceSession).ThenInclude(s => s.Semester)
-            .Include(r => r.RecordedByTeacher).ThenInclude(t => t!.User)
-            .OrderByDescending(r => r.AttendanceDate).ThenBy(r => r.AttendanceSession.StartTime).ThenBy(r => r.Id)
-            .Skip((filter.Page - 1) * 25).Take(25).ToListAsync();
-        model.Items = rows.Select(r => new AttendanceHistoryRowDto
+
+        NormalizeFilter(filter);
+        model.Semesters = await GetSemesterOptionsAsync();
+
+        if (!filter.StudentId.HasValue)
         {
-            Session = Map(r.AttendanceSession, false),
-            Status = r.AttendanceSession.Status == AttendanceStatuses.Submitted ? r.Status : AttendanceStatuses.NotMarked,
-            Comment = r.AttendanceSession.Status == AttendanceStatuses.Submitted ? r.Comment : null,
-            RecordedBy = r.AttendanceSession.Status == AttendanceStatuses.Submitted ? r.RecordedByTeacher?.User.FullName : null
-        }).ToList();
+            return ServiceResult<AttendanceStudentHistoryDto>.Ok(model);
+        }
+
+        var studentId = filter.StudentId.Value;
+        model.StudentName = await _attendanceRepository.GetStudentNameAsync(studentId);
+
+        var subjects = await _attendanceRepository.GetHistorySubjectsAsync(studentId);
+        model.Subjects = subjects.Select(s => new AttendanceOption(s.Id, s.SubjectName)).ToList();
+
+        var counts = await _attendanceRepository.GetHistoryCountsAsync(
+            studentId, filter.FromDate!.Value, filter.ToDate!.Value, filter.SemesterId, filter.SubjectId, filter.Status);
+
+        model.Present = counts.GetValueOrDefault(AttendanceStatuses.Present);
+        model.Absent = counts.GetValueOrDefault(AttendanceStatuses.Absent);
+        model.Late = counts.GetValueOrDefault(AttendanceStatuses.Late);
+        model.Excused = counts.GetValueOrDefault(AttendanceStatuses.Excused);
+        model.Pending = counts.GetValueOrDefault(AttendanceStatuses.NotMarked);
+        model.TotalCount = counts.Values.Sum();
+        filter.Page = GetValidPage(filter.Page, model.TotalCount);
+
+        var rows = await _attendanceRepository.GetHistoryRecordsAsync(
+            studentId, filter.FromDate!.Value, filter.ToDate!.Value, filter.SemesterId, filter.SubjectId, filter.Status, filter.Page, 25);
+
+        foreach (var record in rows)
+        {
+            var item = new AttendanceHistoryRowDto
+            {
+                Session = ToSessionDto(record.AttendanceSession)
+            };
+
+            if (record.AttendanceSession.Status == AttendanceStatuses.Submitted)
+            {
+                item.Status = record.Status;
+                item.Comment = record.Comment;
+                item.RecordedBy = record.RecordedByTeacher?.User.FullName;
+            }
+
+            model.Items.Add(item);
+        }
+
         return ServiceResult<AttendanceStudentHistoryDto>.Ok(model);
     }
 
-    private string? ValidateEntry(TimetableEntry entry, DateTime date)
+    private static bool IsStaff(User? user)
     {
-        var a = entry.TeachingAssignment;
-        if (date.Date < AttendanceRules.Today(Now)) return "Không được tạo hoặc mở lại bảng điểm danh cho ngày đã qua.";
-        if (!a.Semester.IsActive || date.Date < a.Semester.StartDate.Date || date.Date > a.Semester.EndDate.Date)
-            return "Ngày học phải thuộc học kỳ đang mở.";
-        if (entry.DayOfWeek is < 2 or > 7 || entry.DayOfWeek != (int)date.DayOfWeek + 1)
-            return "Ngày đã chọn không trùng thứ của tiết học.";
-        if (a.Class.AcademicYearId != a.Semester.AcademicYearId) return "Lớp và học kỳ không thuộc cùng năm học.";
-        if (a.Teacher.Status != "Active" || !a.Teacher.User.IsActive || !a.Subject.IsActive ||
-            a.Status is not ("Active" or "Assigned") || entry.Room.Status == "Maintenance")
-            return "Phân công, giáo viên, môn hoặc phòng học không còn hợp lệ.";
+        return user?.Role.RoleName == "Staff";
+    }
+
+    private static bool IsTeacher(User? user)
+    {
+        return user?.Role.RoleName == "Teacher" && user.Teacher != null;
+    }
+
+    private bool CanView(User? user, AttendanceSession session)
+    {
+        if (IsStaff(user))
+        {
+            return true;
+        }
+
+        if (!IsTeacher(user))
+        {
+            return false;
+        }
+
+        return user!.Teacher!.Id == session.AssignedTeacherId && session.AttendanceDate.Date == AttendanceRules.Today(Now);
+    }
+
+    private string? GetEditError(User? user, AttendanceSession session)
+    {
+        if (session.Status == AttendanceStatuses.Cancelled)
+        {
+            return "Bảng điểm danh đã hủy.";
+        }
+
+        if (!session.Semester.IsActive)
+        {
+            return "Học kỳ đã đóng.";
+        }
+
+        if (Now < AttendanceRules.StartsAt(session.AttendanceDate, session.StartTime))
+        {
+            return "Chưa đến giờ bắt đầu tiết học, chưa được điểm danh.";
+        }
+
+        if (Now >= AttendanceRules.Deadline(session.AttendanceDate))
+        {
+            return "Đã hết hạn điểm danh (00:00 ngày kế tiếp theo giờ Việt Nam).";
+        }
+
+        if (IsStaff(user) && session.Status != AttendanceStatuses.Submitted)
+        {
+            return "Staff chỉ sửa sau khi giáo viên đã lưu điểm danh.";
+        }
+
         return null;
     }
 
-    private Task<List<int>> Roster(int classId, DateTime date, TimeSpan start)
+    private async Task<List<AttendanceOption>> GetSemesterOptionsAsync()
     {
-        var at = AttendanceRules.StartsAt(date, start).UtcDateTime;
-        return repository.Memberships.Where(m => m.ClassId == classId && m.JoinedAt <= at &&
-            (m.LeftAt == null || m.LeftAt > at)).Select(m => m.StudentId).Distinct().OrderBy(id => id).ToListAsync();
-    }
-    private static bool Overlaps(AttendanceSession s, AttendanceSession other) =>
-        other.AttendanceDate == s.AttendanceDate && other.StartTime < s.EndTime && s.StartTime < other.EndTime &&
-        (other.ClassId == s.ClassId || other.AssignedTeacherId == s.AssignedTeacherId || other.RoomId == s.RoomId);
-    private Task<List<LeaveRequest>> ApprovedLeaves(int[] ids, DateTime date) =>
-        repository.LeaveRequests.AsNoTracking().Where(l => ids.Contains(l.StudentId) && l.Status == "Approved" &&
-            l.StartDate <= date.Date && l.EndDate >= date.Date).OrderBy(l => l.Id).ToListAsync();
-    private Task<List<AttendanceOption>> SemesterOptions() => repository.Semesters.AsNoTracking()
-        .OrderByDescending(s => s.StartDate).ThenByDescending(s => s.Id)
-        .Select(s => new AttendanceOption(s.Id, s.SemesterName + " · " + s.AcademicYear.YearCode + " (" + s.SemesterCode + ")" + (s.IsActive ? " — Đang mở" : " — Đã đóng"))).ToListAsync();
-    private Task<List<AttendanceOption>> ClassOptions(int? semesterId) => repository.Classes.AsNoTracking()
-        .Where(c => !semesterId.HasValue || repository.Semesters.Any(s => s.Id == semesterId && s.AcademicYearId == c.AcademicYearId))
-        .OrderBy(c => c.ClassName).Select(c => new AttendanceOption(c.Id, c.ClassName)).ToListAsync();
-    private void Normalize(AttendanceFilter f)
-    {
-        f.FromDate = (f.FromDate ?? AttendanceRules.Today(Now).AddDays(-30)).Date;
-        f.ToDate = (f.ToDate ?? AttendanceRules.Today(Now)).Date;
-        if (f.ToDate < f.FromDate) (f.FromDate, f.ToDate) = (f.ToDate, f.FromDate);
-    }
-    private static int ClampPage(int page, int total) => Math.Clamp(page, 1, Math.Max(1, (int)Math.Ceiling(total / 25m)));
-    private static IQueryable<AttendanceSession> FilterSessions(IQueryable<AttendanceSession> q, AttendanceFilter f) =>
-        q.Where(s => s.AttendanceDate >= f.FromDate && s.AttendanceDate <= f.ToDate &&
-            (!f.SemesterId.HasValue || s.SemesterId == f.SemesterId) &&
-            (!f.ClassId.HasValue || s.ClassId == f.ClassId));
-    private AttendanceSessionDto Map(AttendanceSession s, bool teacher, bool staff = false) => new()
-    {
-        Id = s.Id, TimetableEntryId = s.TimetableEntryId, Date = s.AttendanceDate,
-        ClassName = s.Class.ClassName, SubjectName = s.Subject.SubjectName, TeacherName = s.AssignedTeacher.User.FullName,
-        RoomName = s.Room.RoomName, Slot = $"{(s.SchoolSession == "Morning" ? "Sáng" : "Chiều")} · Tiết {s.PeriodNo} ({s.SlotCode})",
-        StartTime = s.StartTime, EndTime = s.EndTime, Status = s.Status, StudentCount = s.Records.Count,
-        CanWrite = (teacher || staff && s.Status == AttendanceStatuses.Submitted && s.Records.Count > 0 && s.Records.All(r => r.RecordedBy.HasValue && AttendanceStatuses.IsResult(r.Status))) && s.Status != AttendanceStatuses.Cancelled && s.Semester.IsActive &&
-            AttendanceRules.CanWrite(s.AttendanceDate, s.StartTime, Now),
-        RowVersion = Convert.ToBase64String(s.RowVersion)
-    };
-    private AttendanceSession NewSession(TimetableEntry e, DateTime date)
-    {
-        var session = new AttendanceSession { TimetableEntryId = e.Id, AttendanceDate = date.Date,
-            CreatedAt = Now.UtcDateTime, UpdatedAt = Now.UtcDateTime };
-        ApplySnapshot(session, e);
-        return session;
-    }
-    private static void ApplySnapshot(AttendanceSession s, TimetableEntry e)
-    {
-        var a = e.TeachingAssignment;
-        s.ClassId = a.ClassId; s.Class = a.Class; s.SubjectId = a.SubjectId; s.Subject = a.Subject;
-        s.SemesterId = a.SemesterId; s.Semester = a.Semester; s.AssignedTeacherId = a.TeacherId; s.AssignedTeacher = a.Teacher;
-        s.TimeSlotId = e.TimeSlotId; s.RoomId = e.RoomId; s.Room = e.Room;
-        s.SlotCode = e.TimeSlot.SlotCode; s.PeriodNo = e.TimeSlot.PeriodNo; s.SchoolSession = e.TimeSlot.Session;
-        s.StartTime = e.TimeSlot.StartTime; s.EndTime = e.TimeSlot.EndTime;
-    }
-    private static bool MatchesSchedule(AttendanceSession s, TimetableEntry e) =>
-        s.ClassId == e.TeachingAssignment.ClassId && s.SubjectId == e.TeachingAssignment.SubjectId &&
-        s.SemesterId == e.TeachingAssignment.SemesterId && s.AssignedTeacherId == e.TeachingAssignment.TeacherId &&
-        s.RoomId == e.RoomId && s.TimeSlotId == e.TimeSlotId && s.StartTime == e.TimeSlot.StartTime &&
-        s.EndTime == e.TimeSlot.EndTime && s.SlotCode == e.TimeSlot.SlotCode &&
-        s.PeriodNo == e.TimeSlot.PeriodNo && s.SchoolSession == e.TimeSlot.Session &&
-        e.DayOfWeek == (int)s.AttendanceDate.DayOfWeek + 1 &&
-        e.TeachingAssignment.Status is "Active" or "Assigned";
-    private static AttendanceRecord NewRecord(AttendanceSession s, int studentId) => new()
-    { StudentId = studentId, TimetableEntryId = s.TimetableEntryId, AttendanceDate = s.AttendanceDate, AttendanceSession = s };
-    private bool CheckVersion(AttendanceSession s, string value)
-    {
-        if (string.IsNullOrEmpty(value) || value.Length > 100) return false;
-        try
-        {
-            var version = Convert.FromBase64String(value);
-            if (!version.SequenceEqual(s.RowVersion)) return false;
-            repository.ExpectVersion(s, version);
-            return true;
-        }
-        catch (FormatException) { return false; }
-    }
-    private string ReadOnlyReason(AttendanceSession s, bool staff)
-    {
-        if (staff && s.Status != AttendanceStatuses.Submitted) return "Staff chỉ được sửa sau khi giáo viên đã thực hiện điểm danh tiết học này.";
-        if (s.Status == AttendanceStatuses.Cancelled) return "Bảng điểm danh đã hủy.";
-        if (!s.Semester.IsActive) return "Học kỳ đã đóng, chỉ được xem kết quả.";
-        if (Now >= AttendanceRules.Deadline(s.AttendanceDate)) return "Đã qua 00:00 ngày kế tiếp. Bảng điểm danh chỉ được xem và không thể chỉnh sửa.";
-        return "Chưa đến giờ bắt đầu tiết học.";
-    }
-    private static string? Clean(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
-    private void Audit(AttendanceSession session, int? actor, string action, object data) =>
-        repository.AddAudit(new AttendanceAuditLog { AttendanceSession = session, ActorUserId = actor,
-            Action = action, Details = JsonSerializer.Serialize(data), OccurredAt = Now.UtcDateTime });
+        var semesters = await _attendanceRepository.GetSemestersAsync();
+        var options = new List<AttendanceOption>();
 
-    private async Task<ServiceResult> Write(Func<Task<ServiceResult>> action, Func<DateTimeOffset?>? deadline = null)
+        foreach (var semester in semesters)
+        {
+            var name = semester.SemesterName + " · " + semester.AcademicYear.YearCode +
+                " (" + semester.SemesterCode + ")";
+
+            name += semester.IsActive ? " — Đang mở" : " — Đã đóng";
+            options.Add(new AttendanceOption(semester.Id, name));
+        }
+
+        return options;
+    }
+
+    private async Task<List<AttendanceOption>> GetClassOptionsAsync(int? semesterId)
     {
-        try
+        var classes = await _attendanceRepository.GetClassesAsync(semesterId);
+
+        return classes.Select(c => new AttendanceOption(c.Id, c.ClassName)).ToList();
+    }
+
+    private void NormalizeFilter(AttendanceFilter filter)
+    {
+        filter.FromDate = (filter.FromDate ?? AttendanceRules.Today(Now).AddDays(-30)).Date;
+        filter.ToDate = (filter.ToDate ?? AttendanceRules.Today(Now)).Date;
+
+        if (filter.ToDate < filter.FromDate)
         {
-            await using var transaction = await repository.BeginTransactionAsync();
-            var result = await action();
-            if (!result.Success) { repository.ClearTracking(); return result; }
-            if (deadline?.Invoke() is { } before && Now >= before)
-            { repository.ClearTracking(); return Invalid("Đã đến 00:00 ngày kế tiếp. Không thể lưu điểm danh."); }
-            await repository.SaveAsync();
-            if (deadline?.Invoke() is { } after && Now >= after)
-            { repository.ClearTracking(); return Invalid("Đã đến 00:00 ngày kế tiếp. Thay đổi chưa được lưu."); }
-            await transaction.CommitAsync();
-            return result;
+            var fromDate = filter.FromDate;
+            filter.FromDate = filter.ToDate;
+            filter.ToDate = fromDate;
         }
-        catch (DbUpdateConcurrencyException ex)
+    }
+
+    private static int GetValidPage(int page, int total)
+    {
+        var totalPages = (int)Math.Ceiling(total / 25m);
+        totalPages = Math.Max(1, totalPages);
+
+        return Math.Clamp(page, 1, totalPages);
+    }
+
+    private async Task<AttendanceSession?> FindSessionAsync(int id, int entryId, DateTime date)
+    {
+        if (id > 0)
         {
-            repository.ClearTracking();
-            logger.LogWarning(ex, "Attendance concurrent update");
-            return Invalid("Bảng đã được cập nhật bởi thao tác khác. Vui lòng tải lại.");
+            return await _attendanceRepository.GetSessionAsync(id);
         }
-        // SQL Server's execution strategy wraps transient failures (including deadlocks)
-        // in InvalidOperationException. Return a retryable form error after rollback too.
-        catch (Exception ex) when (ex is DbUpdateException or DbException ||
-            ex is InvalidOperationException && ex.GetBaseException() is DbException)
+
+        var saved = await _attendanceRepository.GetSessionByLessonAsync(entryId, date);
+
+        if (saved != null)
         {
-            repository.ClearTracking();
-            logger.LogWarning(ex, "Attendance transaction failed");
-            return ServiceResult.Fail(ErrorCodes.DatabaseError, "Không thể lưu: dữ liệu trùng hoặc vừa thay đổi. Vui lòng tải lại và kiểm tra.");
+            return saved;
         }
+
+        var entry = await _attendanceRepository.GetEntryAsync(entryId);
+
+        if (entry == null)
+        {
+            return null;
+        }
+
+        var semester = entry.TeachingAssignment.Semester;
+
+        if (entry.DayOfWeek != (int)date.DayOfWeek + 1 ||
+            date.Date < semester.StartDate.Date || date.Date > semester.EndDate.Date)
+        {
+            return null;
+        }
+
+        return NewSession(entry, date);
+    }
+
+    private AttendanceSession NewSession(TimetableEntry entry, DateTime date)
+    {
+        var assignment = entry.TeachingAssignment;
+
+        return new AttendanceSession
+        {
+            TimetableEntryId = entry.Id,
+            AttendanceDate = date.Date,
+            ClassId = assignment.ClassId,
+            Class = assignment.Class,
+            SubjectId = assignment.SubjectId,
+            Subject = assignment.Subject,
+            SemesterId = assignment.SemesterId,
+            Semester = assignment.Semester,
+            AssignedTeacherId = assignment.TeacherId,
+            AssignedTeacher = assignment.Teacher,
+            RoomId = entry.RoomId,
+            Room = entry.Room,
+            TimeSlotId = entry.TimeSlotId,
+            SlotCode = entry.TimeSlot.SlotCode,
+            SchoolSession = entry.TimeSlot.Session,
+            PeriodNo = entry.TimeSlot.PeriodNo,
+            StartTime = entry.TimeSlot.StartTime,
+            EndTime = entry.TimeSlot.EndTime,
+            CreatedAt = Now.UtcDateTime
+        };
+
+    }
+
+    private AttendanceSessionDto ToSessionDto(AttendanceSession session, User? actor = null)
+    {
+        return new AttendanceSessionDto
+        {
+            Id = session.Id,
+            TimetableEntryId = session.TimetableEntryId,
+            Date = session.AttendanceDate,
+            ClassName = session.Class.ClassName,
+            SubjectName = session.Subject.SubjectName,
+            TeacherName = session.AssignedTeacher.User.FullName,
+            RoomName = session.Room.RoomName,
+            Slot = $"{(session.SchoolSession == "Morning" ? "Sáng" : "Chiều")} · Tiết {session.PeriodNo} ({session.SlotCode})",
+            StartTime = session.StartTime,
+            EndTime = session.EndTime,
+            Status = session.Status,
+            StudentCount = session.Records.Count,
+            CanWrite = CanView(actor, session) && GetEditError(actor, session) == null
+        };
+
     }
 }

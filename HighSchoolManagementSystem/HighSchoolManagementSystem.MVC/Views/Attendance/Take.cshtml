@@ -4,7 +4,6 @@
 @{
     ViewData["Title"] = "Bảng điểm danh";
     var canEdit = Model.Session.CanWrite;
-    ViewData["AttendanceStudentNames"] = Model.Students.ToDictionary(s => s.StudentId, s => s.FullName + " (" + s.StudentCode + ")");
 }
 <div class="d-flex justify-content-between mb-3">
     <div><h1 class="h3">@Model.Session.ClassName · @Model.Session.SubjectName</h1>
@@ -14,9 +13,11 @@
 </div>
 <partial name="_Messages" />
 @if(!canEdit){<div class="alert alert-info">@Model.ReadOnlyReason</div>}
-else{<div class="alert alert-warning" id="attendance-deadline">Được nhập/chỉnh sửa đến trước 00:00 ngày @Model.Session.Date.AddDays(1).ToString("dd/MM/yyyy") theo giờ Việt Nam. Qua hạn, bảng chỉ được xem.</div>}
+else{<div class="alert alert-warning" id="attendance-deadline">Được nhập/chỉnh sửa đến trước 00:00 ngày @Model.Session.Date.AddDays(1).ToString("dd/MM/yyyy") theo giờ Việt Nam. Qua hạn không thể nhập/sửa.</div>}
 <form asp-action="Save" method="post" id="attendance-form" data-editable="@(canEdit ? "true" : "false")" data-deadline="@AttendanceRules.Deadline(Model.Session.Date).ToString("O")">
-    <input type="hidden" name="SessionId" value="@Model.Session.Id" /><input type="hidden" name="RowVersion" value="@Model.Session.RowVersion" />
+    <input type="hidden" name="SessionId" value="@Model.Session.Id" />
+    <input type="hidden" name="TimetableEntryId" value="@Model.Session.TimetableEntryId" />
+    <input type="hidden" name="Date" value="@Model.Session.Date.ToString("yyyy-MM-dd")" />
     @if(canEdit){<button type="button" class="btn btn-outline-success mb-3" id="mark-present">Đánh dấu có mặt cho các học sinh chưa chọn</button>}
     <div class="card table-responsive"><table class="table align-middle mb-0">
         <thead><tr><th>STT</th><th>Học sinh</th><th style="min-width:200px">Kết quả</th><th>Đơn nghỉ</th><th style="min-width:220px">Ghi chú</th></tr></thead>
@@ -62,10 +63,9 @@ else{<div class="alert alert-warning" id="attendance-deadline">Được nhập/c
 {
     <details class="card card-body mt-4"><summary>Lịch sử thao tác gần đây</summary><ul class="mt-2 mb-0">
     @foreach(var audit in Model.Audit){
-        var action = audit.Action switch { "AutoCreate" => "Tự tạo theo lịch học", "AutoRefresh" => "Tự đồng bộ lịch/danh sách", "AutoCancel" => "Tự hủy bảng không còn lịch hợp lệ", "Create" => "Tạo bảng", "Submit" => "Xác nhận điểm danh", "Update" => "Sửa điểm danh", "Refresh" => "Đồng bộ bảng", "Cancel" => "Hủy bảng", "Restore" => "Khôi phục bảng", _ => audit.Action };
+        var action = audit.Action == "Update" ? "Sửa điểm danh" : audit.Action == "Submit" ? "Lưu điểm danh" : audit.Action;
         <li class="mb-3">@audit.At.AddHours(7).ToString("dd/MM/yyyy HH:mm") · @audit.Actor · @action
             @if(!string.IsNullOrWhiteSpace(audit.Reason)){<div><strong>Nội dung/lý do:</strong> @audit.Reason</div>}
-            <partial name="_AuditChanges" model="audit" />
         </li>
     }</ul></details>
 }
